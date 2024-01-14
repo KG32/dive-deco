@@ -3,6 +3,7 @@ mod gas;
 mod global_types;
 mod compartment;
 mod step;
+mod model;
 
 use zhl_16_values::zhl_16_values;
 
