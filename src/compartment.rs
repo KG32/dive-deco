@@ -5,7 +5,7 @@ use crate::step::Step;
 
 #[derive(Debug, PartialEq)]
 pub struct Compartment {
-    pub no: u8,
+    pub no: usize,
     pub min_tolerable_amb_pressure: Pressure,
     pub inert_pressure: Pressure,
     pub params: ZHLParams,
@@ -13,7 +13,7 @@ pub struct Compartment {
 
 impl Compartment {
     pub fn new(
-        no: u8,
+        no: usize,
         params: ZHLParams
     ) -> Compartment {
         let mut compartment = Compartment {
@@ -27,22 +27,22 @@ impl Compartment {
         compartment
     }
 
-    pub fn recalculate(&mut self, step: &Step) -> () {
+    pub fn recalculate(&mut self, step: &Step) {
         self.inert_pressure = self.calc_compartment_inert_pressure(step);
         self.min_tolerable_amb_pressure = self.calc_min_tolerable_pressure();
     }
 
     fn calc_min_tolerable_pressure(&self) -> Pressure {
         let (_, a_coefficient, b_coefficient) = &self.params;
-        (&self.inert_pressure - a_coefficient) * b_coefficient
+        (self.inert_pressure - a_coefficient) * b_coefficient
     }
 
     pub fn calc_compartment_inert_pressure(&self, step: &Step) -> Pressure {
         let Step { depth, time, gas  } = step;
         let GasPP { n2, .. } = gas.partial_pressures(**depth);
-        let (half_time, ..) = &self.params;
-        let p_comp_delta = (n2 - &self.inert_pressure) * (1. - (2_f32.powf(-**time / half_time)));
-        &self.inert_pressure + p_comp_delta
+        let (half_time, ..) = self.params;
+        let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f32.powf(-**time / half_time)));
+        self.inert_pressure + p_comp_delta
     }
 }
 

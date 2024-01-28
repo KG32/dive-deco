@@ -13,7 +13,7 @@ pub struct GasPP {
 
 impl Gas {
     pub fn new(o2_pp: Pressure) -> Gas {
-        if o2_pp < 0. || o2_pp > 1. {
+        if !(0. ..=1.).contains(&o2_pp) {
             panic!("Invalid O2 partial pressure");
         }
 
@@ -27,8 +27,8 @@ impl Gas {
         let gas_pressure = 1. + (depth / 10.);
 
         GasPP {
-            o2: &self.o2_pp * gas_pressure,
-            n2: &self.n2_pp * gas_pressure,
+            o2: self.o2_pp * gas_pressure,
+            n2: self.n2_pp * gas_pressure,
         }
     }
 }

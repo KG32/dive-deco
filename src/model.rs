@@ -19,7 +19,7 @@ impl ZHLModel {
         model
     }
 
-    pub fn step(&mut self, step: &Step) -> () {
+    pub fn step(&mut self, step: &Step) {
         self.depth = *step.depth;
         self.recalculate_compartments(step);
     }
@@ -58,18 +58,16 @@ impl ZHLModel {
         leading_cpt
     }
 
-    fn create_compartments(&mut self, zhl_values: Vec<ZHLParams>) -> () {
+    fn create_compartments(&mut self, zhl_values: Vec<ZHLParams>) {
         let mut compartments: Vec<Compartment> = vec![];
-        let mut i = 0;
-        for comp_values in zhl_values {
+        for (i, comp_values) in zhl_values.into_iter().enumerate() {
             let compartment = Compartment::new(i + 1, comp_values);
             compartments.push(compartment);
-            i += 1;
         }
         self.compartments = compartments;
     }
 
-    fn recalculate_compartments(&mut self, step: &Step) -> () {
+    fn recalculate_compartments(&mut self, step: &Step) {
         for compartment in self.compartments.iter_mut() {
             compartment.recalculate(step);
         }
