@@ -10,5 +10,6 @@ use zhl_16_values::zhl_16_values;
 
 pub fn zhl16c() -> ZHLModel {
     let zhl16_values = zhl_16_values();
+
     ZHLModel::new(zhl16_values.to_vec())
 }

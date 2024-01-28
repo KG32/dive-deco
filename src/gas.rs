@@ -1,21 +1,22 @@
-use crate::global_types::{PartialPressure, Depth};
+use crate::global_types::{Pressure, Depth};
 
 pub struct Gas {
-    o2_pp: PartialPressure,
-    n2_pp: PartialPressure,
+    o2_pp: Pressure,
+    n2_pp: Pressure,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct GasPP {
-    pub o2: PartialPressure,
-    pub n2: PartialPressure,
+    pub o2: Pressure,
+    pub n2: Pressure,
 }
 
 impl Gas {
-    pub fn new(o2_pp: PartialPressure) -> Gas {
+    pub fn new(o2_pp: Pressure) -> Gas {
         if o2_pp < 0. || o2_pp > 1. {
             panic!("Invalid O2 partial pressure");
         }
+
         Gas {
             o2_pp,
             n2_pp: 1. - o2_pp,
@@ -24,6 +25,7 @@ impl Gas {
 
     pub fn partial_pressures(&self, depth: Depth) -> GasPP {
         let gas_pressure = 1. + (depth / 10.);
+
         GasPP {
             o2: &self.o2_pp * gas_pressure,
             n2: &self.n2_pp * gas_pressure,
@@ -34,15 +36,13 @@ impl Gas {
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error;
     use super::*;
 
     #[test]
-    fn test_valid_gas() -> Result<(), Box<dyn Error>> {
+    fn test_valid_gas() {
         let air = Gas::new(0.21);
         assert_eq!(air.o2_pp, 0.21);
         assert_eq!(air.n2_pp, 0.79);
-        Ok(())
     }
 
     #[test]

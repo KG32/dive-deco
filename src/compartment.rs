@@ -1,4 +1,4 @@
-use crate::global_types::PartialPressure;
+use crate::global_types::Pressure;
 use crate::zhl_16_values::ZHLParams;
 use crate::gas::GasPP;
 use crate::step::Step;
@@ -6,9 +6,9 @@ use crate::step::Step;
 #[derive(Debug, PartialEq)]
 pub struct Compartment {
     pub no: u8,
-    pub min_tolerable_pressure: PartialPressure,
-    pressure: PartialPressure,
-    params: ZHLParams,
+    pub min_tolerable_amb_pressure: Pressure,
+    pub inert_pressure: Pressure,
+    pub params: ZHLParams,
 }
 
 impl Compartment {
@@ -19,31 +19,30 @@ impl Compartment {
         let mut compartment = Compartment {
             no,
             params,
-            pressure: 0.79,
-            min_tolerable_pressure: 0.,
+            inert_pressure: 0.79,
+            min_tolerable_amb_pressure: -0.,
         };
-        compartment.min_tolerable_pressure = compartment.calc_min_tolerable_pressure();
+        compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_pressure();
 
         compartment
     }
 
     pub fn recalculate(&mut self, step: &Step) -> () {
-        self.pressure = self.calc_compartment_pressure(step);
-        self.min_tolerable_pressure = self.calc_min_tolerable_pressure();
+        self.inert_pressure = self.calc_compartment_inert_pressure(step);
+        self.min_tolerable_amb_pressure = self.calc_min_tolerable_pressure();
     }
 
-    fn calc_min_tolerable_pressure(&self) -> PartialPressure {
+    fn calc_min_tolerable_pressure(&self) -> Pressure {
         let (_, a_coefficient, b_coefficient) = &self.params;
-        (&self.pressure - a_coefficient) * b_coefficient
+        (&self.inert_pressure - a_coefficient) * b_coefficient
     }
 
-
-    fn calc_compartment_pressure(&self, step: &Step) -> PartialPressure {
+    pub fn calc_compartment_inert_pressure(&self, step: &Step) -> Pressure {
         let Step { depth, time, gas  } = step;
         let GasPP { n2, .. } = gas.partial_pressures(**depth);
         let (half_time, ..) = &self.params;
-        let p_comp_delta = (n2 - &self.pressure) * (1. - (2_f32.powf(-**time / half_time)));
-        &self.pressure + p_comp_delta
+        let p_comp_delta = (n2 - &self.inert_pressure) * (1. - (2_f32.powf(-**time / half_time)));
+        &self.inert_pressure + p_comp_delta
     }
 }
 
@@ -62,8 +61,8 @@ mod tests {
             Compartment {
                 no: 1,
                 params: cpt_1_params,
-                pressure: 0.79,
-                min_tolerable_pressure: -0.23729947
+                inert_pressure: 0.79,
+                min_tolerable_amb_pressure: -0.23729947
             }
         );
     }
@@ -75,7 +74,7 @@ mod tests {
         let air = Gas::new(0.21);
         let step = Step { depth: &30., time: &10., gas: &air };
         cpt_5.recalculate(&step);
-        assert_eq!(cpt_5.pressure, 1.3266063);
+        assert_eq!(cpt_5.inert_pressure, 1.3266063);
     }
 
     #[test]
@@ -85,7 +84,7 @@ mod tests {
         let air = Gas::new(0.21);
         let step = Step { depth: &30., time: &10., gas: &air };
         cpt_5.recalculate(&step);
-        let min_tolerable_pressure = cpt_5.min_tolerable_pressure;
+        let min_tolerable_pressure = cpt_5.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.5741883);
     }
 }
