@@ -1,7 +1,8 @@
 use crate::compartment::Compartment;
 use crate::step::Step;
-use crate::global_types::{Depth, Pressure};
+use crate::global_types::{Depth, Minutes, Pressure};
 use crate::zhl_16_values::ZHLParams;
+use crate::gas::Gas;
 
 pub struct ZHLModel {
     compartments: Vec<Compartment>,
@@ -19,8 +20,9 @@ impl ZHLModel {
         model
     }
 
-    pub fn step(&mut self, step: &Step) {
-        self.depth = *step.depth;
+    pub fn step(&mut self, depth: Depth, time: Minutes, gas: &Gas) {
+        let step = Step { depth, time, gas };
+        self.depth = step.depth;
         self.recalculate_compartments(step);
     }
 
@@ -67,9 +69,9 @@ impl ZHLModel {
         self.compartments = compartments;
     }
 
-    fn recalculate_compartments(&mut self, step: &Step) {
+    fn recalculate_compartments(&mut self, step: Step) {
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(step);
+            compartment.recalculate(&step);
         }
     }
 }
@@ -85,10 +87,8 @@ mod tests {
     fn test_ceiling() {
         let mut model = ZHLModel::new(zhl_16_values().to_vec());
         let air = Gas::new(0.21);
-        let step1 = Step { depth: &40., time: &30., gas: &air };
-        let step2 = Step { depth: &30., time: &30., gas: &air };
-        model.step(&step1);
-        model.step(&step2);
+        model.step(40., 30., &air);
+        model.step(30., 30., &air);
         let calculated_ceiling = model.ceiling();
         assert_eq!(calculated_ceiling, 8.207313);
     }
@@ -98,10 +98,12 @@ mod tests {
         let mut model = ZHLModel::new(zhl_16_values().to_vec());
         let air = Gas::new(0.21);
 
-        model.step(&Step { depth: &50., time: &20., gas: &air });
+        // model.step(&Step { depth: &50., time: &20., gas: &air });
+        model.step(50., 20., &air);
         assert_eq!(model.gfs_current(), (-46.5044, 198.13847));
 
-        model.step(&Step { depth: &40., time: &10., gas: &air });
+        // model.step(&Step { depth: &40., time: &10., gas: &air });
+        model.step(40., 10., &air);
         assert_eq!(model.gfs_current(), (-48.280266, 213.03172));
     }
 }
