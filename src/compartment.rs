@@ -41,7 +41,7 @@ impl Compartment {
         let Step { depth, time, gas  } = step;
         let GasPP { n2, .. } = gas.partial_pressures(*depth);
         let (half_time, ..) = self.params;
-        let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f32.powf(-*time / half_time)));
+        let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f64.powf(-*time / half_time)));
         self.inert_pressure + p_comp_delta
     }
 }
@@ -62,7 +62,7 @@ mod tests {
                 no: 1,
                 params: cpt_1_params,
                 inert_pressure: 0.79,
-                min_tolerable_amb_pressure: -0.23729947
+                min_tolerable_amb_pressure: -0.2372995
             }
         );
     }
@@ -74,7 +74,7 @@ mod tests {
         let air = Gas::new(0.21);
         let step = Step { depth: 30., time: 10., gas: &air };
         cpt_5.recalculate(&step);
-        assert_eq!(cpt_5.inert_pressure, 1.3266063);
+        assert_eq!(cpt_5.inert_pressure, 1.3266062140854773);
     }
 
     #[test]
@@ -85,6 +85,6 @@ mod tests {
         let step = Step { depth: 30., time: 10., gas: &air };
         cpt_5.recalculate(&step);
         let min_tolerable_pressure = cpt_5.min_tolerable_amb_pressure;
-        assert_eq!(min_tolerable_pressure, 0.5741883);
+        assert_eq!(min_tolerable_pressure, 0.5741882095658588);
     }
 }

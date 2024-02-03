@@ -1,5 +1,5 @@
 // half-time, a coefficient, b coefficient
-pub type ZHLParam = f32;
+pub type ZHLParam = f64;
 pub type ZHLParams = (ZHLParam, ZHLParam, ZHLParam);
 
 pub fn zhl_16_values() -> [ZHLParams; 16] {

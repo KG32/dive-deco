@@ -90,7 +90,7 @@ mod tests {
         model.step(40., 30., &air);
         model.step(30., 30., &air);
         let calculated_ceiling = model.ceiling();
-        assert_eq!(calculated_ceiling, 8.207313);
+        assert_eq!(calculated_ceiling, 8.207311225723817);
     }
 
     #[test]
@@ -100,10 +100,10 @@ mod tests {
 
         // model.step(&Step { depth: &50., time: &20., gas: &air });
         model.step(50., 20., &air);
-        assert_eq!(model.gfs_current(), (-46.5044, 198.13847));
+        assert_eq!(model.gfs_current(), (-46.50440176081318, 198.13842597008946));
 
         // model.step(&Step { depth: &40., time: &10., gas: &air });
         model.step(40., 10., &air);
-        assert_eq!(model.gfs_current(), (-48.280266, 213.03172));
+        assert_eq!(model.gfs_current(), (-48.28027926904754, 213.03171209358845));
     }
 }
