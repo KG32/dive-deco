@@ -1,6 +1,6 @@
 use crate::compartment::Compartment;
 use crate::step::Step;
-use crate::global_types::{Depth, Minutes, Pressure};
+use crate::global_types::{Depth, Seconds, Pressure};
 use crate::zhl_16_values::ZHLParams;
 use crate::gas::Gas;
 
@@ -20,14 +20,16 @@ impl ZHLModel {
         model
     }
 
-    pub fn step(&mut self, depth: Depth, time: Minutes, gas: &Gas) {
+    pub fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         let step = Step { depth, time, gas };
-        self.depth = step.depth;
+        self.depth = *step.depth;
         self.recalculate_compartments(step);
+
+        println!("gf {:?}", self.gfs_current());
     }
 
     pub fn ceiling(&self) -> Depth {
-        let leading_cpt: &Compartment = self.get_leading_cpt();
+        let leading_cpt: &Compartment = self.leading_cpt();
         let mut ceil = (leading_cpt.min_tolerable_amb_pressure - 1.) * 10.;
         if ceil < 0. {
             ceil = 0.;
@@ -37,7 +39,7 @@ impl ZHLModel {
     }
 
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
-        let leading_cpt = self.get_leading_cpt();
+        let leading_cpt = self.leading_cpt();
         let p_surf = 1.;
         let p_amb = p_surf + (&self.depth / 10.);
         let (_, a_coeff, b_coeff) = leading_cpt.params;
@@ -49,7 +51,7 @@ impl ZHLModel {
         (gf_now, gf_surf)
     }
 
-    fn get_leading_cpt(&self) -> &Compartment {
+    fn leading_cpt(&self) -> &Compartment {
         let mut leading_cpt: &Compartment = &self.compartments[0];
         for compartment in &self.compartments[1..] {
             if compartment.min_tolerable_amb_pressure > leading_cpt.min_tolerable_amb_pressure {
@@ -87,8 +89,8 @@ mod tests {
     fn test_ceiling() {
         let mut model = ZHLModel::new(zhl_16_values().to_vec());
         let air = Gas::new(0.21);
-        model.step(40., 30., &air);
-        model.step(30., 30., &air);
+        model.step(&40., &(30 * 60), &air);
+        model.step(&30., &(30 * 60), &air);
         let calculated_ceiling = model.ceiling();
         assert_eq!(calculated_ceiling, 8.207311225723817);
     }
@@ -99,11 +101,34 @@ mod tests {
         let air = Gas::new(0.21);
 
         // model.step(&Step { depth: &50., time: &20., gas: &air });
-        model.step(50., 20., &air);
+        model.step(&50., &(20 * 60), &air);
         assert_eq!(model.gfs_current(), (-46.50440176081318, 198.13842597008946));
 
         // model.step(&Step { depth: &40., time: &10., gas: &air });
-        model.step(40., 10., &air);
+        model.step(&40., &(10 * 60), &air);
         assert_eq!(model.gfs_current(), (-48.28027926904754, 213.03171209358845));
+    }
+
+    #[test]
+    fn test_model_steps_equality() {
+        let mut model1 = ZHLModel::new(zhl_16_values().to_vec());
+        let mut model2 = ZHLModel::new(zhl_16_values().to_vec());
+
+        let air = Gas::new(0.21);
+        let test_depth = 50.;
+        let test_time_minutes = 100;
+
+        model1.step(&test_depth, &(test_time_minutes * 60), &air);
+
+        for _i in 1..=test_time_minutes {
+            model2.step(&test_depth, &(1 * 60), &air);
+        }
+
+        assert_eq!(model1.ceiling().floor(), model2.ceiling().floor());
+
+        let (model1_gf_now, model1_gf_surf) = model1.gfs_current();
+        let (model2_gf_now, model2_gf_surf) = model1.gfs_current();
+        assert_eq!(model1_gf_now.floor(), model2_gf_now.floor());
+        assert_eq!(model1_gf_surf.floor(), model2_gf_surf.floor());
     }
 }
