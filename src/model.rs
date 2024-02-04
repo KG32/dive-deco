@@ -23,9 +23,7 @@ impl ZHLModel {
     pub fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         let step = Step { depth, time, gas };
         self.depth = *step.depth;
-        self.recalculate_compartments(step);
-
-        println!("gf {:?}", self.gfs_current());
+        self.recalculate_compartments(&step);
     }
 
     pub fn ceiling(&self) -> Depth {
@@ -71,7 +69,7 @@ impl ZHLModel {
         self.compartments = compartments;
     }
 
-    fn recalculate_compartments(&mut self, step: Step) {
+    fn recalculate_compartments(&mut self, step: &Step) {
         for compartment in self.compartments.iter_mut() {
             compartment.recalculate(&step);
         }
@@ -116,12 +114,13 @@ mod tests {
 
         let air = Gas::new(0.21);
         let test_depth = 50.;
-        let test_time_minutes = 100;
+        let test_time_minutes: usize = 100;
 
         model1.step(&test_depth, &(test_time_minutes * 60), &air);
 
-        for _i in 1..=test_time_minutes {
-            model2.step(&test_depth, &(1 * 60), &air);
+        // step every second
+        for _i in 1..=(test_time_minutes * 60) {
+            model2.step(&test_depth, &1, &air);
         }
 
         assert_eq!(model1.ceiling().floor(), model2.ceiling().floor());

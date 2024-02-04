@@ -28,15 +28,15 @@ impl Compartment {
     }
 
     pub fn recalculate(&mut self, step: &Step) {
-        self.inert_pressure = self.calc_compartment_inert_pressure(step);
+        self.inert_pressure = self.calc_compartment_inert_pressure(&step);
         self.min_tolerable_amb_pressure = self.calc_min_tolerable_pressure();
     }
 
     pub fn calc_compartment_inert_pressure(&self, step: &Step) -> Pressure {
-        let Step { depth, time, gas  } = step;
-        let GasPP { n2, .. } = gas.partial_pressures(**depth);
+        let Step { depth, time, gas  } = *step;
+        let GasPP { n2, .. } = gas.partial_pressures(depth);
         let (half_time, ..) = self.params;
-        let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f64.powf(-((*time / 60) as f64) / half_time)));
+        let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f64.powf(-((*time as f64 / 60.)) / half_time)));
         self.inert_pressure + p_comp_delta
     }
 

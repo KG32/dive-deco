@@ -24,7 +24,7 @@ impl Gas {
         }
     }
 
-    pub fn partial_pressures(&self, depth: Depth) -> GasPP {
+    pub fn partial_pressures(&self, depth: &Depth) -> GasPP {
         let gas_pressure = 1. + (depth / 10.);
 
         GasPP {
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn test_partial_pressures() {
         let air = Gas::new(0.21);
-        let partial_pressures = air.partial_pressures(10.);
+        let partial_pressures = air.partial_pressures(&10.);
         assert_eq!(partial_pressures, GasPP { o2: 0.42, n2: 1.58 });
     }
 }
