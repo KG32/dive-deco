@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_ceiling() {
         let mut model = DecoModel::new();
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
         model.step(&40., &(30 * 60), &air);
         model.step(&30., &(30 * 60), &air);
         let calculated_ceiling = model.ceiling();
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn test_gfs() {
         let mut model = DecoModel::new();
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
 
         model.step(&50., &(20 * 60), &air);
         assert_eq!(model.gfs_current(), (-46.50440176081318, 198.13842597008946));
@@ -115,7 +115,7 @@ mod tests {
         let mut model1 = DecoModel::new();
         let mut model2 = DecoModel::new();
 
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
         let test_depth = 50.;
         let test_time_minutes: usize = 100;
 

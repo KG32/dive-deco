@@ -13,9 +13,12 @@ pub struct GasPP {
 }
 
 impl Gas {
-    pub fn new(o2_pp: Pressure) -> Gas {
+    pub fn new(o2_pp: Pressure, he_pp: Pressure) -> Gas {
         if !(0. ..=1.).contains(&o2_pp) {
             panic!("Invalid O2 partial pressure");
+        }
+        if he_pp != 0. {
+            panic!("Helium not supported");
         }
 
         Gas {
@@ -41,7 +44,7 @@ mod tests {
 
     #[test]
     fn test_valid_gas() {
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
         assert_eq!(air.o2_pp, 0.21);
         assert_eq!(air.n2_pp, 0.79);
     }
@@ -49,18 +52,18 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_invalid_o2_high() {
-        Gas::new(1.1);
+        Gas::new(1.1, 0.);
     }
 
     #[test]
     #[should_panic]
     fn test_invalid_o2_low() {
-        Gas::new(-3.);
+        Gas::new(-3., 0.);
     }
 
     #[test]
     fn test_partial_pressures() {
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
         let partial_pressures = air.partial_pressures(&10.);
         assert_eq!(partial_pressures, GasPP { o2: 0.42, n2: 1.58 });
     }

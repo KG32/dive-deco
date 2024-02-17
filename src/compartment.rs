@@ -71,7 +71,7 @@ mod tests {
     fn test_recalculation_ongassing() {
         let cpt_5_params = (27., 0.6200, 0.8126);
         let mut cpt_5 = Compartment::new(5, cpt_5_params);
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
         let step = Step { depth: &30., time: &(10 * 60), gas: &air };
         cpt_5.recalculate(&step);
         assert_eq!(cpt_5.inert_pressure, 1.3266062140854773);
@@ -81,7 +81,7 @@ mod tests {
     fn test_min_pressure_calculation() {
         let cpt_5_params = (27., 0.6200, 0.8126);
         let mut cpt_5 = Compartment::new(5, cpt_5_params);
-        let air = Gas::new(0.21);
+        let air = Gas::new(0.21, 0.);
         let step = Step { depth: &30., time: &(10 * 60), gas: &air };
         cpt_5.recalculate(&step);
         let min_tolerable_pressure = cpt_5.min_tolerable_amb_pressure;
