@@ -1,7 +1,6 @@
-use crate::global_types::Pressure;
-use crate::zhl_values::ZHLParams;
-use crate::gas::GasPP;
-use crate::step::Step;
+use crate::common::{GasPP, Pressure, Step};
+use super::zhl_values::ZHLParams;
+
 
 #[derive(Debug, PartialEq)]
 pub struct Compartment {
@@ -50,7 +49,7 @@ impl Compartment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gas::*;
+    use crate::common::Gas;
 
     #[test]
     fn test_constructor() {

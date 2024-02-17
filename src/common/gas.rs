@@ -1,4 +1,4 @@
-use crate::global_types::{Pressure, Depth};
+use crate::common::global_types::{Pressure, Depth};
 
 #[derive(Debug)]
 pub struct Gas {

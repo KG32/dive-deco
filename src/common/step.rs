@@ -1,5 +1,4 @@
-use crate::global_types::{Depth,Seconds};
-use crate::gas::Gas;
+use crate::common::{Depth,Seconds,Gas};
 
 #[derive(Debug)]
 pub struct Step<'a> {

@@ -1,17 +1,15 @@
-use crate::compartment::Compartment;
-use crate::step::Step;
-use crate::global_types::{Depth, Seconds, Pressure};
-use crate::zhl_values::{ZHL16C_VALUES, ZHLParams};
-use crate::gas::Gas;
+use crate::buehlmann::compartment::Compartment;
+use crate::common::{Gas, Step, Depth, Seconds, Pressure};
+use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
 
-pub struct DecoModel {
+pub struct BuehlmannModel {
     compartments: Vec<Compartment>,
     depth: Depth,
 }
 
-impl DecoModel {
-    pub fn new() -> DecoModel {
-        let mut model = DecoModel {
+impl BuehlmannModel {
+    pub fn new() -> BuehlmannModel {
+        let mut model = BuehlmannModel {
             compartments: vec![],
             depth: 0.,
         };
@@ -86,11 +84,11 @@ impl DecoModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gas::Gas;
+    use crate::common::Gas;
 
     #[test]
     fn test_ceiling() {
-        let mut model = DecoModel::new();
+        let mut model = BuehlmannModel::new();
         let air = Gas::new(0.21, 0.);
         model.step(&40., &(30 * 60), &air);
         model.step(&30., &(30 * 60), &air);
@@ -100,7 +98,7 @@ mod tests {
 
     #[test]
     fn test_gfs() {
-        let mut model = DecoModel::new();
+        let mut model = BuehlmannModel::new();
         let air = Gas::new(0.21, 0.);
 
         model.step(&50., &(20 * 60), &air);
@@ -112,8 +110,8 @@ mod tests {
 
     #[test]
     fn test_model_steps_equality() {
-        let mut model1 = DecoModel::new();
-        let mut model2 = DecoModel::new();
+        let mut model1 = BuehlmannModel::new();
+        let mut model2 = BuehlmannModel::new();
 
         let air = Gas::new(0.21, 0.);
         let test_depth = 50.;

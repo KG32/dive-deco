@@ -1,11 +1,6 @@
-mod deco_model;
-mod zhl_values;
-mod gas;
-mod global_types;
-mod compartment;
-mod step;
+mod common;
+mod buehlmann;
 
-pub use deco_model::DecoModel;
-pub use gas::Gas;
-pub use global_types::{Depth, Seconds, Pressure};
-pub use step::Step;
+pub use common::{Gas, Step, Depth, Seconds, Pressure};
+
+pub use buehlmann::BuehlmannModel;
