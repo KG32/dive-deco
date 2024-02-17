@@ -1,15 +1,11 @@
-pub mod model;
-pub mod zhl_16_values;
-pub mod gas;
-pub mod global_types;
-pub mod compartment;
-pub mod step;
+mod deco_model;
+mod zhl_values;
+mod gas;
+mod global_types;
+mod compartment;
+mod step;
 
-use model::ZHLModel;
-use zhl_16_values::zhl_16_values;
-
-pub fn zhl16c() -> ZHLModel {
-    let zhl16_values = zhl_16_values();
-
-    ZHLModel::new(zhl16_values.to_vec())
-}
+pub use deco_model::DecoModel;
+pub use gas::Gas;
+pub use global_types::{Depth, Seconds, Pressure};
+pub use step::Step;

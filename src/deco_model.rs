@@ -1,34 +1,37 @@
 use crate::compartment::Compartment;
 use crate::step::Step;
 use crate::global_types::{Depth, Seconds, Pressure};
-use crate::zhl_16_values::ZHLParams;
+use crate::zhl_values::{ZHL16C_VALUES, ZHLParams};
 use crate::gas::Gas;
 
-pub struct ZHLModel {
+pub struct DecoModel {
     compartments: Vec<Compartment>,
     depth: Depth,
 }
 
-impl ZHLModel {
-    pub fn new(zhl_values: Vec<ZHLParams>) -> ZHLModel {
-        let mut model = ZHLModel {
+impl DecoModel {
+    pub fn new() -> DecoModel {
+        let mut model = DecoModel {
             compartments: vec![],
             depth: 0.,
         };
-        model.create_compartments(zhl_values);
+        model.create_compartments(ZHL16C_VALUES);
 
         model
     }
 
+    /// model step: depth (meters), time (seconds), gas
     pub fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         let step = Step { depth, time, gas };
         self.depth = *step.depth;
         self.recalculate_compartments(&step);
     }
 
+    /// current deco ceiling
     pub fn ceiling(&self) -> Depth {
         let leading_cpt: &Compartment = self.leading_cpt();
         let mut ceil = (leading_cpt.min_tolerable_amb_pressure - 1.) * 10.;
+        // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
         if ceil < 0. {
             ceil = 0.;
         }
@@ -36,10 +39,13 @@ impl ZHLModel {
         ceil
     }
 
+    /// set of current gradient factors (GF now, GF surface)
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
         let leading_cpt = self.leading_cpt();
+        // surface pressure assumed 1ATA
         let p_surf = 1.;
         let p_amb = p_surf + (&self.depth / 10.);
+        // ZHL params coefficients
         let (_, a_coeff, b_coeff) = leading_cpt.params;
         let m_value = a_coeff + (p_amb / b_coeff);
         let m_value_surf = a_coeff + (p_surf / b_coeff);
@@ -60,7 +66,7 @@ impl ZHLModel {
         leading_cpt
     }
 
-    fn create_compartments(&mut self, zhl_values: Vec<ZHLParams>) {
+    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16]) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
             let compartment = Compartment::new(i + 1, comp_values);
@@ -81,11 +87,10 @@ impl ZHLModel {
 mod tests {
     use super::*;
     use crate::gas::Gas;
-    use crate::zhl_16_values::*;
 
     #[test]
     fn test_ceiling() {
-        let mut model = ZHLModel::new(zhl_16_values().to_vec());
+        let mut model = DecoModel::new();
         let air = Gas::new(0.21);
         model.step(&40., &(30 * 60), &air);
         model.step(&30., &(30 * 60), &air);
@@ -95,22 +100,20 @@ mod tests {
 
     #[test]
     fn test_gfs() {
-        let mut model = ZHLModel::new(zhl_16_values().to_vec());
+        let mut model = DecoModel::new();
         let air = Gas::new(0.21);
 
-        // model.step(&Step { depth: &50., time: &20., gas: &air });
         model.step(&50., &(20 * 60), &air);
         assert_eq!(model.gfs_current(), (-46.50440176081318, 198.13842597008946));
 
-        // model.step(&Step { depth: &40., time: &10., gas: &air });
         model.step(&40., &(10 * 60), &air);
         assert_eq!(model.gfs_current(), (-48.28027926904754, 213.03171209358845));
     }
 
     #[test]
     fn test_model_steps_equality() {
-        let mut model1 = ZHLModel::new(zhl_16_values().to_vec());
-        let mut model2 = ZHLModel::new(zhl_16_values().to_vec());
+        let mut model1 = DecoModel::new();
+        let mut model2 = DecoModel::new();
 
         let air = Gas::new(0.21);
         let test_depth = 50.;
