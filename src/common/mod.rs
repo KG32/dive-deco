@@ -1,7 +1,9 @@
+mod deco_model;
 mod gas;
 mod global_types;
 mod step;
 
+pub use deco_model::DecoModel;
 pub use gas::{Gas, GasPP};
 pub use global_types::{Depth, Pressure, Seconds};
 pub use step::Step;

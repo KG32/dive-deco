@@ -1,5 +1,5 @@
 use crate::buehlmann::compartment::Compartment;
-use crate::common::{Gas, Step, Depth, Seconds, Pressure};
+use crate::common::{DecoModel, Depth, Gas, Pressure, Seconds, Step};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
 
 pub struct BuehlmannModel {
@@ -7,8 +7,8 @@ pub struct BuehlmannModel {
     depth: Depth,
 }
 
-impl BuehlmannModel {
-    pub fn new() -> BuehlmannModel {
+impl DecoModel for BuehlmannModel {
+    fn new() -> BuehlmannModel {
         let mut model = BuehlmannModel {
             compartments: vec![],
             depth: 0.,
@@ -19,14 +19,14 @@ impl BuehlmannModel {
     }
 
     /// model step: depth (meters), time (seconds), gas
-    pub fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
+    fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         let step = Step { depth, time, gas };
         self.depth = *step.depth;
         self.recalculate_compartments(&step);
     }
 
     /// current deco ceiling
-    pub fn ceiling(&self) -> Depth {
+    fn ceiling(&self) -> Depth {
         let leading_cpt: &Compartment = self.leading_cpt();
         let mut ceil = (leading_cpt.min_tolerable_amb_pressure - 1.) * 10.;
         // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
@@ -36,7 +36,9 @@ impl BuehlmannModel {
 
         ceil
     }
+}
 
+impl BuehlmannModel {
     /// set of current gradient factors (GF now, GF surface)
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
         let leading_cpt = self.leading_cpt();

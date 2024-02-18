@@ -1,5 +1,5 @@
 mod zhl_values;
 mod compartment;
-mod deco_model;
+mod buehlmann_model;
 
-pub use deco_model::BuehlmannModel;
+pub use buehlmann_model::BuehlmannModel;
