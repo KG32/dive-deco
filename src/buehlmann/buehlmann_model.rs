@@ -8,6 +8,7 @@ pub struct BuehlmannModel {
 }
 
 impl DecoModel for BuehlmannModel {
+    /// initialize new Buehlmann (ZH-L16C) model with GF 100/100
     fn new() -> BuehlmannModel {
         let mut model = BuehlmannModel {
             compartments: vec![],
@@ -22,10 +23,9 @@ impl DecoModel for BuehlmannModel {
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         let step = Step { depth, time, gas };
         self.depth = *step.depth;
-        self.recalculate_compartments(&step);
+        self.recalculate_compartments(step);
     }
 
-    /// current deco ceiling
     fn ceiling(&self) -> Depth {
         let leading_cpt: &Compartment = self.leading_cpt();
         let mut ceil = (leading_cpt.min_tolerable_amb_pressure - 1.) * 10.;
@@ -75,7 +75,7 @@ impl BuehlmannModel {
         self.compartments = compartments;
     }
 
-    fn recalculate_compartments(&mut self, step: &Step) {
+    fn recalculate_compartments(&mut self, step: Step) {
         for compartment in self.compartments.iter_mut() {
             compartment.recalculate(&step);
         }
