@@ -1,6 +1,6 @@
 use crate::common::global_types::{Pressure, Depth};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Gas {
     o2_pp: Pressure,
     n2_pp: Pressure,

@@ -1,11 +1,11 @@
 [package]
 name = "dive-deco"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
-description = "A dive decompression models library (Buehlmann ZH-L 16 C)"
+description = "A dive decompression models library (Buehlmann ZH-L 16C)"
 repository = "https://github.com/KG32/dive-deco.git"
-keywords = ["scuba", "diving", "decompression", "algorithm", "Buehlmann"]
+keywords = ["scuba", "diving", "decompression", "Buhlmann", "Buehlmann"]
 categories = ["algorithms", "simulation", "science"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

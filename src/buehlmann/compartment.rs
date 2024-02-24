@@ -2,7 +2,7 @@ use crate::common::{GasPP, Pressure, Step};
 use super::zhl_values::ZHLParams;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Compartment {
     pub no: usize,
     pub min_tolerable_amb_pressure: Pressure,

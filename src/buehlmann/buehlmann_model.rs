@@ -1,10 +1,14 @@
 use crate::buehlmann::compartment::Compartment;
-use crate::common::{DecoModel, Depth, Gas, Pressure, Seconds, Step};
+use crate::common::{DecoModel, Depth, Gas, Pressure, Seconds, Step, Minutes};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
+
+const NDL_CUT_OFF_MINS: Minutes = 99;
 
 pub struct BuehlmannModel {
     compartments: Vec<Compartment>,
     depth: Depth,
+    time: Seconds,
+    gas: Gas,
 }
 
 impl DecoModel for BuehlmannModel {
@@ -13,6 +17,8 @@ impl DecoModel for BuehlmannModel {
         let mut model = BuehlmannModel {
             compartments: vec![],
             depth: 0.,
+            time: 0,
+            gas: Gas::new(0.21, 0.),
         };
         model.create_compartments(ZHL16C_VALUES);
 
@@ -23,7 +29,26 @@ impl DecoModel for BuehlmannModel {
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         let step = Step { depth, time, gas };
         self.depth = *step.depth;
+        self.gas = *step.gas;
         self.recalculate_compartments(step);
+    }
+
+    fn ndl(&self) -> Minutes {
+        let mut ndl: Minutes = Minutes::MAX;
+
+        // create a simulation model based on current model's state
+        let mut sim_model = self.fork();
+
+        // iterate simulation model over 1min steps until NDL cut-off or in deco
+        for i in 0..NDL_CUT_OFF_MINS {
+            sim_model.step(&self.depth, &60, &self.gas);
+            if sim_model.is_deco() {
+                ndl = i;
+                break;
+            }
+        }
+
+        ndl
     }
 
     fn ceiling(&self) -> Depth {
@@ -80,6 +105,19 @@ impl BuehlmannModel {
             compartment.recalculate(&step);
         }
     }
+
+    fn fork(&self) -> BuehlmannModel {
+        BuehlmannModel {
+            compartments: self.compartments.clone(),
+            depth: self.depth,
+            time: self.time,
+            gas: self.gas,
+        }
+    }
+
+    fn is_deco(&self) -> bool {
+        self.ceiling() > 0.
+    }
 }
 
 
@@ -132,5 +170,48 @@ mod tests {
         let (model2_gf_now, model2_gf_surf) = model1.gfs_current();
         assert_eq!(model1_gf_now.floor(), model2_gf_now.floor());
         assert_eq!(model1_gf_surf.floor(), model2_gf_surf.floor());
+    }
+
+    #[test]
+    fn test_ndl_calculation() {
+        let mut model = BuehlmannModel::new();
+        let air = Gas::new(0.21, 0.);
+        let depth = 30.;
+
+        // expect NDL 15
+        model.step(&depth, &0, &air);
+        assert_eq!(model.ndl(), 15);
+
+        // expect NDL 14 after 1 min
+        model.step(&depth, &(1*60), &air);
+        assert_eq!(model.ndl(), 14);
+    }
+
+    #[test]
+    fn test_ndl_cut_off() {
+        let mut model = BuehlmannModel::new();
+        let air = Gas::new(0.21, 0.);
+
+        model.step(&0., &0, &air);
+        assert_eq!(model.ndl(), Minutes::MAX);
+
+        model.step(&10., &(10*60), &air);
+        assert_eq!(model.ndl(), Minutes::MAX);
+    }
+
+    #[test]
+    fn test_multi_gas_ndl() {
+        let mut model = BuehlmannModel::new();
+        let depth = 20.;
+        let air = Gas::new(0.21, 0.);
+        let nx_32 = Gas::new(0.32, 0.);
+
+        // @todo verify too conservative?
+
+        model.step(&depth, &(30 * 60), &air);
+        assert_eq!(model.ndl(), 11);
+
+        model.step(&depth, &(20 * 60), &nx_32);
+        assert_eq!(model.ndl(), 8);
     }
 }
