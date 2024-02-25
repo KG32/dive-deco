@@ -14,11 +14,14 @@ pub struct BuehlmannModel {
 impl DecoModel for BuehlmannModel {
     /// initialize new Buehlmann (ZH-L16C) model with GF 100/100
     fn new() -> BuehlmannModel {
+        // air as a default init gas
+        let air = Gas::new(0.21, 0.);
+
         let mut model = BuehlmannModel {
             compartments: vec![],
             depth: 0.,
             time: 0,
-            gas: Gas::new(0.21, 0.),
+            gas: air,
         };
         model.create_compartments(ZHL16C_VALUES);
 
@@ -27,9 +30,9 @@ impl DecoModel for BuehlmannModel {
 
     /// model step: depth (meters), time (seconds), gas
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
+        self.depth = *depth;
+        self.gas = *gas;
         let step = Step { depth, time, gas };
-        self.depth = *step.depth;
-        self.gas = *step.gas;
         self.recalculate_compartments(step);
     }
 
