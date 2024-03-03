@@ -1,5 +1,8 @@
 use crate::common::global_types::{Pressure, Depth};
 
+// alveolar water vapor pressure assuming 47 mm Hg at 37C (Buehlmann's value)
+const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Gas {
     o2_pp: Pressure,
@@ -8,7 +11,7 @@ pub struct Gas {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct GasPP {
+pub struct PartialPressures {
     pub o2: Pressure,
     pub n2: Pressure,
     pub he: Pressure,
@@ -16,8 +19,8 @@ pub struct GasPP {
 
 impl Gas {
     /// init new gas with partial pressures (eg. 0.21, 0. for air)
-    /// helium currently not supported
-    pub fn new(o2_pp: Pressure, he_pp: Pressure) -> Gas {
+    /// helium not supported yet
+    pub fn new(o2_pp: Pressure, he_pp: Pressure) -> Self {
         if !(0. ..=1.).contains(&o2_pp) {
             panic!("Invalid O2 partial pressure");
         }
@@ -32,16 +35,27 @@ impl Gas {
             panic!("Helium not supported");
         }
 
-        Gas {
+        Self {
             o2_pp,
             he_pp,
             n2_pp: 1. - (o2_pp + he_pp),
         }
     }
 
-    pub fn partial_pressures(&self, depth: &Depth) -> GasPP {
+    /// gas partial pressures
+    pub fn partial_pressures(&self, depth: &Depth) -> PartialPressures {
         let gas_pressure = 1. + (depth / 10.);
-        GasPP {
+        self.gas_pressures_compound(gas_pressure)
+    }
+
+    /// gas partial pressures in alveoli taking into account alveolar water vapor pressure
+    pub fn inspired_partial_pressures(&self, depth: &Depth) -> PartialPressures {
+        let gas_pressure = (1. + (depth / 10.)) - ALVEOLI_WATER_VAPOR_PRESSURE;
+        self.gas_pressures_compound(gas_pressure)
+    }
+
+    fn gas_pressures_compound(&self, gas_pressure: f64) -> PartialPressures {
+        PartialPressures {
             o2: self.o2_pp * gas_pressure,
             n2: self.n2_pp * gas_pressure,
             he: self.he_pp * gas_pressure,
@@ -99,6 +113,13 @@ mod tests {
     fn test_partial_pressures() {
         let air = Gas::new(0.21, 0.);
         let partial_pressures = air.partial_pressures(&10.);
-        assert_eq!(partial_pressures, GasPP { o2: 0.42, n2: 1.58, he: 0. });
+        assert_eq!(partial_pressures, PartialPressures { o2: 0.42, n2: 1.58, he: 0. });
+    }
+
+    #[test]
+    fn test_inspired_partial_pressures() {
+        let air = Gas::new(0.21, 0.);
+        let inspired_partial_pressures = air.inspired_partial_pressures(&10.);
+        assert_eq!(inspired_partial_pressures, PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 });
     }
 }

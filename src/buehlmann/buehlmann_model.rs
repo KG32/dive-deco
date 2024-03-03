@@ -13,11 +13,11 @@ pub struct BuehlmannModel {
 
 impl DecoModel for BuehlmannModel {
     /// initialize new Buehlmann (ZH-L16C) model with GF 100/100
-    fn new() -> BuehlmannModel {
+    fn new() -> Self {
         // air as a default init gas
         let air = Gas::new(0.21, 0.);
 
-        let mut model = BuehlmannModel {
+        let mut model = Self {
             compartments: vec![],
             depth: 0.,
             time: 0,
@@ -136,7 +136,7 @@ mod tests {
         model.step(&40., &(30 * 60), &air);
         model.step(&30., &(30 * 60), &air);
         let calculated_ceiling = model.ceiling();
-        assert_eq!(calculated_ceiling, 8.207311225723817);
+        assert_eq!(calculated_ceiling, 7.860647737614171);
     }
 
     #[test]
@@ -145,10 +145,10 @@ mod tests {
         let air = Gas::new(0.21, 0.);
 
         model.step(&50., &(20 * 60), &air);
-        assert_eq!(model.gfs_current(), (-46.50440176081318, 198.13842597008946));
+        assert_eq!(model.gfs_current(), (-47.472755948806224, 195.48223043242453));
 
         model.step(&40., &(10 * 60), &air);
-        assert_eq!(model.gfs_current(), (-48.28027926904754, 213.03171209358845));
+        assert_eq!(model.gfs_current(), (-49.721821631139136, 209.81072496423172));
     }
 
     #[test]
@@ -181,13 +181,13 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let depth = 30.;
 
-        // expect NDL 15
+        // with 21/00 at 30m expect NDL 16
         model.step(&depth, &0, &air);
-        assert_eq!(model.ndl(), 15);
+        assert_eq!(model.ndl(), 16);
 
-        // expect NDL 14 after 1 min
+        // expect NDL 15 after 1 min
         model.step(&depth, &(1*60), &air);
-        assert_eq!(model.ndl(), 14);
+        assert_eq!(model.ndl(), 15);
     }
 
     #[test]
@@ -205,16 +205,16 @@ mod tests {
     #[test]
     fn test_multi_gas_ndl() {
         let mut model = BuehlmannModel::new();
-        let depth = 20.;
         let air = Gas::new(0.21, 0.);
-        let nx_32 = Gas::new(0.32, 0.);
+        let ean_28 = Gas::new(0.28, 0.);
 
-        // @todo verify too conservative?
+        model.step(&30., &(0 * 60), &air);
+        assert_eq!(model.ndl(), 16);
 
-        model.step(&depth, &(30 * 60), &air);
-        assert_eq!(model.ndl(), 11);
+        model.step(&30., &(10 * 60), &air);
+        assert_eq!(model.ndl(), 6);
 
-        model.step(&depth, &(20 * 60), &nx_32);
-        assert_eq!(model.ndl(), 8);
+        model.step(&30., &(0 * 60), &ean_28);
+        assert_eq!(model.ndl(), 9);
     }
 }
