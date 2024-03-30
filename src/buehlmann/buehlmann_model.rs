@@ -1,5 +1,5 @@
 use crate::buehlmann::compartment::Compartment;
-use crate::common::{DecoModel, Depth, Gas, Pressure, Seconds, Step, Minutes};
+use crate::common::{DecoModel, DecoModelConfig, Depth, Gas, Minutes, Pressure, Seconds, Step};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 
@@ -9,6 +9,11 @@ const NDL_CUT_OFF_MINS: Minutes = 99;
 pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
+    state: ModelState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ModelState {
     depth: Depth,
     time: Seconds,
     gas: Gas,
@@ -17,18 +22,29 @@ pub struct BuehlmannModel {
 impl DecoModel for BuehlmannModel {
     type ConfigType = BuehlmannConfig;
 
-    /// initialize new Buehlmann (ZH-L16C) model with GF 100/100
+    /// initialize new Buehlmann (ZH-L16C) model with gradient factors
     fn new(config: BuehlmannConfig) -> Self {
+        // validate config
+        match config.validate() {
+            Err(e) => panic!("Config error [{}]: {}", e.field, e.reason),
+            _ => ()
+        }
+
         // air as a default init gas
         let air = Gas::new(0.21, 0.);
 
-        let mut model = Self {
-            config,
-            compartments: vec![],
+        let initial_model_state = ModelState {
             depth: 0.,
             time: 0,
             gas: air,
         };
+
+        let mut model = Self {
+            config,
+            compartments: vec![],
+            state: initial_model_state
+        };
+
         model.create_compartments(ZHL16C_VALUES);
 
         model
@@ -36,8 +52,9 @@ impl DecoModel for BuehlmannModel {
 
     /// model step: depth (meters), time (seconds), gas
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
-        self.depth = *depth;
-        self.gas = *gas;
+        self.state.depth = *depth;
+        self.state.gas = *gas;
+        self.state.time = self.state.time + time;
         let step = Step { depth, time, gas };
         self.recalculate_compartments(step);
     }
@@ -50,7 +67,7 @@ impl DecoModel for BuehlmannModel {
 
         // iterate simulation model over 1min steps until NDL cut-off or in deco
         for i in 0..NDL_CUT_OFF_MINS {
-            sim_model.step(&self.depth, &60, &self.gas);
+            sim_model.step(&self.state.depth, &60, &self.state.gas);
             if sim_model.is_deco() {
                 ndl = i;
                 break;
@@ -94,7 +111,7 @@ impl BuehlmannModel {
     fn gfs_for_compartment(&self, cpt: &Compartment) -> (Pressure, Pressure) {
         // surface pressure assumed 1ATA
         let p_surf = 1.;
-        let p_amb = p_surf + (&self.depth / 10.);
+        let p_amb = p_surf + (&self.state.depth / 10.);
         // ZHL params coefficients
         let (_, a_coeff, b_coeff) = cpt.params;
         let m_value = a_coeff + (p_amb / b_coeff);
@@ -135,9 +152,7 @@ impl BuehlmannModel {
         BuehlmannModel {
             config: self.config.clone(),
             compartments: self.compartments.clone(),
-            depth: self.depth,
-            time: self.time,
-            gas: self.gas,
+            state: self.state.clone(),
         }
     }
 
@@ -151,6 +166,16 @@ impl BuehlmannModel {
 mod tests {
     use super::*;
     use crate::common::Gas;
+
+    #[test]
+    fn test_state() {
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+        let air = Gas::new(0.21, 0.);
+        let nx32 = Gas::new(0.32, 0.);
+        model.step(&10., &(10 * 60), &air);
+        model.step(&15., &(15 * 60), &nx32);
+        assert_eq!(model.state, ModelState { depth: 15., time: (25 * 60), gas: nx32 });
+    }
 
     #[test]
     fn test_ceiling() {

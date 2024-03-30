@@ -1,9 +1,26 @@
 use crate::common::{Depth, Gas, Seconds, Minutes};
 
-pub trait SupportedConfigType {}
+#[derive(Debug, PartialEq)]
+pub struct ConfigValidationErr<'a> {
+    pub field: &'a str,
+    pub reason: &'a str,
+}
+
+impl<'a> ConfigValidationErr<'a> {
+    pub fn new(field: &'a str, reason: &'a str) -> Self {
+        Self {
+            field,
+            reason
+        }
+    }
+}
+
+pub trait DecoModelConfig {
+    fn validate(&self) -> Result<(), ConfigValidationErr>;
+}
 
 pub trait DecoModel {
-    type ConfigType: SupportedConfigType;
+    type ConfigType: DecoModelConfig;
 
     /// model init
     fn new(config: Self::ConfigType) -> Self;
