@@ -1,10 +1,13 @@
 use crate::buehlmann::compartment::Compartment;
 use crate::common::{DecoModel, Depth, Gas, Pressure, Seconds, Step, Minutes};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
+use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
+#[derive(Debug)]
 pub struct BuehlmannModel {
+    config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     depth: Depth,
     time: Seconds,
@@ -12,12 +15,15 @@ pub struct BuehlmannModel {
 }
 
 impl DecoModel for BuehlmannModel {
+    type ConfigType = BuehlmannConfig;
+
     /// initialize new Buehlmann (ZH-L16C) model with GF 100/100
-    fn new() -> Self {
+    fn new(config: BuehlmannConfig) -> Self {
         // air as a default init gas
         let air = Gas::new(0.21, 0.);
 
         let mut model = Self {
+            config,
             compartments: vec![],
             depth: 0.,
             time: 0,
@@ -127,6 +133,7 @@ impl BuehlmannModel {
 
     fn fork(&self) -> BuehlmannModel {
         BuehlmannModel {
+            config: self.config.clone(),
             compartments: self.compartments.clone(),
             depth: self.depth,
             time: self.time,
@@ -147,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_ceiling() {
-        let mut model = BuehlmannModel::new();
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         model.step(&40., &(30 * 60), &air);
         model.step(&30., &(30 * 60), &air);
@@ -157,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_gfs() {
-        let mut model = BuehlmannModel::new();
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
 
         model.step(&50., &(20 * 60), &air);
@@ -169,8 +176,8 @@ mod tests {
 
     #[test]
     fn test_model_steps_equality() {
-        let mut model1 = BuehlmannModel::new();
-        let mut model2 = BuehlmannModel::new();
+        let mut model1 = BuehlmannModel::new(BuehlmannConfig::default());
+        let mut model2 = BuehlmannModel::new(BuehlmannConfig::default());
 
         let air = Gas::new(0.21, 0.);
         let test_depth = 50.;
@@ -193,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_ndl_calculation() {
-        let mut model = BuehlmannModel::new();
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let depth = 30.;
 
@@ -208,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_ndl_cut_off() {
-        let mut model = BuehlmannModel::new();
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
 
         model.step(&0., &0, &air);
@@ -220,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_multi_gas_ndl() {
-        let mut model = BuehlmannModel::new();
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let ean_28 = Gas::new(0.28, 0.);
 

@@ -1,8 +1,12 @@
 use crate::common::{Depth, Gas, Seconds, Minutes};
 
+pub trait SupportedConfigType {}
+
 pub trait DecoModel {
+    type ConfigType: SupportedConfigType;
+
     /// model init
-    fn new() -> Self;
+    fn new(config: Self::ConfigType) -> Self;
 
     /// add register step (depth: meters, time: seconds)
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas);

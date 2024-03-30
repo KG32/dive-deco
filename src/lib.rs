@@ -3,4 +3,4 @@ mod buehlmann;
 
 pub use common::{DecoModel, Gas, Depth, Seconds, Pressure};
 
-pub use buehlmann::BuehlmannModel;
+pub use buehlmann::{BuehlmannModel, BuehlmannConfig};
