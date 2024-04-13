@@ -1,4 +1,4 @@
-use crate::{common::{Gas, GradientFactors, PartialPressures, Pressure, Step}, BuehlmannConfig};
+use crate::common::{GradientFactors, PartialPressures, Pressure, Step};
 use super::zhl_values::ZHLParams;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -47,11 +47,10 @@ impl Compartment {
         let (_, a_coefficient, b_coefficient) = &self.params;
         let (_gf_lo, gf_hi) = gf;
         let gf_hi_fraction = gf_hi as f64 / 100.;
-        let a2 = a_coefficient * gf_hi_fraction;
-        let b2 = b_coefficient / (gf_hi_fraction - (gf_hi_fraction * b_coefficient) + b_coefficient);
-        let m_value = (self.inert_pressure - a2) * b2;
+        let a_coefficient_adjusted = a_coefficient * gf_hi_fraction;
+        let b_coefficient_adjusted = b_coefficient / (gf_hi_fraction - (gf_hi_fraction * b_coefficient) + b_coefficient);
 
-        m_value
+        (self.inert_pressure - a_coefficient_adjusted) * b_coefficient_adjusted
     }
 }
 

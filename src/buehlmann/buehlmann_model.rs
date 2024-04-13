@@ -25,9 +25,8 @@ impl DecoModel for BuehlmannModel {
     /// initialize new Buehlmann (ZH-L16C) model with gradient factors
     fn new(config: BuehlmannConfig) -> Self {
         // validate config
-        match config.validate() {
-            Err(e) => panic!("Config error [{}]: {}", e.field, e.reason),
-            _ => ()
+        if let Err(e) = config.validate() {
+            panic!("Config error [{}]: {}", e.field, e.reason);
         }
 
         // air as a default init gas
@@ -54,7 +53,7 @@ impl DecoModel for BuehlmannModel {
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
         self.state.depth = *depth;
         self.state.gas = *gas;
-        self.state.time = self.state.time + time;
+        self.state.time += time;
         let step = Step { depth, time, gas };
         self.recalculate_compartments(step);
     }
@@ -68,10 +67,7 @@ impl DecoModel for BuehlmannModel {
         // iterate simulation model over 1min steps until NDL cut-off or in deco
         for i in 0..NDL_CUT_OFF_MINS {
             sim_model.step(&self.state.depth, &60, &self.state.gas);
-
-            println!("{} gfsurf: {} ceil: {}", i, &sim_model.gfs_current().1, &sim_model.ceiling());
-
-            if sim_model.is_deco() {
+            if sim_model.in_deco() {
                 ndl = i;
                 break;
             }
@@ -153,13 +149,13 @@ impl BuehlmannModel {
 
     fn fork(&self) -> BuehlmannModel {
         BuehlmannModel {
-            config: self.config.clone(),
+            config: self.config,
             compartments: self.compartments.clone(),
-            state: self.state.clone(),
+            state: self.state,
         }
     }
 
-    fn is_deco(&self) -> bool {
+    fn in_deco(&self) -> bool {
         self.ceiling() > 0.
     }
 }
