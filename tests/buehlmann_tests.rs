@@ -94,8 +94,7 @@ fn test_multi_gas_ndl() {
 
 #[test]
 fn test_ndl_with_gf() {
-    let g = 70;
-    let mut model = BuehlmannModel::new(BuehlmannConfig { gf: (g, g )});
+    let mut model = BuehlmannModel::new(BuehlmannConfig { gf: (70, 70 )});
 
     let air = Gas::new(0.21, 0.);
 

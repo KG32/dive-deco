@@ -14,6 +14,7 @@ impl Compartment {
     pub fn new(
         no: usize,
         params: ZHLParams,
+        gf_config: GradientFactors,
     ) -> Self {
         let mut compartment = Self {
             no,
@@ -22,8 +23,10 @@ impl Compartment {
             min_tolerable_inert_pressure: -0.,
             min_tolerable_amb_pressure: -0.,
         };
-        // @todo initial calc with GF
-        compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_amb_pressure((100, 100));
+
+        // calculate initial minimal tolerable ambient pressure
+        let (gf_low, gf_high) = gf_config;
+        compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_amb_pressure((gf_low, gf_high));
 
         compartment
     }
@@ -31,7 +34,6 @@ impl Compartment {
     pub fn recalculate(&mut self, step: &Step, gf: GradientFactors) {
         self.inert_pressure = self.calc_compartment_inert_pressure(step);
         self.min_tolerable_amb_pressure = self.calc_min_tolerable_amb_pressure(gf);
-        // self.min_tolerable_amb_pressure = self.calc_min_tolerable_inert_pressure(step);
     }
 
     pub fn calc_compartment_inert_pressure(&self, step: &Step) -> Pressure {
@@ -63,7 +65,7 @@ mod tests {
     #[test]
     fn test_constructor() {
         let cpt_1_params = (4., 1.2599, 0.5050);
-        let cpt_1 = Compartment::new(1, cpt_1_params);
+        let cpt_1 = Compartment::new(1, cpt_1_params, (100, 100));
         assert_eq!(
             cpt_1,
             Compartment {
@@ -79,7 +81,7 @@ mod tests {
     #[test]
     fn test_recalculation_ongassing() {
         let cpt_5_params = (27., 0.6200, 0.8126);
-        let mut cpt_5 = Compartment::new(5, cpt_5_params);
+        let mut cpt_5 = Compartment::new(5, cpt_5_params, (100, 100));
         let air = Gas::new(0.21, 0.);
         let step = Step { depth: &30., time: &(10 * 60), gas: &air };
         cpt_5.recalculate(&step, (100, 100));
@@ -89,7 +91,7 @@ mod tests {
     #[test]
     fn test_min_pressure_calculation() {
         let cpt_5_params = (27., 0.6200, 0.8126);
-        let mut cpt_5 = Compartment::new(5, cpt_5_params);
+        let mut cpt_5 = Compartment::new(5, cpt_5_params, (100, 100));
         let air = Gas::new(0.21, 0.);
         let step = Step { depth: &30., time: &(10 * 60), gas: &air };
         cpt_5.recalculate(&step, (100, 100));
