@@ -5,7 +5,7 @@ use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
@@ -68,6 +68,9 @@ impl DecoModel for BuehlmannModel {
         // iterate simulation model over 1min steps until NDL cut-off or in deco
         for i in 0..NDL_CUT_OFF_MINS {
             sim_model.step(&self.state.depth, &60, &self.state.gas);
+
+            println!("{} gfsurf: {} ceil: {}", i, &sim_model.gfs_current().1, &sim_model.ceiling());
+
             if sim_model.is_deco() {
                 ndl = i;
                 break;
@@ -144,7 +147,7 @@ impl BuehlmannModel {
 
     fn recalculate_compartments(&mut self, step: Step) {
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&step);
+            compartment.recalculate(&step, self.config.gf);
         }
     }
 

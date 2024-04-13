@@ -6,14 +6,6 @@ pub struct ConfigValidationErr<'a> {
     pub reason: &'a str,
 }
 
-impl<'a> ConfigValidationErr<'a> {
-    pub fn new(field: &'a str, reason: &'a str) -> Self {
-        Self {
-            field,
-            reason
-        }
-    }
-}
 
 pub trait DecoModelConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr>;

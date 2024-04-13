@@ -1,5 +1,6 @@
 use dive_deco::{ BuehlmannModel, BuehlmannConfig, DecoModel, Gas, Minutes };
 
+
 #[test]
 fn test_ceiling() {
     let mut model = BuehlmannModel::new(BuehlmannConfig::default());
@@ -88,3 +89,17 @@ fn test_multi_gas_ndl() {
     model.step(&30., &(0 * 60), &ean_28);
     assert_eq!(model.ndl(), 9);
 }
+
+// gradient factors
+
+#[test]
+fn test_ndl_with_gf() {
+    let g = 70;
+    let mut model = BuehlmannModel::new(BuehlmannConfig { gf: (g, g )});
+
+    let air = Gas::new(0.21, 0.);
+
+    model.step(&20., &(0 * 60), &air);
+    assert_eq!(model.ndl(), 21);
+}
+

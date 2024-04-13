@@ -1,4 +1,4 @@
-use crate::common::{DecoModelConfig, ConfigValidationErr};
+use crate::common::{DecoModelConfig, ConfigValidationErr, GradientFactors};
 
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
@@ -10,11 +10,25 @@ impl DecoModelConfig for BuehlmannConfig {
         let gf_range = 1..=100;
 
         if !gf_range.contains(gf_low) || !gf_range.contains(gf_high) {
-            return Err(ConfigValidationErr::new("gf", GF_RANGE_ERR_MSG));
+            return Err(ConfigValidationErr {
+                field: "gf",
+                reason: GF_RANGE_ERR_MSG
+            });
         }
 
         if gf_low > gf_high {
-            return Err(ConfigValidationErr::new("gf", GF_ORDER_ERR_MSG));
+            return Err(ConfigValidationErr {
+                field: "gf",
+                reason: GF_ORDER_ERR_MSG
+            });
+        }
+
+        // TMP - GF low not implemented yet
+        if gf_low != gf_high {
+            return Err(ConfigValidationErr {
+                field: "gf",
+                reason: "Currently only uniform gradient factors supported"
+            });
         }
 
         Ok(())
@@ -31,7 +45,7 @@ impl Default for BuehlmannConfig {
 
 #[derive(Copy, Clone, Debug)]
 pub struct BuehlmannConfig {
-    pub gf: (u8, u8)
+    pub gf: GradientFactors
 }
 
 
@@ -46,8 +60,9 @@ mod tests {
         assert_eq!(config.gf, (100, 100));
     }
 
+    #[ignore = "variable GFs not implemented yet"]
     #[test]
-    fn test_passing_validation() {
+    fn test_variable_gradient_factors() {
         let config = BuehlmannConfig { gf: (30, 70) };
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.gf, (30, 70));
@@ -66,5 +81,11 @@ mod tests {
     fn test_gf_order() {
         let config = BuehlmannConfig { gf: (90, 80) };
         assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: GF_ORDER_ERR_MSG }));
+    }
+
+    #[test]
+    fn test_temporal_uniform_gf_check() {
+        let config = BuehlmannConfig { gf: (30, 70) };
+        assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: "Currently only uniform gradient factors supported"}));
     }
 }
