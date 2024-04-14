@@ -4,7 +4,7 @@ use super::zhl_values::ZHLParams;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Compartment {
     pub no: usize,
-    pub min_tolerable_inert_pressure: Pressure,
+    // pub min_tolerable_inert_pressure: Pressure,
     pub min_tolerable_amb_pressure: Pressure,
     pub inert_pressure: Pressure,
     pub params: ZHLParams,
@@ -20,7 +20,7 @@ impl Compartment {
             no,
             params,
             inert_pressure: 0.79,
-            min_tolerable_inert_pressure: -0.,
+            // min_tolerable_inert_pressure: -0.,
             min_tolerable_amb_pressure: -0.,
         };
 
@@ -72,7 +72,7 @@ mod tests {
                 no: 1,
                 params: cpt_1_params,
                 inert_pressure: 0.79,
-                min_tolerable_inert_pressure: -0.,
+                // min_tolerable_inert_pressure: -0.,
                 min_tolerable_amb_pressure: -0.2372995
             }
         );
