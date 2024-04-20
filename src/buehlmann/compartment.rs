@@ -20,14 +20,14 @@ impl Compartment {
             inert_pressure: 0.79,
             min_tolerable_amb_pressure: -0.,
         };
-        compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_pressure();
+        compartment.min_tolerable_amb_pressure = compartment.calc_min_tol_amb_pressure();
 
         compartment
     }
 
     pub fn recalculate(&mut self, step: &Step) {
         self.inert_pressure = self.calc_compartment_inert_pressure(step);
-        self.min_tolerable_amb_pressure = self.calc_min_tolerable_pressure();
+        self.min_tolerable_amb_pressure = self.calc_min_tol_amb_pressure();
     }
 
     pub fn calc_compartment_inert_pressure(&self, step: &Step) -> Pressure {
@@ -39,7 +39,7 @@ impl Compartment {
         self.inert_pressure + p_comp_delta
     }
 
-    fn calc_min_tolerable_pressure(&self) -> Pressure {
+    fn calc_min_tol_amb_pressure(&self) -> Pressure {
         let (_, a_coefficient, b_coefficient) = &self.params;
         (self.inert_pressure - a_coefficient) * b_coefficient
     }

@@ -69,16 +69,32 @@ impl DecoModel for BuehlmannModel {
 impl BuehlmannModel {
     /// set of current gradient factors (GF now, GF surface)
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
-        let leading_cpt = self.leading_cpt();
+        let mut gf_now = 0.;
+        let mut gf_surf = 0.;
+
+        for cpt in self.compartments.iter() {
+            let (cpt_gf_now, cpt_gf_surf) = self.gfs_for_compartment(&cpt);
+            if cpt_gf_now > gf_now {
+                gf_now = cpt_gf_now;
+            }
+            if cpt_gf_surf > gf_surf {
+                gf_surf = cpt_gf_surf;
+            }
+        }
+
+        (gf_now, gf_surf)
+    }
+
+    fn gfs_for_compartment(&self, cpt: &Compartment) -> (Pressure, Pressure) {
         // surface pressure assumed 1ATA
         let p_surf = 1.;
         let p_amb = p_surf + (&self.depth / 10.);
         // ZHL params coefficients
-        let (_, a_coeff, b_coeff) = leading_cpt.params;
+        let (_, a_coeff, b_coeff) = cpt.params;
         let m_value = a_coeff + (p_amb / b_coeff);
         let m_value_surf = a_coeff + (p_surf / b_coeff);
-        let gf_now = ((leading_cpt.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
-        let gf_surf = ((leading_cpt.inert_pressure - p_surf) / (m_value_surf - p_surf)) * 100.;
+        let gf_now = ((cpt.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
+        let gf_surf = ((cpt.inert_pressure - p_surf) / (m_value_surf - p_surf)) * 100.;
 
         (gf_now, gf_surf)
     }
@@ -145,10 +161,10 @@ mod tests {
         let air = Gas::new(0.21, 0.);
 
         model.step(&50., &(20 * 60), &air);
-        assert_eq!(model.gfs_current(), (-47.472755948806224, 195.48223043242453));
+        assert_eq!(model.gfs_current(), (0., 195.48223043242453));
 
         model.step(&40., &(10 * 60), &air);
-        assert_eq!(model.gfs_current(), (-49.721821631139136, 209.81072496423172));
+        assert_eq!(model.gfs_current(), (0., 210.41983141337982));
     }
 
     #[test]
