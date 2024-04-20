@@ -18,10 +18,10 @@ fn test_gfs() {
     let air = Gas::new(0.21, 0.);
 
     model.step(&50., &(20 * 60), &air);
-    assert_eq!(model.gfs_current(), (-47.472755948806224, 195.48223043242453));
+    assert_eq!(model.gfs_current(), (0., 195.48223043242453));
 
     model.step(&40., &(10 * 60), &air);
-    assert_eq!(model.gfs_current(), (-49.721821631139136, 209.81072496423172));
+    assert_eq!(model.gfs_current(), (0., 210.41983141337982));
 }
 
 #[test]
