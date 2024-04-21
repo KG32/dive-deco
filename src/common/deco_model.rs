@@ -25,4 +25,7 @@ pub trait DecoModel {
 
     /// current decompression ceiling in meters
     fn ceiling(&self) -> Depth;
+
+    /// get model config
+    fn config(&self) -> Self::ConfigType;
 }

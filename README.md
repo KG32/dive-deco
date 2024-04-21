@@ -24,14 +24,28 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 ### Examples
 
+#### Model initialization
+
+```rust
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel };
+
+fn main() {
+    // model with default config (GF 100/100)
+    let default_config = BuehlmannConfig::default();
+    let model = BuehlmannModel::new(default_config);
+    println!("{:?}", model.config()); // BuehlmannConfig { gf: (100, 100) }
+}
+```
+
 #### NDL (no-decompression limit)
 
 ```rust
-use dive_deco::{DecoModel, BuehlmannModel, Gas};
+use dive_deco::{DecoModel, BuehlmannModel, BuehlmannConfig, Gas};
 
 fn main() {
-    // initialize a Buehlmann ZHL-16C deco model
-    let mut model = BuehlmannModel::new();
+    // initialize a Buehlmann ZHL-16C deco model with default config (GF 100/100)
+    let config = BuehlmannConfig::default();
+    let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
     let depth = 30.;
@@ -40,8 +54,9 @@ fn main() {
     // a simulated instantaneous drop to 20m with 20 minutes bottom time using air
     model.step(&depth, &(bottom_time_minutes * 60), &air);
 
-    // print NDL
-    println!("NDL: {} min", model.ndl()); // output: NDL: 5 min
+    // current NDL (no-decompression limit)
+    let current_ndl = model.ndl();
+    println!("NDL: {} min", current_ndl); // output: NDL: 5 min
 }
 ```
 

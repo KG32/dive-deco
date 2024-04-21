@@ -86,6 +86,10 @@ impl DecoModel for BuehlmannModel {
 
         ceil
     }
+
+    fn config(&self) -> BuehlmannConfig {
+        self.config
+    }
 }
 
 impl BuehlmannModel {
