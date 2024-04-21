@@ -3,6 +3,30 @@ use crate::common::{DecoModelConfig, ConfigValidationErr, GradientFactors};
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
 
+#[derive(Copy, Clone, Debug)]
+pub struct BuehlmannConfig {
+    pub gf: GradientFactors
+}
+
+impl BuehlmannConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn gradient_factors(mut self, gf_high: u8, gf_low: u8) -> Self {
+        self.gf = (gf_high, gf_low);
+        self
+    }
+}
+
+impl Default for BuehlmannConfig {
+    fn default() -> Self {
+        Self {
+            gf: (100, 100)
+        }
+    }
+}
+
 impl DecoModelConfig for BuehlmannConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr> {
         let Self { gf } = self;
@@ -23,7 +47,7 @@ impl DecoModelConfig for BuehlmannConfig {
             });
         }
 
-        // TMP - GF low not implemented yet
+        // TMP - only uniform gradient factors implemented for now
         if gf_low != gf_high {
             return Err(ConfigValidationErr {
                 field: "gf",
@@ -35,18 +59,6 @@ impl DecoModelConfig for BuehlmannConfig {
     }
 }
 
-impl Default for BuehlmannConfig {
-    fn default() -> Self {
-        Self {
-            gf: (100, 100)
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct BuehlmannConfig {
-    pub gf: GradientFactors
-}
 
 
 #[cfg(test)]

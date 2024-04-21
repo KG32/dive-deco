@@ -17,9 +17,9 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 ### Planned features
 
-- gradient factors settings (currently working effectively as GF 100/100)
+- non-uniform gradient factors settings (currently model only supports uniform GF (GFHi = GFlo))
 - helium support
-- deco model config (GF, water density, metric/imprial units, surface ambient pressure)
+- extended deco model config (water density, metric/imprial units, surface ambient pressure)
 - optimizations
 
 ### Examples
@@ -32,12 +32,19 @@ use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel };
 fn main() {
     // model with default config (GF 100/100)
     let default_config = BuehlmannConfig::default();
-    let model = BuehlmannModel::new(default_config);
-    println!("{:?}", model.config()); // BuehlmannConfig { gf: (100, 100) }
+    let model1 = BuehlmannModel::new(default_config);
+    println!("{:?}", model1.config()); // BuehlmannConfig { gf: (100, 100) }
+
+    // model with configurable config
+    let config_with_gf = BuehlmannConfig::new().gradient_factors(70, 70);
+    let model2 = BuehlmannModel::new(config_with_gf);
+    println!("{:?}", model2.config()); // BuehlmannConfig { gf: (70, 70) }
 }
 ```
 
 #### NDL (no-decompression limit)
+
+The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
 
 ```rust
 use dive_deco::{DecoModel, BuehlmannModel, BuehlmannConfig, Gas};
@@ -51,12 +58,36 @@ fn main() {
     let depth = 30.;
     let bottom_time_minutes = 10;
 
-    // a simulated instantaneous drop to 20m with 20 minutes bottom time using air
+    // a simulated instantaneous drop to 20m with a single step simulating 20 minutes bottom time using air
     model.step(&depth, &(bottom_time_minutes * 60), &air);
+    // model.step(....)
+    // model.step(....)
 
     // current NDL (no-decompression limit)
     let current_ndl = model.ndl();
     println!("NDL: {} min", current_ndl); // output: NDL: 5 min
+}
+```
+
+#### Decompression Ceiling
+
+Minimum theoretical depth that can be reached at the moment without breaking the decompression obligation. In case of Buehlmann algorithm, a depth restricted by M-value given leading tissue saturation and gradient factors setting.
+
+```rust
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
+
+fn main() {
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+
+    let nitrox_32 = Gas::new(0.32, 0.);
+
+    // ceiling after 20 min at 20 meters using EAN32 - ceiling at 0m
+    model.step(&20., &(20 * 60), &nitrox_32);
+    println!("Ceiling: {}m", model.ceiling()); // Ceiling: 0m
+
+    // ceiling after another 42 min at 30 meters using EAN32 - ceiling at 3m
+    model.step(&30., &(42 * 60), &nitrox_32);
+    println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 }
 ```
 
