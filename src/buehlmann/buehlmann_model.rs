@@ -67,7 +67,6 @@ impl DecoModel for BuehlmannModel {
         // iterate simulation model over 1min steps until NDL cut-off or in deco
         for i in 0..NDL_CUT_OFF_MINS {
             sim_model.step(&self.state.depth, &60, &self.state.gas);
-            println!("{} {} {}", i, sim_model.gfs_current().1, sim_model.ceiling());
             if sim_model.in_deco() {
                 ndl = i;
                 break;
@@ -96,7 +95,7 @@ impl BuehlmannModel {
         let mut gf_surf = 0.;
 
         for cpt in self.compartments.iter() {
-            let (cpt_gf_now, cpt_gf_surf) = self.gfs_for_compartment(&cpt);
+            let (cpt_gf_now, cpt_gf_surf) = self.gfs_for_compartment(cpt);
             if cpt_gf_now > gf_now {
                 gf_now = cpt_gf_now;
             }

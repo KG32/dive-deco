@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannModel, BuehlmannConfig, DecoModel, Gas, Minutes, GradientFactors };
+use dive_deco::{ BuehlmannModel, BuehlmannConfig, DecoModel, Gas, GradientFactors };
 
 pub fn model_default() -> BuehlmannModel {
     BuehlmannModel::new(BuehlmannConfig::default())

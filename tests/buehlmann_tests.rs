@@ -1,10 +1,11 @@
-use dive_deco::{ BuehlmannModel, BuehlmannConfig, DecoModel, Gas, Minutes };
+use dive_deco::{ DecoModel, Gas, Minutes };
+pub mod fixtures;
 
-// simple high-level model tests
+// general high-level model tests
 
 #[test]
 fn test_ceiling() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
     model.step(&40., &(30 * 60), &air);
     model.step(&30., &(30 * 60), &air);
@@ -14,7 +15,7 @@ fn test_ceiling() {
 
 #[test]
 fn test_gfs() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
 
     model.step(&50., &(20 * 60), &air);
@@ -26,9 +27,7 @@ fn test_gfs() {
 
 #[test]
 fn test_initial_gfs() {
-    let model = BuehlmannModel::new(BuehlmannConfig::default());
-    // let air = Gas::new(0.21, 0.);
-
+    let model = fixtures::model_default();
     let (gf_now, gf_surf) = model.gfs_current();
     dbg!(gf_now, gf_surf);
     assert_eq!(gf_now, 0.);
@@ -37,8 +36,8 @@ fn test_initial_gfs() {
 
 #[test]
 fn test_model_steps_equality() {
-    let mut model1 = BuehlmannModel::new(BuehlmannConfig::default());
-    let mut model2 = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model1 = fixtures::model_default();
+    let mut model2 = fixtures::model_default();
 
     let air = Gas::new(0.21, 0.);
     let test_depth = 50.;
@@ -61,7 +60,8 @@ fn test_model_steps_equality() {
 
 #[test]
 fn test_ndl_calculation() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model = fixtures::model_default();
+
     let air = Gas::new(0.21, 0.);
     let depth = 30.;
 
@@ -76,7 +76,7 @@ fn test_ndl_calculation() {
 
 #[test]
 fn test_ndl_cut_off() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
 
     model.step(&0., &0, &air);
@@ -88,7 +88,7 @@ fn test_ndl_cut_off() {
 
 #[test]
 fn test_multi_gas_ndl() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
     let ean_28 = Gas::new(0.28, 0.);
 
@@ -104,10 +104,8 @@ fn test_multi_gas_ndl() {
 
 #[test]
 fn test_ndl_with_gf() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig { gf: (70, 70 )});
-
+    let mut model = fixtures::model_gf((70, 70));
     let air = Gas::new(0.21, 0.);
-
     model.step(&20., &(0 * 60), &air);
     assert_eq!(model.ndl(), 21);
 }
