@@ -3,7 +3,7 @@ use crate::common::global_types::{Pressure, Depth};
 // alveolar water vapor pressure assuming 47 mm Hg at 37C (Buehlmann's value)
 const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Gas {
     o2_pp: Pressure,
     n2_pp: Pressure,
