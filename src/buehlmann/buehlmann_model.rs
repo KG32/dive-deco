@@ -78,7 +78,7 @@ impl DecoModel for BuehlmannModel {
 
     fn ceiling(&self) -> Depth {
         let leading_cpt: &Compartment = self.leading_cpt();
-        let mut ceil = (leading_cpt.min_tolerable_amb_pressure - 1.) * 10.;
+        let mut ceil = (leading_cpt.min_tolerable_amb_pressure - (self.config.surf_pressure as f64 / 1000.)) * 10.;
         // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
         if ceil < 0. {
             ceil = 0.;
@@ -113,7 +113,7 @@ impl BuehlmannModel {
 
     fn gfs_for_compartment(&self, cpt: &Compartment) -> (Pressure, Pressure) {
         // surface pressure assumed 1ATA
-        let p_surf = 1.;
+        let p_surf = (self.config.surf_pressure as f64) / 1000.;
         let p_amb = p_surf + (&self.state.depth / 10.);
         // ZHL params coefficients
         let (_, a_coeff, b_coeff) = cpt.params;
@@ -147,7 +147,7 @@ impl BuehlmannModel {
 
     fn recalculate_compartments(&mut self, step: Step) {
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&step, self.config.gf);
+            compartment.recalculate(&step, self.config.gf, self.config.surf_pressure);
         }
     }
 

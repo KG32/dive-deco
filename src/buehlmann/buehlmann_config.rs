@@ -7,7 +7,7 @@ const SURFACE_PRESSURE_ERR_MSG: &str = "Surface pressure must be in milibars in 
 #[derive(Copy, Clone, Debug)]
 pub struct BuehlmannConfig {
     pub gf: GradientFactors,
-    pub surface_pressure: MbarPressure,
+    pub surf_pressure: MbarPressure,
 }
 
 impl BuehlmannConfig {
@@ -20,8 +20,8 @@ impl BuehlmannConfig {
         self
     }
 
-    pub fn surface_pressure(mut self, surface_pressure: MbarPressure) -> Self {
-        self.surface_pressure = surface_pressure;
+    pub fn surface_pressure(mut self, surf_pressure: MbarPressure) -> Self {
+        self.surf_pressure = surf_pressure;
         self
     }
 }
@@ -30,14 +30,14 @@ impl Default for BuehlmannConfig {
     fn default() -> Self {
         Self {
             gf: (100, 100),
-            surface_pressure: 1013
+            surf_pressure: 1013
         }
     }
 }
 
 impl DecoModelConfig for BuehlmannConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr> {
-        let Self { gf, surface_pressure } = self;
+        let Self { gf, surf_pressure: surface_pressure } = self;
 
         self.validate_gradient_factors(gf)?;
         self.validate_surface_pressure(surface_pressure)?;
@@ -136,7 +136,7 @@ mod tests {
     fn test_surface_pressure_config() {
         let config = BuehlmannConfig::new().surface_pressure(1032);
         assert_eq!(config.validate(), Ok(()));
-        assert_eq!(config.surface_pressure, 1032);
+        assert_eq!(config.surf_pressure, 1032);
     }
 
     #[test]

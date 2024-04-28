@@ -1,4 +1,4 @@
-use dive_deco::{ DecoModel, Gas, Minutes };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas, Minutes };
 pub mod fixtures;
 
 // general high-level model tests
@@ -10,7 +10,7 @@ fn test_ceiling() {
     model.step(&40., &(30 * 60), &air);
     model.step(&30., &(30 * 60), &air);
     let calculated_ceiling = model.ceiling();
-    assert_eq!(calculated_ceiling, 7.860647737614171);
+    assert_eq!(calculated_ceiling, 7.802523739933558);
 }
 
 #[test]
@@ -19,10 +19,10 @@ fn test_gfs() {
     let air = Gas::new(0.21, 0.);
 
     model.step(&50., &(20 * 60), &air);
-    assert_eq!(model.gfs_current(), (0., 195.48223043242453));
+    assert_eq!(model.gfs_current(), (0., 194.3055827400852));
 
     model.step(&40., &(10 * 60), &air);
-    assert_eq!(model.gfs_current(), (0., 210.41983141337982));
+    assert_eq!(model.gfs_current(), (0., 209.1025059770294));
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn test_multi_gas_ndl() {
     assert_eq!(model.ndl(), 6);
 
     model.step(&30., &(0 * 60), &ean_28);
-    assert_eq!(model.ndl(), 9);
+    assert_eq!(model.ndl(), 10);
 }
 
 #[test]
@@ -110,3 +110,9 @@ fn test_ndl_with_gf() {
     assert_eq!(model.ndl(), 21);
 }
 
+#[test]
+fn test_altitude() {
+    let mut model = BuehlmannModel::new(BuehlmannConfig::new().surface_pressure(700));
+    model.step(&40., &(60 * 60), &fixtures::gas_air());
+    assert_eq!(model.gfs_current().1, 314.27462637570085);
+}
