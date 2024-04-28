@@ -4,7 +4,7 @@ A dive decompression models library.
 
 ## Buehlmann ZH-L16C
 
-The Bühlmann decompression set of parameters is an Haldanian mathematical model (algorithm) of the way in which inert gases enter and leave the human body as the ambient pressure changes. Versions are used to create Bühlmann decompression tables and in personal dive computers to compute no-decompression limits and decompression schedules for dives in real-time.[^1]
+The Bühlmann decompression set of parameters is an Haldanian mathematical model of the way in which inert gases enter and leave the human body as the ambient pressure changes. Versions are used to create Bühlmann decompression tables and in personal dive computers to compute no-decompression limits and decompression schedules for dives in real-time.[^1]
 
 ### Features
 
@@ -22,9 +22,15 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 - extended deco model config (water density, metric/imprial units, surface ambient pressure)
 - optimizations
 
-### Examples
+### API
+
+- [API documentation](https://docs.rs/dive-deco/latest/dive_deco/)
+
+### Usage
 
 #### Model initialization
+
+##### Using default config
 
 ```rust
 use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel };
@@ -32,19 +38,29 @@ use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel };
 fn main() {
     // model with default config (GF 100/100)
     let default_config = BuehlmannConfig::default();
-    let model1 = BuehlmannModel::new(default_config);
-    println!("{:?}", model1.config()); // BuehlmannConfig { gf: (100, 100) }
+    let model = BuehlmannModel::new(default_config);
+    println!("{:?}", model.config()); // BuehlmannConfig { gf: (100, 100) }
+}
+```
 
+##### Using config builder
+
+Current config options
+
+- `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`). Currently only uniform gradient factors settings are supported
+
+```rust
     // model with configurable config
     let config_with_gf = BuehlmannConfig::new().gradient_factors(70, 70);
-    let model2 = BuehlmannModel::new(config_with_gf);
-    println!("{:?}", model2.config()); // BuehlmannConfig { gf: (70, 70) }
-}
+    let model = BuehlmannModel::new(config_with_gf);
+    println!("{:?}", model.config()); // BuehlmannConfig { gf: (70, 70) }
 ```
 
 #### NDL (no-decompression limit)
 
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
+
+- `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix
 
 ```rust
 use dive_deco::{DecoModel, BuehlmannModel, BuehlmannConfig, Gas};
@@ -73,6 +89,8 @@ fn main() {
 
 Minimum theoretical depth that can be reached at the moment without breaking the decompression obligation. In case of Buehlmann algorithm, a depth restricted by M-value given leading tissue saturation and gradient factors setting.
 
+- `ceiling()` - current decompression ceiling in msw, given current model state and gradient factors settings
+
 ```rust
 use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
 
@@ -89,6 +107,58 @@ fn main() {
     model.step(&30., &(42 * 60), &nitrox_32);
     println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 }
+```
+
+##### Current tissues oversaturation (gradient factors)
+
+Current tissue oversaturation as gradient factors.
+
+- `gfs_current() -> (now, surf)` - oversaturation in % relative to M-value
+  - now (f64) - a.k.a GF99, current oversaturation relative to ambient pressure
+  - surf (f64) - a.k.a surfGF, current oversaturation relative to surface pressure
+
+```rust
+  // given model state after 120 seconds at 40 msw breathing air
+  // (...)
+
+  // on-gassing, gf99: 0%, surfGF: 71%
+  let (gf_now, gf_surf) = model.gfs_current(); // (0.0, 71.09852831834125)
+```
+
+#### Common
+
+##### Step
+
+Represents a single model step as a datapoint.
+
+- `new(depth, time, gas)`
+  - depth - current depth in msw
+  - time - duration in **seconds**
+  - gas - breathing mix inspired in this step
+
+```rust
+let depth = 20.;
+let time = 1;
+let nitrox = Gas::new(0.32, 0.);
+// register 1 second at 20 msw breathing nitrox 32
+model.step(&depth, &time, &nitrox);
+```
+
+##### Gas
+
+Breathing gas used in the model.
+
+- `new(o2, he)`
+  - o2 - oxygen partial pressure
+  - he - helium partial pressure (TMX not supported yet)
+- `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
+- `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
+
+```rust
+let mix = Gas::new(0.21, 0.);
+mix.partial_pressures(&10.); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
+mix.inspired_partial_pressures(&10.); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
+
 ```
 
 ### References
