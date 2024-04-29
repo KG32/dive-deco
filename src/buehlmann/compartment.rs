@@ -1,4 +1,4 @@
-use crate::common::{GradientFactors, MbarPressure, PartialPressures, Pressure, Step};
+use crate::common::{GradientFactors, MbarPressure, PartialPressures, Pressure, StepData};
 use super::zhl_values::ZHLParams;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -31,14 +31,14 @@ impl Compartment {
         compartment
     }
 
-    pub fn recalculate(&mut self, step: &Step, gf: GradientFactors, surf_pressure: MbarPressure) {
-        self.inert_pressure = self.calc_compartment_inert_pressure(step, surf_pressure);
+    pub fn recalculate(&mut self, step: &StepData, gf: GradientFactors, surface_pressure: MbarPressure) {
+        self.inert_pressure = self.calc_compartment_inert_pressure(step, surface_pressure);
         self.min_tolerable_amb_pressure = self.calc_min_tolerable_amb_pressure(gf);
     }
 
-    fn calc_compartment_inert_pressure(&self, step: &Step, surf_pressure: MbarPressure) -> Pressure {
-        let Step { depth, time, gas  } = step;
-        let PartialPressures { n2, .. } = gas.inspired_partial_pressures(depth, surf_pressure);
+    fn calc_compartment_inert_pressure(&self, step: &StepData, surface_pressure: MbarPressure) -> Pressure {
+        let StepData { depth, time, gas  } = step;
+        let PartialPressures { n2, .. } = gas.inspired_partial_pressures(depth, surface_pressure);
         let (half_time, ..) = self.params;
         let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f64.powf(-(**time as f64 / 60.) / half_time)));
 
@@ -83,7 +83,7 @@ mod tests {
         let cpt_5_params = (27., 0.6200, 0.8126);
         let mut cpt_5 = Compartment::new(5, cpt_5_params, (100, 100));
         let air = Gas::new(0.21, 0.);
-        let step = Step { depth: &30., time: &(10 * 60), gas: &air };
+        let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
         cpt_5.recalculate(&step, (100, 100), 1000);
         assert_eq!(cpt_5.inert_pressure, 1.315391144211091);
     }
@@ -93,7 +93,7 @@ mod tests {
         let cpt_5_params = (27., 0.6200, 0.8126);
         let mut cpt_5 = Compartment::new(5, cpt_5_params, (100, 100));
         let air = Gas::new(0.21, 0.);
-        let step = Step { depth: &30., time: &(10 * 60), gas: &air };
+        let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
         cpt_5.recalculate(&step, (100, 100), 100);
         let min_tolerable_pressure = cpt_5.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.4342609809161748);

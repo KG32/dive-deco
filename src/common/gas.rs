@@ -45,14 +45,14 @@ impl Gas {
     }
 
     /// gas partial pressures
-    pub fn partial_pressures(&self, depth: &Depth, surf_pressure: MbarPressure) -> PartialPressures {
-        let gas_pressure = (surf_pressure as f64 / 1000.) + (depth / 10.);
+    pub fn partial_pressures(&self, depth: &Depth, surface_pressure: MbarPressure) -> PartialPressures {
+        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth / 10.);
         self.gas_pressures_compound(gas_pressure)
     }
 
     /// gas partial pressures in alveoli taking into account alveolar water vapor pressure
-    pub fn inspired_partial_pressures(&self, depth: &Depth, surf_pressure: MbarPressure) -> PartialPressures {
-        let gas_pressure = ((surf_pressure as f64 / 1000.) + (depth / 10.)) - ALVEOLI_WATER_VAPOR_PRESSURE;
+    pub fn inspired_partial_pressures(&self, depth: &Depth, surface_pressure: MbarPressure) -> PartialPressures {
+        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth / 10.)) - ALVEOLI_WATER_VAPOR_PRESSURE;
         self.gas_pressures_compound(gas_pressure)
     }
 
