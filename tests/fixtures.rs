@@ -5,7 +5,9 @@ pub fn model_default() -> BuehlmannModel {
 }
 
 pub fn model_gf(gf: GradientFactors) -> BuehlmannModel {
-    BuehlmannModel::new(BuehlmannConfig { gf })
+    let (gf_low, gf_high) = gf;
+    let config_with_gf = BuehlmannConfig::new().gradient_factors(gf_low, gf_high);
+    BuehlmannModel::new(config_with_gf)
 }
 
 pub fn gas_air() -> Gas {

@@ -14,12 +14,13 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 - current gradient factors
   - current gradient factor (the raw percentage of the Bühlmann allowable supersaturation at the current depth, i.e. super-saturation percent gradient, a.k.a GF99)
   - surface gradient factor (the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
+- configurable
 
 ### Planned features
 
 - non-uniform gradient factors settings (currently model only supports uniform GF (GFHi = GFlo))
 - helium support
-- extended deco model config (water density, metric/imprial units, surface ambient pressure)
+- extended deco model config (water density, metric/imprial units)
 - optimizations
 
 ### API
@@ -45,15 +46,35 @@ fn main() {
 
 ##### Using config builder
 
-Current config options
+Current config options:
 
 - `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`). Currently only uniform gradient factors settings are supported
+- `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
 
 ```rust
-    // model with configurable config
-    let config_with_gf = BuehlmannConfig::new().gradient_factors(70, 70);
-    let model = BuehlmannModel::new(config_with_gf);
+    // fluid-interface-like built config
+    let config = BuehlmannConfig::new()
+        .gradient_factors(70, 70)
+        .surface_pressure(1013);
+    let model = BuehlmannModel::new(config);
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (70, 70) }
+```
+
+#### Step
+
+A DecoModel trait method that represents a single model step as a datapoint.
+
+- `.step(depth, time, gas)`
+  - depth - current depth in msw
+  - time - duration in seconds
+  - gas - breathing mix used for the duration of this step
+
+```rust
+let depth = 20.;
+let time = 1;
+let nitrox = Gas::new(0.32, 0.);
+// register 1 second at 20 msw breathing nitrox 32
+model.step(&depth, &time, &nitrox);
 ```
 
 #### NDL (no-decompression limit)
@@ -109,7 +130,7 @@ fn main() {
 }
 ```
 
-##### Current tissues oversaturation (gradient factors)
+#### Current tissues oversaturation (gradient factors)
 
 Current tissue oversaturation as gradient factors.
 
@@ -127,22 +148,7 @@ Current tissue oversaturation as gradient factors.
 
 #### Common
 
-##### Step
 
-Represents a single model step as a datapoint.
-
-- `new(depth, time, gas)`
-  - depth - current depth in msw
-  - time - duration in **seconds**
-  - gas - breathing mix inspired in this step
-
-```rust
-let depth = 20.;
-let time = 1;
-let nitrox = Gas::new(0.32, 0.);
-// register 1 second at 20 msw breathing nitrox 32
-model.step(&depth, &time, &nitrox);
-```
 
 ##### Gas
 
