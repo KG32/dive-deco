@@ -97,9 +97,8 @@ impl BuehlmannModel {
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
         let mut gf_now = 0.;
         let mut gf_surf = 0.;
-
         for cpt in self.compartments.iter() {
-            let (cpt_gf_now, cpt_gf_surf) = self.gfs_for_compartment(cpt);
+            let (cpt_gf_now, cpt_gf_surf) = cpt.calc_gfs(self.config.surface_pressure, self.state.depth);
             if cpt_gf_now > gf_now {
                 gf_now = cpt_gf_now;
             }
@@ -107,20 +106,6 @@ impl BuehlmannModel {
                 gf_surf = cpt_gf_surf;
             }
         }
-
-        (gf_now, gf_surf)
-    }
-
-    fn gfs_for_compartment(&self, cpt: &Compartment) -> (Pressure, Pressure) {
-        // surface pressure assumed 1ATA
-        let p_surf = (self.config.surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (&self.state.depth / 10.);
-        // ZHL params coefficients
-        let (_, a_coeff, b_coeff) = cpt.params;
-        let m_value = a_coeff + (p_amb / b_coeff);
-        let m_value_surf = a_coeff + (p_surf / b_coeff);
-        let gf_now = ((cpt.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
-        let gf_surf = ((cpt.inert_pressure - p_surf) / (m_value_surf - p_surf)) * 100.;
 
         (gf_now, gf_surf)
     }

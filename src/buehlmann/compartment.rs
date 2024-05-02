@@ -1,4 +1,4 @@
-use crate::common::{GradientFactors, MbarPressure, PartialPressures, Pressure, StepData};
+use crate::common::{GradientFactors, MbarPressure, PartialPressures, Pressure, StepData, Depth};
 use super::zhl_values::ZHLParams;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -34,6 +34,20 @@ impl Compartment {
     pub fn recalculate(&mut self, step: &StepData, gf: GradientFactors, surface_pressure: MbarPressure) {
         self.inert_pressure = self.calc_compartment_inert_pressure(step, surface_pressure);
         self.min_tolerable_amb_pressure = self.calc_min_tolerable_amb_pressure(gf);
+    }
+
+    pub fn calc_gfs(&self, surface_pressure: MbarPressure, depth: Depth) -> (Pressure, Pressure) {
+        // surface pressure assumed 1ATA
+        let p_surf = (surface_pressure as f64) / 1000.;
+        let p_amb = p_surf + (depth / 10.);
+        // ZHL params coefficients
+        let (_, a_coeff, b_coeff) = self.params;
+        let m_value = a_coeff + (p_amb / b_coeff);
+        let m_value_surf = a_coeff + (p_surf / b_coeff);
+        let gf_now = ((self.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
+        let gf_surf = ((self.inert_pressure - p_surf) / (m_value_surf - p_surf)) * 100.;
+
+        (gf_now, gf_surf)
     }
 
     fn calc_compartment_inert_pressure(&self, step: &StepData, surface_pressure: MbarPressure) -> Pressure {
