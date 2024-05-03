@@ -4,7 +4,7 @@ const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
 const SURFACE_PRESSURE_ERR_MSG: &str = "Surface pressure must be in milibars in 500-1500 range";
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BuehlmannConfig {
     pub gf: GradientFactors,
     pub surface_pressure: MbarPressure,
@@ -65,14 +65,6 @@ impl BuehlmannConfig {
             });
         }
 
-        // TMP - only uniform gradient factors implemented for now
-        if gf_low != gf_high {
-            return Err(ConfigValidationErr {
-                field: "gf",
-                reason: "Currently only uniform gradient factors supported"
-            });
-        }
-
         Ok(())
     }
 
@@ -126,11 +118,6 @@ mod tests {
         assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: GF_ORDER_ERR_MSG }));
     }
 
-    #[test]
-    fn test_temporal_uniform_gf_check() {
-        let config = BuehlmannConfig::new().gradient_factors(30, 70);
-        assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: "Currently only uniform gradient factors supported" }));
-    }
 
     #[test]
     fn test_surface_pressure_config() {

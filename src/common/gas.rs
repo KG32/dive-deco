@@ -56,6 +56,10 @@ impl Gas {
         self.gas_pressures_compound(gas_pressure)
     }
 
+    pub fn air() -> Self {
+        Self::new(0.21, 0.)
+    }
+
     fn gas_pressures_compound(&self, gas_pressure: f64) -> PartialPressures {
         PartialPressures {
             o2: self.o2_pp * gas_pressure,

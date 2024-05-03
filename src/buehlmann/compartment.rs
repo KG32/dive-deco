@@ -1,5 +1,5 @@
-use crate::common::{GradientFactors, MbarPressure, PartialPressures, Pressure, StepData, Depth};
-use super::zhl_values::ZHLParams;
+use crate::{common::{Depth, GradientFactor, GradientFactors, MbarPressure, PartialPressures, Pressure, StepData}, BuehlmannConfig};
+use super::{buehlmann_model::ModelState, zhl_values::ZHLParams};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Compartment {
@@ -8,6 +8,8 @@ pub struct Compartment {
     pub min_tolerable_amb_pressure: Pressure,
     pub inert_pressure: Pressure,
     pub params: ZHLParams,
+    model_config: BuehlmannConfig,
+    model_state: ModelState,
 }
 
 impl Compartment {
@@ -15,6 +17,8 @@ impl Compartment {
         no: usize,
         params: ZHLParams,
         gf_config: GradientFactors,
+        model_config: BuehlmannConfig,
+        model_state: ModelState,
     ) -> Self {
         let mut compartment = Self {
             no,
@@ -22,6 +26,8 @@ impl Compartment {
             inert_pressure: 0.79,
             // min_tolerable_inert_pressure: -0.,
             min_tolerable_amb_pressure: -0.,
+            model_config,
+            model_state,
         };
 
         // calculate initial minimal tolerable ambient pressure
@@ -36,8 +42,17 @@ impl Compartment {
         self.min_tolerable_amb_pressure = self.calc_min_tolerable_amb_pressure(gf);
     }
 
+    pub fn ceiling(&self) -> Depth {
+        let mut ceil = (self.min_tolerable_amb_pressure - (self.model_config.surface_pressure as f64 / 1000.)) * 10.;
+        // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
+        if ceil < 0. {
+            ceil = 0.;
+        }
+
+        ceil
+    }
+
     pub fn calc_gfs(&self, surface_pressure: MbarPressure, depth: Depth) -> (Pressure, Pressure) {
-        // surface pressure assumed 1ATA
         let p_surf = (surface_pressure as f64) / 1000.;
         let p_amb = p_surf + (depth / 10.);
         // ZHL params coefficients
@@ -76,40 +91,50 @@ mod tests {
     use super::*;
     use crate::common::Gas;
 
+    fn cpt_1() -> Compartment {
+        let cpt_1_params = (4., 1.2599, 0.5050);
+        Compartment::new(1, cpt_1_params, (100, 100), BuehlmannConfig::default(), ModelState::initial())
+    }
+
+    fn cpt_5() -> Compartment {
+        let cpt_5_params = (27., 0.6200, 0.8126);
+        Compartment::new(5, cpt_5_params, (100, 100), BuehlmannConfig::default(), ModelState::initial())
+    }
+
     #[test]
     fn test_constructor() {
-        let cpt_1_params = (4., 1.2599, 0.5050);
-        let cpt_1 = Compartment::new(1, cpt_1_params, (100, 100));
+        let cpt = cpt_1();
         assert_eq!(
-            cpt_1,
+            cpt,
             Compartment {
                 no: 1,
-                params: cpt_1_params,
+                params: (4., 1.2599, 0.5050),
                 inert_pressure: 0.79,
-                // min_tolerable_inert_pressure: -0.,
-                min_tolerable_amb_pressure: -0.2372995
+                min_tolerable_amb_pressure: -0.2372995,
+                // mocked config and state
+                model_config: BuehlmannConfig::default(),
+                model_state: ModelState::initial()
             }
         );
     }
 
     #[test]
     fn test_recalculation_ongassing() {
-        let cpt_5_params = (27., 0.6200, 0.8126);
-        let mut cpt_5 = Compartment::new(5, cpt_5_params, (100, 100));
+        let mut cpt = cpt_5();
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
-        cpt_5.recalculate(&step, (100, 100), 1000);
-        assert_eq!(cpt_5.inert_pressure, 1.315391144211091);
+        cpt.recalculate(&step, (100, 100), 1000);
+        assert_eq!(cpt.inert_pressure, 1.315391144211091);
     }
 
     #[test]
     fn test_min_pressure_calculation() {
-        let cpt_5_params = (27., 0.6200, 0.8126);
-        let mut cpt_5 = Compartment::new(5, cpt_5_params, (100, 100));
+        let mut cpt = cpt_5();
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
-        cpt_5.recalculate(&step, (100, 100), 100);
-        let min_tolerable_pressure = cpt_5.min_tolerable_amb_pressure;
+        cpt.recalculate(&step, (100, 100), 100);
+        let min_tolerable_pressure = cpt.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.4342609809161748);
     }
+
 }

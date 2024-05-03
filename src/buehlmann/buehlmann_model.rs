@@ -1,7 +1,8 @@
 use crate::buehlmann::compartment::Compartment;
-use crate::common::{DecoModel, DecoModelConfig, Depth, Gas, Minutes, Pressure, Seconds, StepData};
+use crate::common::{DecoModel, DecoModelConfig, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
+use crate::GradientFactors;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -17,6 +18,18 @@ pub struct ModelState {
     depth: Depth,
     time: Seconds,
     gas: Gas,
+    gf_low_depth: Option<Depth>,
+}
+
+impl ModelState {
+    pub fn initial() -> Self {
+        Self {
+            depth: 0.,
+            time: 0,
+            gas: Gas::air(),
+            gf_low_depth: None,
+        }
+    }
 }
 
 impl DecoModel for BuehlmannModel {
@@ -30,13 +43,7 @@ impl DecoModel for BuehlmannModel {
         }
 
         // air as a default init gas
-        let air = Gas::new(0.21, 0.);
-
-        let initial_model_state = ModelState {
-            depth: 0.,
-            time: 0,
-            gas: air,
-        };
+        let initial_model_state = ModelState::initial();
 
         let mut model = Self {
             config,
@@ -44,7 +51,7 @@ impl DecoModel for BuehlmannModel {
             state: initial_model_state
         };
 
-        model.create_compartments(ZHL16C_VALUES);
+        model.create_compartments(ZHL16C_VALUES, config, initial_model_state);
 
         model
     }
@@ -78,13 +85,7 @@ impl DecoModel for BuehlmannModel {
 
     fn ceiling(&self) -> Depth {
         let leading_cpt: &Compartment = self.leading_cpt();
-        let mut ceil = (leading_cpt.min_tolerable_amb_pressure - (self.config.surface_pressure as f64 / 1000.)) * 10.;
-        // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
-        if ceil < 0. {
-            ceil = 0.;
-        }
-
-        ceil
+        leading_cpt.ceiling()
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -121,10 +122,10 @@ impl BuehlmannModel {
         leading_cpt
     }
 
-    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16]) {
+    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig, state: ModelState) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
-            let compartment = Compartment::new(i + 1, comp_values, self.config.gf);
+            let compartment = Compartment::new(i + 1, comp_values, self.config.gf, config, state);
             compartments.push(compartment);
         }
         self.compartments = compartments;
@@ -134,6 +135,17 @@ impl BuehlmannModel {
         for compartment in self.compartments.iter_mut() {
             compartment.recalculate(&step, self.config.gf, self.config.surface_pressure);
         }
+    }
+
+    #[allow(dead_code)]
+    fn gf_slope(&self, gf: GradientFactors, depth: Depth) -> GradientFactor {
+        let (gf_low, gf_high) = gf;
+        let in_deco = self.ceiling() > 0.;
+        if !in_deco {
+            return gf_high;
+        }
+
+        0
     }
 
     fn fork(&self) -> BuehlmannModel {
@@ -161,6 +173,21 @@ mod tests {
         let nx32 = Gas::new(0.32, 0.);
         model.step(&10., &(10 * 60), &air);
         model.step(&15., &(15 * 60), &nx32);
-        assert_eq!(model.state, ModelState { depth: 15., time: (25 * 60), gas: nx32 });
+        assert_eq!(model.state, ModelState { depth: 15., time: (25 * 60), gas: nx32, gf_low_depth: None });
+    }
+
+    #[test]
+    fn test_gf_slope() {
+        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+        let air = Gas::air();
+        let gf = (50, 100);
+        let step_1 = StepData { depth: &0., time: &0, gas: &air };
+        model.step(&step_1.depth, &step_1.time, &step_1.gas);
+        assert_eq!(model.gf_slope(gf, *step_1.depth), 100);
+
+
+        let step_2 = StepData { depth: &40., time: &(10 * 60), gas: &air };
+        model.step(&step_2.depth, &step_2.time, &step_2.gas);
+        assert_eq!(model.gf_slope(gf, *step_2.depth), 50);
     }
 }
