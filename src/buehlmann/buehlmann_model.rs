@@ -137,16 +137,47 @@ impl BuehlmannModel {
         }
     }
 
-    #[allow(dead_code)]
-    fn gf_slope(&self, gf: GradientFactors, depth: Depth) -> GradientFactor {
+    fn max_gf(&self, gf: GradientFactors, depth: Depth) -> GradientFactor {
         let (gf_low, gf_high) = gf;
         let in_deco = self.ceiling() > 0.;
         if !in_deco {
             return gf_high;
         }
 
-        0
+        let gf_low_depth = match self.state.gf_low_depth {
+            Some(gf_low_depth) => gf_low_depth,
+            None => {
+                // find GF low depth
+                let mut sim_model = self.fork();
+                let sim_gas = sim_model.state.gas;
+                let mut target_depth = sim_model.state.depth;
+                while target_depth > 0. {
+                    let sim_step_depth = target_depth - 0.1;
+                    sim_model.step(&sim_step_depth, &0, &sim_gas);
+                    let (gf99, ..) = sim_model.gfs_current();
+                    if gf99 >= gf_low.into() {
+                        break;
+                    }
+                    target_depth = sim_step_depth;
+                }
+                target_depth
+            }
+        };
+
+        if depth > gf_low_depth {
+            return gf_low;
+        }
+
+        self.gf_slope_point(gf, gf_low_depth, depth)
     }
+
+    fn gf_slope_point(&self, gf: GradientFactors, gf_low_depth: Depth, depth: Depth) -> GradientFactor {
+        let (gf_low, gf_high) = gf;
+        let slope_point: f64 = gf_high as f64 - (((gf_high- gf_low) as f64) / gf_low_depth ) * depth;
+        slope_point as u8
+    }
+
+
 
     fn fork(&self) -> BuehlmannModel {
         BuehlmannModel {
@@ -177,17 +208,24 @@ mod tests {
     }
 
     #[test]
-    fn test_gf_slope() {
+    fn test_max_gf() {
         let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::air();
         let gf = (50, 100);
         let step_1 = StepData { depth: &0., time: &0, gas: &air };
         model.step(&step_1.depth, &step_1.time, &step_1.gas);
-        assert_eq!(model.gf_slope(gf, *step_1.depth), 100);
-
+        assert_eq!(model.max_gf(gf, *step_1.depth), 100);
 
         let step_2 = StepData { depth: &40., time: &(10 * 60), gas: &air };
         model.step(&step_2.depth, &step_2.time, &step_2.gas);
-        assert_eq!(model.gf_slope(gf, *step_2.depth), 50);
+        assert_eq!(model.max_gf(gf, *step_2.depth), 50);
+    }
+
+    #[test]
+    fn test_gf_slope_point() {
+        let gf = (30, 85);
+        let model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
+        assert_eq!(slope_point, 35);
     }
 }
