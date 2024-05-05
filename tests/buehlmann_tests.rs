@@ -29,7 +29,6 @@ fn test_gfs() {
 fn test_initial_gfs() {
     let model = fixtures::model_default();
     let (gf_now, gf_surf) = model.gfs_current();
-    dbg!(gf_now, gf_surf);
     assert_eq!(gf_now, 0.);
     assert_eq!(gf_surf, 0.);
 }
@@ -115,4 +114,20 @@ fn test_altitude() {
     let mut model = BuehlmannModel::new(BuehlmannConfig::new().surface_pressure(700));
     model.step(&40., &(60 * 60), &fixtures::gas_air());
     assert_eq!(model.gfs_current().1, 314.27462637570085);
+}
+
+#[test]
+fn test_example_deco() {
+    let mut model = BuehlmannModel::new(
+        BuehlmannConfig::new().
+            gradient_factors(30, 70)
+            .surface_pressure(1013)
+    );
+
+    let air = Gas::air();
+    // let ean_50 = Gas::new(0.50, 0.);
+
+    // instant drop to 40m on air for 10min
+    model.step(&40., &(10 * 60), &air);
+    assert_eq!(model.ceiling(), 15.);
 }

@@ -31,15 +31,15 @@ impl Compartment {
         };
 
         // calculate initial minimal tolerable ambient pressure
-        let (gf_low, gf_high) = gf_config;
-        compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_amb_pressure((gf_low, gf_high));
+        let (.., gf_high) = gf_config;
+        compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_amb_pressure(gf_high);
 
         compartment
     }
 
-    pub fn recalculate(&mut self, step: &StepData, gf: GradientFactors, surface_pressure: MbarPressure) {
+    pub fn recalculate(&mut self, step: &StepData, max_gf: GradientFactor, surface_pressure: MbarPressure) {
         self.inert_pressure = self.calc_compartment_inert_pressure(step, surface_pressure);
-        self.min_tolerable_amb_pressure = self.calc_min_tolerable_amb_pressure(gf);
+        self.min_tolerable_amb_pressure = self.calc_min_tolerable_amb_pressure(max_gf);
     }
 
     pub fn ceiling(&self) -> Depth {
@@ -74,12 +74,11 @@ impl Compartment {
         self.inert_pressure + p_comp_delta
     }
 
-    fn calc_min_tolerable_amb_pressure(&self, gf: GradientFactors) -> Pressure {
+    fn calc_min_tolerable_amb_pressure(&self, max_gf: GradientFactor) -> Pressure {
         let (_, a_coefficient, b_coefficient) = &self.params;
-        let (_gf_lo, gf_hi) = gf;
-        let gf_hi_fraction = gf_hi as f64 / 100.;
-        let a_coefficient_adjusted = a_coefficient * gf_hi_fraction;
-        let b_coefficient_adjusted = b_coefficient / (gf_hi_fraction - (gf_hi_fraction * b_coefficient) + b_coefficient);
+        let max_gf_fraction = max_gf as f64 / 100.;
+        let a_coefficient_adjusted = a_coefficient * max_gf_fraction;
+        let b_coefficient_adjusted = b_coefficient / (max_gf_fraction - (max_gf_fraction * b_coefficient) + b_coefficient);
 
         (self.inert_pressure - a_coefficient_adjusted) * b_coefficient_adjusted
     }
@@ -123,7 +122,7 @@ mod tests {
         let mut cpt = cpt_5();
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
-        cpt.recalculate(&step, (100, 100), 1000);
+        cpt.recalculate(&step, 100, 1000);
         assert_eq!(cpt.inert_pressure, 1.315391144211091);
     }
 
@@ -132,7 +131,7 @@ mod tests {
         let mut cpt = cpt_5();
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
-        cpt.recalculate(&step, (100, 100), 100);
+        cpt.recalculate(&step, 100, 100);
         let min_tolerable_pressure = cpt.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.4342609809161748);
     }

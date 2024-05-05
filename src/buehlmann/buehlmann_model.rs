@@ -18,7 +18,7 @@ pub struct ModelState {
     depth: Depth,
     time: Seconds,
     gas: Gas,
-    gf_low_depth: Option<Depth>,
+    pub gf_low_depth: Option<Depth>,
 }
 
 impl ModelState {
@@ -132,12 +132,14 @@ impl BuehlmannModel {
     }
 
     fn recalculate_compartments(&mut self, step: StepData) {
+        let max_gf = self.max_gf(self.config.gf, *step.depth);
+        dbg!(max_gf);
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&step, self.config.gf, self.config.surface_pressure);
+            compartment.recalculate(&step, max_gf, self.config.surface_pressure);
         }
     }
 
-    fn max_gf(&self, gf: GradientFactors, depth: Depth) -> GradientFactor {
+    fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
         let (gf_low, gf_high) = gf;
         let in_deco = self.ceiling() > 0.;
         if !in_deco {
@@ -152,6 +154,7 @@ impl BuehlmannModel {
                 let sim_gas = sim_model.state.gas;
                 let mut target_depth = sim_model.state.depth;
                 while target_depth > 0. {
+                    dbg!(target_depth);
                     let sim_step_depth = target_depth - 0.1;
                     sim_model.step(&sim_step_depth, &0, &sim_gas);
                     let (gf99, ..) = sim_model.gfs_current();
@@ -160,6 +163,7 @@ impl BuehlmannModel {
                     }
                     target_depth = sim_step_depth;
                 }
+                self.state.gf_low_depth = Some(target_depth);
                 target_depth
             }
         };
@@ -176,8 +180,6 @@ impl BuehlmannModel {
         let slope_point: f64 = gf_high as f64 - (((gf_high- gf_low) as f64) / gf_low_depth ) * depth;
         slope_point as u8
     }
-
-
 
     fn fork(&self) -> BuehlmannModel {
         BuehlmannModel {

@@ -15,8 +15,8 @@ impl BuehlmannConfig {
         Self::default()
     }
 
-    pub fn gradient_factors(mut self, gf_high: u8, gf_low: u8) -> Self {
-        self.gf = (gf_high, gf_low);
+    pub fn gradient_factors(mut self, gf_low: u8, gf_high: u8) -> Self {
+        self.gf = (gf_low, gf_high);
         self
     }
 
@@ -94,7 +94,6 @@ mod tests {
         assert_eq!(config.gf, (100, 100));
     }
 
-    #[ignore = "variable GFs not implemented yet"]
     #[test]
     fn test_variable_gradient_factors() {
         let config = BuehlmannConfig::new().gradient_factors(30, 70);
