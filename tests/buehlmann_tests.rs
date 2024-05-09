@@ -119,8 +119,8 @@ fn test_altitude() {
 #[test]
 fn test_example_deco() {
     let mut model = BuehlmannModel::new(
-        BuehlmannConfig::new().
-            gradient_factors(30, 70)
+        BuehlmannConfig::new()
+            .gradient_factors(30, 70)
             .surface_pressure(1013)
     );
 

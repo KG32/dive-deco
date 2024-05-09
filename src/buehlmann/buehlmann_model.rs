@@ -11,6 +11,7 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: ModelState,
+    is_sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -48,7 +49,8 @@ impl DecoModel for BuehlmannModel {
         let mut model = Self {
             config,
             compartments: vec![],
-            state: initial_model_state
+            state: initial_model_state,
+            is_sim: false,
         };
 
         model.create_compartments(ZHL16C_VALUES, config, initial_model_state);
@@ -122,6 +124,18 @@ impl BuehlmannModel {
         leading_cpt
     }
 
+    fn leading_cpt_mut(&mut self) -> &mut Compartment {
+        let cpts = &mut self.compartments;
+        let mut leading_cpt_index = 0;
+        for (i, compartment) in cpts.iter().enumerate().skip(1) {
+            if compartment.min_tolerable_amb_pressure > cpts[leading_cpt_index].min_tolerable_amb_pressure {
+                leading_cpt_index = i;
+            }
+        }
+
+        &mut cpts[leading_cpt_index]
+    }
+
     fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig, state: ModelState) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
@@ -132,11 +146,17 @@ impl BuehlmannModel {
     }
 
     fn recalculate_compartments(&mut self, step: StepData) {
-        let max_gf = self.max_gf(self.config.gf, *step.depth);
-        dbg!(max_gf);
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&step, max_gf, self.config.surface_pressure);
+            compartment.recalculate(&step, self.config.gf.1, self.config.surface_pressure);
         }
+        // self.recalculate_leading_compartment_with_gf(step)
+    }
+
+    fn recalculate_leading_compartment_with_gf(&mut self, step: StepData) {
+        let max_gf = self.max_gf(self.config.gf, *step.depth);
+        let leading = self.leading_cpt_mut();
+        let recalc_step = StepData { depth: &step.depth,  time: &0, gas: &step.gas };
+        leading.recalculate(&recalc_step, max_gf, 1013);
     }
 
     fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
@@ -154,8 +174,8 @@ impl BuehlmannModel {
                 let sim_gas = sim_model.state.gas;
                 let mut target_depth = sim_model.state.depth;
                 while target_depth > 0. {
-                    dbg!(target_depth);
-                    let sim_step_depth = target_depth - 0.1;
+                    // dbg!(target_depth);
+                    let sim_step_depth = target_depth - 1.;
                     sim_model.step(&sim_step_depth, &0, &sim_gas);
                     let (gf99, ..) = sim_model.gfs_current();
                     if gf99 >= gf_low.into() {
@@ -177,7 +197,7 @@ impl BuehlmannModel {
 
     fn gf_slope_point(&self, gf: GradientFactors, gf_low_depth: Depth, depth: Depth) -> GradientFactor {
         let (gf_low, gf_high) = gf;
-        let slope_point: f64 = gf_high as f64 - (((gf_high- gf_low) as f64) / gf_low_depth ) * depth;
+        let slope_point: f64 = gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth ) * depth;
         slope_point as u8
     }
 
@@ -186,6 +206,7 @@ impl BuehlmannModel {
             config: self.config,
             compartments: self.compartments.clone(),
             state: self.state,
+            is_sim: true,
         }
     }
 
@@ -210,17 +231,35 @@ mod tests {
     }
 
     #[test]
-    fn test_max_gf() {
-        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
-        let air = Gas::air();
+    fn test_max_gf_within_ndl() {
         let gf = (50, 100);
-        let step_1 = StepData { depth: &0., time: &0, gas: &air };
-        model.step(&step_1.depth, &step_1.time, &step_1.gas);
-        assert_eq!(model.max_gf(gf, *step_1.depth), 100);
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let air = Gas::air();
+        let step = StepData { depth: &0., time: &0, gas: &air };
+        model.step(&step.depth, &step.time, &step.gas);
+        assert_eq!(model.max_gf(gf, *step.depth), 100);
+    }
 
-        let step_2 = StepData { depth: &40., time: &(10 * 60), gas: &air };
-        model.step(&step_2.depth, &step_2.time, &step_2.gas);
-        assert_eq!(model.max_gf(gf, *step_2.depth), 50);
+    #[test]
+    fn test_max_gf_below_first_stop() {
+        let gf = (50, 100);
+
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let air = Gas::air();
+        let step = StepData { depth: &40., time: &(10 * 60), gas: &air };
+        model.step(&step.depth, &step.time, &step.gas);
+        assert_eq!(model.max_gf(gf, *step.depth), 50);
+    }
+
+    #[test]
+    fn test_max_gf_during_deco() {
+        let gf = (30, 70);
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let air = Gas::air();
+
+        model.step(&40., &(30 * 60), &air);
+        model.step(&21., &(5 * 60), &air);
+        dbg!(model.max_gf(gf, model.state.depth));
     }
 
     #[test]
