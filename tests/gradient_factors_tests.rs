@@ -35,5 +35,5 @@ fn test_gf_low_ceiling() {
 
     let ceiling = model.ceiling();
 
-    assert_eq!(ceiling, 0.4707753025628003);
+    assert_eq!(ceiling, 8.184980468521994);
 }

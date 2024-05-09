@@ -149,7 +149,7 @@ impl BuehlmannModel {
         for compartment in self.compartments.iter_mut() {
             compartment.recalculate(&step, self.config.gf.1, self.config.surface_pressure);
         }
-        // self.recalculate_leading_compartment_with_gf(step)
+        self.recalculate_leading_compartment_with_gf(step);
     }
 
     fn recalculate_leading_compartment_with_gf(&mut self, step: StepData) {
@@ -166,6 +166,7 @@ impl BuehlmannModel {
             return gf_high;
         }
 
+        self.dev_dbg(self.state);
         let gf_low_depth = match self.state.gf_low_depth {
             Some(gf_low_depth) => gf_low_depth,
             None => {
@@ -187,6 +188,8 @@ impl BuehlmannModel {
             }
         };
 
+        self.dev_dbg(depth);
+        self.dev_dbg(gf_low_depth);
         if depth > gf_low_depth {
             return gf_low;
         }
@@ -194,9 +197,18 @@ impl BuehlmannModel {
         self.gf_slope_point(gf, gf_low_depth, depth)
     }
 
+    fn dev_dbg<T: std::fmt::Debug>(&self, x: T) {
+        if !self.is_sim {
+            dbg!(x);
+        }
+    }
+
     fn gf_slope_point(&self, gf: GradientFactors, gf_low_depth: Depth, depth: Depth) -> GradientFactor {
+        self.dev_dbg("slope");
+        self.dev_dbg(gf);
         let (gf_low, gf_high) = gf;
         let slope_point: f64 = gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth ) * depth;
+
         slope_point as u8
     }
 
@@ -258,8 +270,10 @@ mod tests {
 
         model.step(&40., &(30 * 60), &air);
         model.step(&21., &(5 * 60), &air);
-        assert_eq!(model.max_gf(gf, 21.), 35);
+        model.step(&14., &(0 * 60), &air);
+        assert_eq!(model.max_gf(gf, 14.), 40);
     }
+
 
     #[test]
     fn test_gf_slope_point() {

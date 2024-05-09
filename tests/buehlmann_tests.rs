@@ -129,5 +129,5 @@ fn test_example_deco() {
 
     // instant drop to 40m on air for 10min
     model.step(&40., &(10 * 60), &air);
-    assert_eq!(model.ceiling(), 15.);
+    assert_eq!(model.ceiling(), 12.906758687930836);
 }
