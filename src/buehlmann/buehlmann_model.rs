@@ -174,7 +174,6 @@ impl BuehlmannModel {
                 let sim_gas = sim_model.state.gas;
                 let mut target_depth = sim_model.state.depth;
                 while target_depth > 0. {
-                    // dbg!(target_depth);
                     let sim_step_depth = target_depth - 1.;
                     sim_model.step(&sim_step_depth, &0, &sim_gas);
                     let (gf99, ..) = sim_model.gfs_current();
@@ -259,7 +258,7 @@ mod tests {
 
         model.step(&40., &(30 * 60), &air);
         model.step(&21., &(5 * 60), &air);
-        dbg!(model.max_gf(gf, model.state.depth));
+        assert_eq!(model.max_gf(gf, 21.), 35);
     }
 
     #[test]
