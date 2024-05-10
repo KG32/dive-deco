@@ -151,10 +151,11 @@ impl BuehlmannModel {
     }
 
     fn recalculate_leading_compartment_with_gf(&mut self, step: StepData) {
-        let max_gf = self.max_gf(self.config.gf, *step.depth);
+        let BuehlmannConfig { gf, surface_pressure } = self.config;
+        let max_gf = self.max_gf(gf, *step.depth);
         let leading = self.leading_comp_mut();
         let recalc_step = StepData { depth: step.depth,  time: &0, gas: step.gas };
-        leading.recalculate(&recalc_step, max_gf, 1013);
+        leading.recalculate(&recalc_step, max_gf, surface_pressure);
     }
 
     fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
