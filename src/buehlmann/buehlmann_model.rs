@@ -137,7 +137,7 @@ impl BuehlmannModel {
     fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
-            let compartment = Compartment::new(i + 1, comp_values, self.config.gf, config);
+            let compartment = Compartment::new(i + 1, comp_values, config);
             compartments.push(compartment);
         }
         self.compartments = compartments;

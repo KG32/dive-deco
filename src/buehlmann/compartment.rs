@@ -15,7 +15,6 @@ impl Compartment {
     pub fn new(
         no: usize,
         params: ZHLParams,
-        gf_config: GradientFactors,
         model_config: BuehlmannConfig,
     ) -> Self {
         let mut compartment = Self {
@@ -27,7 +26,7 @@ impl Compartment {
         };
 
         // calculate initial minimal tolerable ambient pressure
-        let (.., gf_high) = gf_config;
+        let (.., gf_high) = model_config.gf;
         compartment.min_tolerable_amb_pressure = compartment.calc_min_tolerable_amb_pressure(gf_high);
 
         compartment
@@ -88,12 +87,12 @@ mod tests {
 
     fn comp_1() -> Compartment {
         let comp_1_params = (4., 1.2599, 0.5050);
-        Compartment::new(1, comp_1_params, (100, 100), BuehlmannConfig::default())
+        Compartment::new(1, comp_1_params, BuehlmannConfig::default())
     }
 
     fn comp_5() -> Compartment {
         let comp_5_params = (27., 0.6200, 0.8126);
-        Compartment::new(5, comp_5_params, (100, 100), BuehlmannConfig::default())
+        Compartment::new(5, comp_5_params, BuehlmannConfig::default())
     }
 
     #[test]
