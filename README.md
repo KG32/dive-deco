@@ -14,13 +14,16 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 - current gradient factors
   - current gradient factor (the raw percentage of the Bühlmann allowable supersaturation at the current depth, i.e. super-saturation percent gradient, a.k.a GF99)
   - surface gradient factor (the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
-- configurable
+- configurable model settings
+  - gradient factors
+  - surface pressure
 
 ### Planned features
 
-- non-uniform gradient factors settings (currently model only supports uniform GF (GFHi = GFlo))
 - helium support
 - extended deco model config (water density, metric/imprial units)
+- deco stops planner
+- linear ascent / descent steps
 - optimizations
 
 ### API
@@ -48,16 +51,16 @@ fn main() {
 
 Current config options:
 
-- `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`). Currently only uniform gradient factors settings are supported
+- `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`)
 - `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
 
 ```rust
     // fluid-interface-like built config
     let config = BuehlmannConfig::new()
-        .gradient_factors(70, 70)
+        .gradient_factors(30, 70)
         .surface_pressure(1013);
     let model = BuehlmannModel::new(config);
-    println!("{:?}", model.config()); // BuehlmannConfig { gf: (70, 70) }
+    println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
 
 #### Step
