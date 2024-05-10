@@ -16,7 +16,7 @@ fn main() {
 
 
     // model with fluent-interface-like config
-    let config_with_gf = BuehlmannConfig::new().gradient_factors(70, 70);
+    let config_with_gf = BuehlmannConfig::new().gradient_factors(30, 70);
     let model_3 = BuehlmannModel::new(config_with_gf);
-    println!("{:?}", model_3.config()); // BuehlmannConfig { gf: (70, 70) }
+    println!("{:?}", model_3.config()); // BuehlmannConfig { gf: (30, 70) }
 }

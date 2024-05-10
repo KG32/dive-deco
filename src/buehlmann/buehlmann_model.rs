@@ -1,7 +1,8 @@
 use crate::buehlmann::compartment::Compartment;
-use crate::common::{DecoModel, DecoModelConfig, Depth, Gas, Minutes, Pressure, Seconds, StepData};
+use crate::common::{DecoModel, DecoModelConfig, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
+use crate::GradientFactors;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -17,6 +18,18 @@ pub struct ModelState {
     depth: Depth,
     time: Seconds,
     gas: Gas,
+    gf_low_depth: Option<Depth>,
+}
+
+impl ModelState {
+    pub fn initial() -> Self {
+        Self {
+            depth: 0.,
+            time: 0,
+            gas: Gas::air(),
+            gf_low_depth: None,
+        }
+    }
 }
 
 impl DecoModel for BuehlmannModel {
@@ -30,21 +43,15 @@ impl DecoModel for BuehlmannModel {
         }
 
         // air as a default init gas
-        let air = Gas::new(0.21, 0.);
-
-        let initial_model_state = ModelState {
-            depth: 0.,
-            time: 0,
-            gas: air,
-        };
+        let initial_model_state = ModelState::initial();
 
         let mut model = Self {
             config,
             compartments: vec![],
-            state: initial_model_state
+            state: initial_model_state,
         };
 
-        model.create_compartments(ZHL16C_VALUES);
+        model.create_compartments(ZHL16C_VALUES, config);
 
         model
     }
@@ -77,14 +84,8 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn ceiling(&self) -> Depth {
-        let leading_cpt: &Compartment = self.leading_cpt();
-        let mut ceil = (leading_cpt.min_tolerable_amb_pressure - (self.config.surface_pressure as f64 / 1000.)) * 10.;
-        // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
-        if ceil < 0. {
-            ceil = 0.;
-        }
-
-        ceil
+        let leading_comp: &Compartment = self.leading_comp();
+        leading_comp.ceiling()
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -97,49 +98,46 @@ impl BuehlmannModel {
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
         let mut gf_now = 0.;
         let mut gf_surf = 0.;
-
-        for cpt in self.compartments.iter() {
-            let (cpt_gf_now, cpt_gf_surf) = self.gfs_for_compartment(cpt);
-            if cpt_gf_now > gf_now {
-                gf_now = cpt_gf_now;
+        for comp in self.compartments.iter() {
+            let (comp_gf_now, comp_gf_surf) = comp.calc_gfs(self.config.surface_pressure, self.state.depth);
+            if comp_gf_now > gf_now {
+                gf_now = comp_gf_now;
             }
-            if cpt_gf_surf > gf_surf {
-                gf_surf = cpt_gf_surf;
+            if comp_gf_surf > gf_surf {
+                gf_surf = comp_gf_surf;
             }
         }
 
         (gf_now, gf_surf)
     }
 
-    fn gfs_for_compartment(&self, cpt: &Compartment) -> (Pressure, Pressure) {
-        // surface pressure assumed 1ATA
-        let p_surf = (self.config.surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (&self.state.depth / 10.);
-        // ZHL params coefficients
-        let (_, a_coeff, b_coeff) = cpt.params;
-        let m_value = a_coeff + (p_amb / b_coeff);
-        let m_value_surf = a_coeff + (p_surf / b_coeff);
-        let gf_now = ((cpt.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
-        let gf_surf = ((cpt.inert_pressure - p_surf) / (m_value_surf - p_surf)) * 100.;
-
-        (gf_now, gf_surf)
-    }
-
-    fn leading_cpt(&self) -> &Compartment {
-        let mut leading_cpt: &Compartment = &self.compartments[0];
+    fn leading_comp(&self) -> &Compartment {
+        let mut leading_comp: &Compartment = &self.compartments[0];
         for compartment in &self.compartments[1..] {
-            if compartment.min_tolerable_amb_pressure > leading_cpt.min_tolerable_amb_pressure {
-                leading_cpt = compartment;
+            if compartment.min_tolerable_amb_pressure > leading_comp.min_tolerable_amb_pressure {
+                leading_comp = compartment;
             }
         }
 
-        leading_cpt
+        leading_comp
     }
 
-    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16]) {
+    fn leading_comp_mut(&mut self) -> &mut Compartment {
+        let comps = &mut self.compartments;
+        let mut leading_comp_index = 0;
+        for (i, compartment) in comps.iter().enumerate().skip(1) {
+            if compartment.min_tolerable_amb_pressure > comps[leading_comp_index].min_tolerable_amb_pressure {
+                leading_comp_index = i;
+            }
+        }
+
+        &mut comps[leading_comp_index]
+    }
+
+    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
-            let compartment = Compartment::new(i + 1, comp_values, self.config.gf);
+            let compartment = Compartment::new(i + 1, comp_values, config);
             compartments.push(compartment);
         }
         self.compartments = compartments;
@@ -147,8 +145,59 @@ impl BuehlmannModel {
 
     fn recalculate_compartments(&mut self, step: StepData) {
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&step, self.config.gf, self.config.surface_pressure);
+            compartment.recalculate(&step, self.config.gf.1, self.config.surface_pressure);
         }
+        self.recalculate_leading_compartment_with_gf(step);
+    }
+
+    fn recalculate_leading_compartment_with_gf(&mut self, step: StepData) {
+        let BuehlmannConfig { gf, surface_pressure } = self.config;
+        let max_gf = self.max_gf(gf, *step.depth);
+        let leading = self.leading_comp_mut();
+        let recalc_step = StepData { depth: step.depth,  time: &0, gas: step.gas };
+        leading.recalculate(&recalc_step, max_gf, surface_pressure);
+    }
+
+    fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
+        let (gf_low, gf_high) = gf;
+        let in_deco = self.ceiling() > 0.;
+        if !in_deco {
+            return gf_high;
+        }
+
+        let gf_low_depth = match self.state.gf_low_depth {
+            Some(gf_low_depth) => gf_low_depth,
+            None => {
+                // find GF low depth
+                let mut sim_model = self.fork();
+                let sim_gas = sim_model.state.gas;
+                let mut target_depth = sim_model.state.depth;
+                while target_depth > 0. {
+                    let sim_step_depth = target_depth - 1.;
+                    sim_model.step(&sim_step_depth, &0, &sim_gas);
+                    let (gf99, ..) = sim_model.gfs_current();
+                    if gf99 >= gf_low.into() {
+                        break;
+                    }
+                    target_depth = sim_step_depth;
+                }
+                self.state.gf_low_depth = Some(target_depth);
+                target_depth
+            }
+        };
+
+        if depth > gf_low_depth {
+            return gf_low;
+        }
+
+        self.gf_slope_point(gf, gf_low_depth, depth)
+    }
+
+    fn gf_slope_point(&self, gf: GradientFactors, gf_low_depth: Depth, depth: Depth) -> GradientFactor {
+        let (gf_low, gf_high) = gf;
+        let slope_point: f64 = gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth ) * depth;
+
+        slope_point as u8
     }
 
     fn fork(&self) -> BuehlmannModel {
@@ -176,6 +225,48 @@ mod tests {
         let nx32 = Gas::new(0.32, 0.);
         model.step(&10., &(10 * 60), &air);
         model.step(&15., &(15 * 60), &nx32);
-        assert_eq!(model.state, ModelState { depth: 15., time: (25 * 60), gas: nx32 });
+        assert_eq!(model.state, ModelState { depth: 15., time: (25 * 60), gas: nx32, gf_low_depth: None });
+    }
+
+    #[test]
+    fn test_max_gf_within_ndl() {
+        let gf = (50, 100);
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let air = Gas::air();
+        let step = StepData { depth: &0., time: &0, gas: &air };
+        model.step(&step.depth, &step.time, &step.gas);
+        assert_eq!(model.max_gf(gf, *step.depth), 100);
+    }
+
+    #[test]
+    fn test_max_gf_below_first_stop() {
+        let gf = (50, 100);
+
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let air = Gas::air();
+        let step = StepData { depth: &40., time: &(10 * 60), gas: &air };
+        model.step(&step.depth, &step.time, &step.gas);
+        assert_eq!(model.max_gf(gf, *step.depth), 50);
+    }
+
+    #[test]
+    fn test_max_gf_during_deco() {
+        let gf = (30, 70);
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let air = Gas::air();
+
+        model.step(&40., &(30 * 60), &air);
+        model.step(&21., &(5 * 60), &air);
+        model.step(&14., &(0 * 60), &air);
+        assert_eq!(model.max_gf(gf, 14.), 40);
+    }
+
+
+    #[test]
+    fn test_gf_slope_point() {
+        let gf = (30, 85);
+        let model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
+        assert_eq!(slope_point, 35);
     }
 }

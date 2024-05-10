@@ -23,3 +23,17 @@ fn test_ndl() {
     }
 }
 
+// GFLo
+
+#[test]
+fn test_gf_low_ceiling() {
+    let mut model = fixtures::model_gf((50, 100));
+
+    let air = fixtures::gas_air();
+
+    model.step(&40., &(10 * 60), &air);
+
+    let ceiling = model.ceiling();
+
+    assert_eq!(ceiling, 8.184980468521994);
+}
