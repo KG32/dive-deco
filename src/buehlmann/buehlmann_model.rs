@@ -11,7 +11,6 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: ModelState,
-    is_sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -19,7 +18,7 @@ pub struct ModelState {
     depth: Depth,
     time: Seconds,
     gas: Gas,
-    pub gf_low_depth: Option<Depth>,
+    gf_low_depth: Option<Depth>,
 }
 
 impl ModelState {
@@ -50,10 +49,9 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
-            is_sim: false,
         };
 
-        model.create_compartments(ZHL16C_VALUES, config, initial_model_state);
+        model.create_compartments(ZHL16C_VALUES, config);
 
         model
     }
@@ -86,8 +84,8 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn ceiling(&self) -> Depth {
-        let leading_cpt: &Compartment = self.leading_cpt();
-        leading_cpt.ceiling()
+        let leading_comp: &Compartment = self.leading_comp();
+        leading_comp.ceiling()
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -100,31 +98,31 @@ impl BuehlmannModel {
     pub fn gfs_current(&self) -> (Pressure, Pressure) {
         let mut gf_now = 0.;
         let mut gf_surf = 0.;
-        for cpt in self.compartments.iter() {
-            let (cpt_gf_now, cpt_gf_surf) = cpt.calc_gfs(self.config.surface_pressure, self.state.depth);
-            if cpt_gf_now > gf_now {
-                gf_now = cpt_gf_now;
+        for comp in self.compartments.iter() {
+            let (comp_gf_now, comp_gf_surf) = comp.calc_gfs(self.config.surface_pressure, self.state.depth);
+            if comp_gf_now > gf_now {
+                gf_now = comp_gf_now;
             }
-            if cpt_gf_surf > gf_surf {
-                gf_surf = cpt_gf_surf;
+            if comp_gf_surf > gf_surf {
+                gf_surf = comp_gf_surf;
             }
         }
 
         (gf_now, gf_surf)
     }
 
-    fn leading_cpt(&self) -> &Compartment {
-        let mut leading_cpt: &Compartment = &self.compartments[0];
+    fn leading_comp(&self) -> &Compartment {
+        let mut leading_comp: &Compartment = &self.compartments[0];
         for compartment in &self.compartments[1..] {
-            if compartment.min_tolerable_amb_pressure > leading_cpt.min_tolerable_amb_pressure {
-                leading_cpt = compartment;
+            if compartment.min_tolerable_amb_pressure > leading_comp.min_tolerable_amb_pressure {
+                leading_comp = compartment;
             }
         }
 
-        leading_cpt
+        leading_comp
     }
 
-    fn leading_cpt_mut(&mut self) -> &mut Compartment {
+    fn leading_comp_mut(&mut self) -> &mut Compartment {
         let cpts = &mut self.compartments;
         let mut leading_cpt_index = 0;
         for (i, compartment) in cpts.iter().enumerate().skip(1) {
@@ -136,10 +134,10 @@ impl BuehlmannModel {
         &mut cpts[leading_cpt_index]
     }
 
-    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig, state: ModelState) {
+    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
-            let compartment = Compartment::new(i + 1, comp_values, self.config.gf, config, state);
+            let compartment = Compartment::new(i + 1, comp_values, self.config.gf, config);
             compartments.push(compartment);
         }
         self.compartments = compartments;
@@ -154,8 +152,8 @@ impl BuehlmannModel {
 
     fn recalculate_leading_compartment_with_gf(&mut self, step: StepData) {
         let max_gf = self.max_gf(self.config.gf, *step.depth);
-        let leading = self.leading_cpt_mut();
-        let recalc_step = StepData { depth: &step.depth,  time: &0, gas: &step.gas };
+        let leading = self.leading_comp_mut();
+        let recalc_step = StepData { depth: step.depth,  time: &0, gas: step.gas };
         leading.recalculate(&recalc_step, max_gf, 1013);
     }
 
@@ -166,7 +164,6 @@ impl BuehlmannModel {
             return gf_high;
         }
 
-        self.dev_dbg(self.state);
         let gf_low_depth = match self.state.gf_low_depth {
             Some(gf_low_depth) => gf_low_depth,
             None => {
@@ -188,8 +185,6 @@ impl BuehlmannModel {
             }
         };
 
-        self.dev_dbg(depth);
-        self.dev_dbg(gf_low_depth);
         if depth > gf_low_depth {
             return gf_low;
         }
@@ -197,15 +192,7 @@ impl BuehlmannModel {
         self.gf_slope_point(gf, gf_low_depth, depth)
     }
 
-    fn dev_dbg<T: std::fmt::Debug>(&self, x: T) {
-        if !self.is_sim {
-            dbg!(x);
-        }
-    }
-
     fn gf_slope_point(&self, gf: GradientFactors, gf_low_depth: Depth, depth: Depth) -> GradientFactor {
-        self.dev_dbg("slope");
-        self.dev_dbg(gf);
         let (gf_low, gf_high) = gf;
         let slope_point: f64 = gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth ) * depth;
 
@@ -217,7 +204,6 @@ impl BuehlmannModel {
             config: self.config,
             compartments: self.compartments.clone(),
             state: self.state,
-            is_sim: true,
         }
     }
 

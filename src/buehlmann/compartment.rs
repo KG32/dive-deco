@@ -1,5 +1,5 @@
 use crate::{common::{Depth, GradientFactor, GradientFactors, MbarPressure, PartialPressures, Pressure, StepData}, BuehlmannConfig};
-use super::{buehlmann_model::ModelState, zhl_values::ZHLParams};
+use super::zhl_values::ZHLParams;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Compartment {
@@ -9,7 +9,6 @@ pub struct Compartment {
     pub inert_pressure: Pressure,
     pub params: ZHLParams,
     model_config: BuehlmannConfig,
-    model_state: ModelState,
 }
 
 impl Compartment {
@@ -18,16 +17,13 @@ impl Compartment {
         params: ZHLParams,
         gf_config: GradientFactors,
         model_config: BuehlmannConfig,
-        model_state: ModelState,
     ) -> Self {
         let mut compartment = Self {
             no,
             params,
             inert_pressure: 0.79,
-            // min_tolerable_inert_pressure: -0.,
             min_tolerable_amb_pressure: -0.,
             model_config,
-            model_state,
         };
 
         // calculate initial minimal tolerable ambient pressure
@@ -92,12 +88,12 @@ mod tests {
 
     fn cpt_1() -> Compartment {
         let cpt_1_params = (4., 1.2599, 0.5050);
-        Compartment::new(1, cpt_1_params, (100, 100), BuehlmannConfig::default(), ModelState::initial())
+        Compartment::new(1, cpt_1_params, (100, 100), BuehlmannConfig::default())
     }
 
     fn cpt_5() -> Compartment {
         let cpt_5_params = (27., 0.6200, 0.8126);
-        Compartment::new(5, cpt_5_params, (100, 100), BuehlmannConfig::default(), ModelState::initial())
+        Compartment::new(5, cpt_5_params, (100, 100), BuehlmannConfig::default())
     }
 
     #[test]
@@ -112,7 +108,6 @@ mod tests {
                 min_tolerable_amb_pressure: -0.2372995,
                 // mocked config and state
                 model_config: BuehlmannConfig::default(),
-                model_state: ModelState::initial()
             }
         );
     }

@@ -117,7 +117,7 @@ fn test_altitude() {
 }
 
 #[test]
-fn test_example_deco() {
+fn test_example_deco_start() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
             .gradient_factors(30, 70)
@@ -131,3 +131,22 @@ fn test_example_deco() {
     model.step(&40., &(10 * 60), &air);
     assert_eq!(model.ceiling(), 12.906758687930836);
 }
+
+#[test]
+fn test_example_deco() {
+    let mut model = BuehlmannModel::new(
+        BuehlmannConfig::new()
+            .gradient_factors(30, 70)
+            .surface_pressure(1013)
+    );
+
+    let air = Gas::air();
+    let ean_50 = Gas::new(0.50, 0.);
+
+    model.step(&40., &(40 * 60), &air);
+    model.step(&30., &(3 * 60), &air);
+    model.step(&21., &(10 * 60), &ean_50);
+
+    assert_eq!(model.ceiling(), 11.744868181179458);
+}
+
