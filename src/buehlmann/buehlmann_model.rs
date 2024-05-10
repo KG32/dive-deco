@@ -123,15 +123,15 @@ impl BuehlmannModel {
     }
 
     fn leading_comp_mut(&mut self) -> &mut Compartment {
-        let cpts = &mut self.compartments;
-        let mut leading_cpt_index = 0;
-        for (i, compartment) in cpts.iter().enumerate().skip(1) {
-            if compartment.min_tolerable_amb_pressure > cpts[leading_cpt_index].min_tolerable_amb_pressure {
-                leading_cpt_index = i;
+        let comps = &mut self.compartments;
+        let mut leading_comp_index = 0;
+        for (i, compartment) in comps.iter().enumerate().skip(1) {
+            if compartment.min_tolerable_amb_pressure > comps[leading_comp_index].min_tolerable_amb_pressure {
+                leading_comp_index = i;
             }
         }
 
-        &mut cpts[leading_cpt_index]
+        &mut comps[leading_comp_index]
     }
 
     fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {

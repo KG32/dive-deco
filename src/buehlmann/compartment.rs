@@ -86,21 +86,21 @@ mod tests {
     use super::*;
     use crate::common::Gas;
 
-    fn cpt_1() -> Compartment {
-        let cpt_1_params = (4., 1.2599, 0.5050);
-        Compartment::new(1, cpt_1_params, (100, 100), BuehlmannConfig::default())
+    fn comp_1() -> Compartment {
+        let comp_1_params = (4., 1.2599, 0.5050);
+        Compartment::new(1, comp_1_params, (100, 100), BuehlmannConfig::default())
     }
 
-    fn cpt_5() -> Compartment {
-        let cpt_5_params = (27., 0.6200, 0.8126);
-        Compartment::new(5, cpt_5_params, (100, 100), BuehlmannConfig::default())
+    fn comp_5() -> Compartment {
+        let comp_5_params = (27., 0.6200, 0.8126);
+        Compartment::new(5, comp_5_params, (100, 100), BuehlmannConfig::default())
     }
 
     #[test]
     fn test_constructor() {
-        let cpt = cpt_1();
+        let comp = comp_1();
         assert_eq!(
-            cpt,
+            comp,
             Compartment {
                 no: 1,
                 params: (4., 1.2599, 0.5050),
@@ -114,20 +114,20 @@ mod tests {
 
     #[test]
     fn test_recalculation_ongassing() {
-        let mut cpt = cpt_5();
+        let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
-        cpt.recalculate(&step, 100, 1000);
-        assert_eq!(cpt.inert_pressure, 1.315391144211091);
+        comp.recalculate(&step, 100, 1000);
+        assert_eq!(comp.inert_pressure, 1.315391144211091);
     }
 
     #[test]
     fn test_min_pressure_calculation() {
-        let mut cpt = cpt_5();
+        let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
-        cpt.recalculate(&step, 100, 100);
-        let min_tolerable_pressure = cpt.min_tolerable_amb_pressure;
+        comp.recalculate(&step, 100, 100);
+        let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.4342609809161748);
     }
 
