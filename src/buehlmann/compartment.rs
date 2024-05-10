@@ -1,4 +1,4 @@
-use crate::{common::{Depth, GradientFactor, GradientFactors, MbarPressure, PartialPressures, Pressure, StepData}, BuehlmannConfig};
+use crate::{common::{Depth, GradientFactor, MbarPressure, PartialPressures, Pressure, StepData}, BuehlmannConfig};
 use super::zhl_values::ZHLParams;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
