@@ -11,6 +11,13 @@ pub trait DecoModelConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr>;
 }
 
+#[derive(Debug)]
+pub struct DiveState {
+    pub depth: Depth,
+    pub time: Seconds,
+    pub gas: Gas,
+}
+
 pub trait DecoModel {
     type ConfigType: DecoModelConfig;
 
@@ -28,4 +35,7 @@ pub trait DecoModel {
 
     /// get model config
     fn config(&self) -> Self::ConfigType;
+
+    /// get model dive state
+    fn dive_state(&self) -> DiveState;
 }
