@@ -1,5 +1,5 @@
 use crate::buehlmann::compartment::Compartment;
-use crate::common::{DecoModel, DecoModelConfig, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
+use crate::common::{DecoModel, DecoModelConfig, DiveState, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
@@ -10,18 +10,18 @@ const NDL_CUT_OFF_MINS: Minutes = 99;
 pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
-    state: ModelState,
+    state: BuehlmannState,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ModelState {
+pub struct BuehlmannState {
     depth: Depth,
     time: Seconds,
     gas: Gas,
     gf_low_depth: Option<Depth>,
 }
 
-impl ModelState {
+impl BuehlmannState {
     pub fn initial() -> Self {
         Self {
             depth: 0.,
@@ -43,7 +43,7 @@ impl DecoModel for BuehlmannModel {
         }
 
         // air as a default init gas
-        let initial_model_state = ModelState::initial();
+        let initial_model_state = BuehlmannState::initial();
 
         let mut model = Self {
             config,
@@ -90,6 +90,15 @@ impl DecoModel for BuehlmannModel {
 
     fn config(&self) -> BuehlmannConfig {
         self.config
+    }
+
+    fn dive_state(&self) -> DiveState {
+        let BuehlmannState { depth, time, gas, .. } = self.state;
+        DiveState {
+            depth,
+            time,
+            gas,
+        }
     }
 }
 
@@ -225,7 +234,7 @@ mod tests {
         let nx32 = Gas::new(0.32, 0.);
         model.step(&10., &(10 * 60), &air);
         model.step(&15., &(15 * 60), &nx32);
-        assert_eq!(model.state, ModelState { depth: 15., time: (25 * 60), gas: nx32, gf_low_depth: None });
+        assert_eq!(model.state, BuehlmannState { depth: 15., time: (25 * 60), gas: nx32, gf_low_depth: None });
     }
 
     #[test]
@@ -269,4 +278,6 @@ mod tests {
         let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
         assert_eq!(slope_point, 35);
     }
+
+
 }
