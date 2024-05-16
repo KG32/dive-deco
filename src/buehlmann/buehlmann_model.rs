@@ -1,6 +1,6 @@
 use crate::buehlmann::compartment::Compartment;
 use crate::common::{DecoModel, DecoModelConfig, DiveState, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
-use crate::buehlmann::zhl_values::{ZHL16C_VALUES, ZHLParams};
+use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
 
@@ -51,7 +51,7 @@ impl DecoModel for BuehlmannModel {
             state: initial_model_state,
         };
 
-        model.create_compartments(ZHL16C_VALUES, config);
+        model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
         model
     }

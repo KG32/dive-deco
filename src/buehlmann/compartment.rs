@@ -51,9 +51,9 @@ impl Compartment {
         let p_surf = (surface_pressure as f64) / 1000.;
         let p_amb = p_surf + (depth / 10.);
         // ZHL params coefficients
-        let (_, a_coeff, b_coeff) = self.params;
-        let m_value = a_coeff + (p_amb / b_coeff);
-        let m_value_surf = a_coeff + (p_surf / b_coeff);
+        let (_, n2_a_coeff, n2_b_coeff, _, _, _) = self.params;
+        let m_value = n2_a_coeff + (p_amb / n2_b_coeff);
+        let m_value_surf = n2_a_coeff + (p_surf / n2_b_coeff);
         let gf_now = ((self.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
         let gf_surf = ((self.inert_pressure - p_surf) / (m_value_surf - p_surf)) * 100.;
 
@@ -70,10 +70,10 @@ impl Compartment {
     }
 
     fn calc_min_tolerable_amb_pressure(&self, max_gf: GradientFactor) -> Pressure {
-        let (_, a_coefficient, b_coefficient) = &self.params;
+        let (_, n2_a_coefficient, n2_b_coefficient, _, _, _) = &self.params;
         let max_gf_fraction = max_gf as f64 / 100.;
-        let a_coefficient_adjusted = a_coefficient * max_gf_fraction;
-        let b_coefficient_adjusted = b_coefficient / (max_gf_fraction - (max_gf_fraction * b_coefficient) + b_coefficient);
+        let a_coefficient_adjusted = n2_a_coefficient * max_gf_fraction;
+        let b_coefficient_adjusted = n2_b_coefficient / (max_gf_fraction - (max_gf_fraction * n2_b_coefficient) + n2_b_coefficient);
 
         (self.inert_pressure - a_coefficient_adjusted) * b_coefficient_adjusted
     }
@@ -86,12 +86,12 @@ mod tests {
     use crate::common::Gas;
 
     fn comp_1() -> Compartment {
-        let comp_1_params = (4., 1.2599, 0.5050);
+        let comp_1_params = (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245);
         Compartment::new(1, comp_1_params, BuehlmannConfig::default())
     }
 
     fn comp_5() -> Compartment {
-        let comp_5_params = (27., 0.6200, 0.8126);
+        let comp_5_params = (27., 0.6200, 0.8126, 10.21, 0.9220, 0.7582);
         Compartment::new(5, comp_5_params, BuehlmannConfig::default())
     }
 
@@ -102,7 +102,7 @@ mod tests {
             comp,
             Compartment {
                 no: 1,
-                params: (4., 1.2599, 0.5050),
+                params: (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245),
                 inert_pressure: 0.79,
                 min_tolerable_amb_pressure: -0.2372995,
                 // mocked config and state
