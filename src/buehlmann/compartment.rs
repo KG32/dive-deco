@@ -78,10 +78,29 @@ impl Compartment {
         (self.inert_pressure - a_coefficient_adjusted) * b_coefficient_adjusted
     }
 
-    fn weighted_zhl_params(&self, _gas: Gas) -> (ZHLParam, ZHLParam, ZHLParam) {
-        let params = self.params;
-        // tmp opaque
-        (params.0, params.1, params.2)
+    fn weighted_zhl_params(&self, gas: Gas) -> (ZHLParam, ZHLParam, ZHLParam) {
+        fn weighted_param(he_param: ZHLParam, he_pp: Pressure, n2_param: ZHLParam, n2_pp: Pressure) -> ZHLParam {
+            ((he_param * he_pp) + (n2_param * n2_pp)) / (he_pp + n2_pp)
+        }
+        let (
+            n2_half_time,
+            n2_a_coeff,
+            n2_b_coeff,
+            he_half_time,
+            he_a_coeff,
+            he_b_coeff,
+        ) = self.params;
+        let PartialPressures {
+            o2: _o2_pp,
+            he: he_pp,
+            n2: n2_pp,
+        } = gas.gas_pressures_compound(1.);
+
+        (
+            weighted_param(he_half_time, he_pp, n2_half_time, n2_pp),
+            weighted_param(he_a_coeff, he_pp, n2_a_coeff, n2_pp),
+            weighted_param(he_b_coeff, he_pp, n2_b_coeff, n2_pp),
+        )
     }
 }
 
@@ -131,8 +150,7 @@ mod tests {
         let comp = comp_1();
         let tmx = Gas::new(0.18, 0.50);
         let weighted_params = comp.weighted_zhl_params(tmx);
-        assert_eq!(weighted_params, (2.48, 1.5569, 0.4559));
-
+        assert_eq!(weighted_params, (2.481707317073171, 1.5541073170731705, 0.4559146341463414));
     }
 
     #[test]

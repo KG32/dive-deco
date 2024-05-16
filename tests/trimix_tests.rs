@@ -1,7 +1,6 @@
 use dive_deco::{ DecoModel, Gas };
 pub mod fixtures;
 
-#[ignore = "wip"]
 #[test]
 fn test_tmx_gf_surf() {
     let mut model = fixtures::model_gf((100, 100));
