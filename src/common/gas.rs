@@ -32,15 +32,15 @@ impl Gas {
         if (o2_pp + he_pp) > 1. {
             panic!("Invalid partial pressures, can't exceed 1ATA in total");
         }
-        // @todo helium
-        if he_pp != 0. {
-            panic!("Helium not supported");
-        }
+        // // @todo helium
+        // if he_pp != 0. {
+        //     panic!("Helium not supported");
+        // }
 
         Self {
             o2_pp,
             he_pp,
-            n2_pp: 1. - (o2_pp + he_pp),
+            n2_pp: ((1. - (o2_pp + he_pp)) * 100.0).round() / 100.0,
         }
     }
 
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(air.he_pp, 0.);
     }
 
-    #[ignore = "trimix unsupported"]
+    // #[ignore = "trimix unsupported"]
     #[test]
     fn test_valid_gas_tmx() {
         let tmx = Gas::new(0.18, 0.35);
@@ -109,17 +109,24 @@ mod tests {
         Gas::new(0.5, 0.51);
     }
 
-    #[test]
-    #[should_panic]
-    fn test_unsupported_helium() {
-        Gas::new(0.18, 0.35);
-    }
+    // #[test]
+    // #[should_panic]
+    // fn test_unsupported_helium() {
+    //     Gas::new(0.18, 0.35);
+    // }
 
     #[test]
-    fn test_partial_pressures() {
+    fn test_partial_pressures_air() {
         let air = Gas::new(0.21, 0.);
         let partial_pressures = air.partial_pressures(&10., 1000);
         assert_eq!(partial_pressures, PartialPressures { o2: 0.42, n2: 1.58, he: 0. });
+    }
+
+    #[test]
+    fn partial_pressures_tmx() {
+        let tmx = Gas::new(0.21, 0.35);
+        let partial_pressures = tmx.partial_pressures(&10., 1000);
+        assert_eq!(partial_pressures, PartialPressures { o2: 0.42, he: 0.70, n2: 0.88})
     }
 
     #[test]
