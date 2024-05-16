@@ -108,7 +108,7 @@ impl BuehlmannModel {
         let mut gf_now = 0.;
         let mut gf_surf = 0.;
         for comp in self.compartments.iter() {
-            let (comp_gf_now, comp_gf_surf) = comp.gfs(self.config.surface_pressure, self.state.depth);
+            let (comp_gf_now, comp_gf_surf) = comp.gfs(self.config.surface_pressure, self.state.depth, self.state.gas);
             if comp_gf_now > gf_now {
                 gf_now = comp_gf_now;
             }

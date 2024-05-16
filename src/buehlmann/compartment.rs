@@ -17,24 +17,26 @@ impl Compartment {
         params: ZHLParams,
         model_config: BuehlmannConfig,
     ) -> Self {
+        let init_gas = Gas::air();
+
         let mut compartment = Self {
             no,
             params,
-            inert_pressure: 0.79,
+            inert_pressure: init_gas.gas_pressures_compound(1.).n2,
             min_tolerable_amb_pressure: -0.,
             model_config,
         };
 
         // calculate initial minimal tolerable ambient pressure
-        let (.., gf_high) = model_config.gf;
-        compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high);
+        let (_, gf_high) = model_config.gf;
+        compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high, Gas::air());
 
         compartment
     }
 
     pub fn recalculate(&mut self, step: &StepData, max_gf: GradientFactor, surface_pressure: MbarPressure) {
         self.inert_pressure = self.compartment_inert_pressure(step, surface_pressure);
-        self.min_tolerable_amb_pressure = self.min_tolerable_amb_pressure(max_gf);
+        self.min_tolerable_amb_pressure = self.min_tolerable_amb_pressure(max_gf, *step.gas);
     }
 
     pub fn ceiling(&self) -> Depth {
@@ -47,11 +49,11 @@ impl Compartment {
         ceil
     }
 
-    pub fn gfs(&self, surface_pressure: MbarPressure, depth: Depth) -> (Pressure, Pressure) {
+    pub fn gfs(&self, surface_pressure: MbarPressure, depth: Depth, gas: Gas) -> (Pressure, Pressure) {
         let p_surf = (surface_pressure as f64) / 1000.;
         let p_amb = p_surf + (depth / 10.);
         // ZHL params coefficients
-        let (_, a_coeff, b_coeff) = self.weighted_zhl_params(Gas::air());
+        let (_, a_coeff, b_coeff) = self.weighted_zhl_params(gas);
         let m_value = a_coeff + (p_amb / b_coeff);
         let m_value_surf = a_coeff + (p_surf / b_coeff);
         let gf_now = ((self.inert_pressure - p_amb) / (m_value - p_amb)) * 100.;
@@ -62,18 +64,18 @@ impl Compartment {
 
     fn compartment_inert_pressure(&self, step: &StepData, surface_pressure: MbarPressure) -> Pressure {
         let StepData { depth, time, gas  } = step;
-        let PartialPressures { n2, .. } = gas.inspired_partial_pressures(depth, surface_pressure);
-        let (half_time, ..) = self.params;
-        let p_comp_delta = (n2 - self.inert_pressure) * (1. - (2_f64.powf(-(**time as f64 / 60.) / half_time)));
+        let PartialPressures { n2: n2_pp, .. } = gas.inspired_partial_pressures(depth, surface_pressure);
+        let (half_time, ..) = self.weighted_zhl_params(**gas);
+        let p_comp_delta = (n2_pp - self.inert_pressure) * (1. - (2_f64.powf(-(**time as f64 / 60.) / half_time)));
 
         self.inert_pressure + p_comp_delta
     }
 
-    fn min_tolerable_amb_pressure(&self, max_gf: GradientFactor) -> Pressure {
-        let (_, n2_a_coefficient, n2_b_coefficient, _, _, _) = &self.params;
+    fn min_tolerable_amb_pressure(&self, max_gf: GradientFactor, gas: Gas) -> Pressure {
+        let (_, a_coefficient, b_coefficient,) = self.weighted_zhl_params(gas);
         let max_gf_fraction = max_gf as f64 / 100.;
-        let a_coefficient_adjusted = n2_a_coefficient * max_gf_fraction;
-        let b_coefficient_adjusted = n2_b_coefficient / (max_gf_fraction - (max_gf_fraction * n2_b_coefficient) + n2_b_coefficient);
+        let a_coefficient_adjusted = a_coefficient * max_gf_fraction;
+        let b_coefficient_adjusted = b_coefficient / (max_gf_fraction - (max_gf_fraction * b_coefficient) + b_coefficient);
 
         (self.inert_pressure - a_coefficient_adjusted) * b_coefficient_adjusted
     }

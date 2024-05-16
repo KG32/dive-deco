@@ -5,9 +5,9 @@ pub mod fixtures;
 fn test_tmx_gf_surf() {
     let mut model = fixtures::model_gf((100, 100));
 
-    let gas = Gas::new(0.21, 0.35);
+    let tmx = Gas::new(0.21, 0.35);
 
-    model.step(&50., &(5 * 60), &gas);
+    model.step(&50., &(5 * 60), &tmx);
 
     close_to_percent!(model.gfs_current().1, 104., 5.);
 }
