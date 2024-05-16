@@ -29,7 +29,7 @@ impl Compartment {
 
         // calculate initial minimal tolerable ambient pressure
         let (_, gf_high) = model_config.gf;
-        compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high, Gas::air());
+        compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high, init_gas);
 
         compartment
     }
@@ -64,9 +64,10 @@ impl Compartment {
 
     fn compartment_inert_pressure(&self, step: &StepData, surface_pressure: MbarPressure) -> Pressure {
         let StepData { depth, time, gas  } = step;
-        let PartialPressures { n2: n2_pp, .. } = gas.inspired_partial_pressures(depth, surface_pressure);
+        let PartialPressures { n2: n2_pp, he: he_pp, .. } = gas.inspired_partial_pressures(depth, surface_pressure);
+        let inert_gases_pressure = n2_pp + he_pp;
         let (half_time, ..) = self.weighted_zhl_params(**gas);
-        let p_comp_delta = (n2_pp - self.inert_pressure) * (1. - (2_f64.powf(-(**time as f64 / 60.) / half_time)));
+        let p_comp_delta = (inert_gases_pressure - self.inert_pressure) * (1. - (2_f64.powf(-(**time as f64 / 60.) / half_time)));
 
         self.inert_pressure + p_comp_delta
     }
