@@ -32,10 +32,6 @@ impl Gas {
         if (o2_pp + he_pp) > 1. {
             panic!("Invalid partial pressures, can't exceed 1ATA in total");
         }
-        // // @todo helium
-        // if he_pp != 0. {
-        //     panic!("Helium not supported");
-        // }
 
         Self {
             o2_pp,

@@ -18,11 +18,12 @@ impl Compartment {
         model_config: BuehlmannConfig,
     ) -> Self {
         let init_gas = Gas::air();
+        let init_gas_compound_pressures = init_gas.gas_pressures_compound(1.);
 
         let mut compartment = Self {
             no,
             params,
-            inert_pressure: init_gas.gas_pressures_compound(1.).n2,
+            inert_pressure: init_gas_compound_pressures.n2 + init_gas_compound_pressures.he,
             min_tolerable_amb_pressure: -0.,
             model_config,
         };
