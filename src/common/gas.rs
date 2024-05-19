@@ -19,15 +19,19 @@ pub struct PartialPressures {
     pub he: Pressure,
 }
 
+pub enum IntertGas {
+    HELIUM,
+    NITROGEN
+}
+
 impl Gas {
     /// init new gas with partial pressures (eg. 0.21, 0. for air)
-    /// helium not supported yet
     pub fn new(o2_pp: Pressure, he_pp: Pressure) -> Self {
         if !(0. ..=1.).contains(&o2_pp) {
             panic!("Invalid O2 partial pressure");
         }
         if !(0. ..=1.).contains(&he_pp) {
-            panic!("Invalid He partial pressure");
+            panic!("Invalid He partial pressure [{he_pp}]");
         }
         if (o2_pp + he_pp) > 1. {
             panic!("Invalid partial pressures, can't exceed 1ATA in total");
@@ -37,6 +41,14 @@ impl Gas {
             o2_pp,
             he_pp,
             n2_pp: ((1. - (o2_pp + he_pp)) * 100.0).round() / 100.0,
+        }
+    }
+
+    pub fn _tmp_new_inert_mock(he_pp: Pressure, n2_pp: Pressure) -> Self {
+        Self {
+            o2_pp: 0.,
+            he_pp,
+            n2_pp,
         }
     }
 
@@ -105,11 +117,6 @@ mod tests {
         Gas::new(0.5, 0.51);
     }
 
-    // #[test]
-    // #[should_panic]
-    // fn test_unsupported_helium() {
-    //     Gas::new(0.18, 0.35);
-    // }
 
     #[test]
     fn test_partial_pressures_air() {
