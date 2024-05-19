@@ -5,3 +5,4 @@ mod buehlmann_config;
 
 pub use buehlmann_model::BuehlmannModel;
 pub use buehlmann_config::BuehlmannConfig;
+pub use compartment::Supersaturation;

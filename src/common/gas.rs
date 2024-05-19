@@ -19,28 +19,28 @@ pub struct PartialPressures {
     pub he: Pressure,
 }
 
+pub enum InertGas {
+    Helium,
+    Nitrogen
+}
+
 impl Gas {
     /// init new gas with partial pressures (eg. 0.21, 0. for air)
-    /// helium not supported yet
     pub fn new(o2_pp: Pressure, he_pp: Pressure) -> Self {
         if !(0. ..=1.).contains(&o2_pp) {
             panic!("Invalid O2 partial pressure");
         }
         if !(0. ..=1.).contains(&he_pp) {
-            panic!("Invalid He partial pressure");
+            panic!("Invalid He partial pressure [{he_pp}]");
         }
         if (o2_pp + he_pp) > 1. {
             panic!("Invalid partial pressures, can't exceed 1ATA in total");
-        }
-        // @todo helium
-        if he_pp != 0. {
-            panic!("Helium not supported");
         }
 
         Self {
             o2_pp,
             he_pp,
-            n2_pp: 1. - (o2_pp + he_pp),
+            n2_pp: ((1. - (o2_pp + he_pp)) * 100.0).round() / 100.0,
         }
     }
 
@@ -56,16 +56,17 @@ impl Gas {
         self.gas_pressures_compound(gas_pressure)
     }
 
-    pub fn air() -> Self {
-        Self::new(0.21, 0.)
-    }
-
-    fn gas_pressures_compound(&self, gas_pressure: f64) -> PartialPressures {
+    pub fn gas_pressures_compound(&self, gas_pressure: f64) -> PartialPressures {
         PartialPressures {
             o2: self.o2_pp * gas_pressure,
             n2: self.n2_pp * gas_pressure,
             he: self.he_pp * gas_pressure,
         }
+    }
+
+    // TODO standard nitrox (bottom and deco) and trimix gasses
+    pub fn air() -> Self {
+        Self::new(0.21, 0.)
     }
 }
 
@@ -82,7 +83,6 @@ mod tests {
         assert_eq!(air.he_pp, 0.);
     }
 
-    #[ignore = "trimix unsupported"]
     #[test]
     fn test_valid_gas_tmx() {
         let tmx = Gas::new(0.18, 0.35);
@@ -109,17 +109,19 @@ mod tests {
         Gas::new(0.5, 0.51);
     }
 
-    #[test]
-    #[should_panic]
-    fn test_unsupported_helium() {
-        Gas::new(0.18, 0.35);
-    }
 
     #[test]
-    fn test_partial_pressures() {
+    fn test_partial_pressures_air() {
         let air = Gas::new(0.21, 0.);
         let partial_pressures = air.partial_pressures(&10., 1000);
         assert_eq!(partial_pressures, PartialPressures { o2: 0.42, n2: 1.58, he: 0. });
+    }
+
+    #[test]
+    fn partial_pressures_tmx() {
+        let tmx = Gas::new(0.21, 0.35);
+        let partial_pressures = tmx.partial_pressures(&10., 1000);
+        assert_eq!(partial_pressures, PartialPressures { o2: 0.42, he: 0.70, n2: 0.88})
     }
 
     #[test]
