@@ -38,8 +38,6 @@ fn test_heliox_gf_surf() {
 
     model.step(step.depth, step.time, step.gas);
 
-    dbg!(&model);
-
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
     assert_close_to_percent!(gf_surf, 201.16, 0.5);

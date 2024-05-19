@@ -146,7 +146,7 @@ Current tissue oversaturation as gradient factors.
   // (...)
 
   // on-gassing, gf99: 0%, surfGF: 71%
-  let (gf_now, gf_surf) = model.supersaturation(); // (0.0, 71.09852831834125)
+  let supersaturation = model.supersaturation(); // Supersaturation { gf_99: 0.0, gf_surf: 71.09852831834125 }
 ```
 
 #### Common
