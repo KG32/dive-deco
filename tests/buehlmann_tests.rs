@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas, Minutes };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas, Minutes, Supersaturation };
 pub mod fixtures;
 
 // general high-level model tests
@@ -19,17 +19,19 @@ fn test_gfs() {
     let air = Gas::new(0.21, 0.);
 
     model.step(&50., &(20 * 60), &air);
-    assert_eq!(model.gfs_current(), (0., 194.3055827400852));
+    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 194.3055827400852 });
 
     model.step(&40., &(10 * 60), &air);
-    assert_eq!(model.gfs_current(), (0., 209.1025059770294));
+    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 209.1025059770294 });
 }
 
 #[test]
 fn test_initial_gfs() {
-    let model = fixtures::model_default();
-    let (gf_now, gf_surf) = model.gfs_current();
-    assert_eq!(gf_now, 0.);
+    let mut model = fixtures::model_default();
+    let air = Gas::new(0.21, 0.);
+    model.step(&0., &0, &air);
+    let Supersaturation { gf_99, gf_surf } = model.supersaturation();
+    assert_eq!(gf_99, 0.);
     assert_eq!(gf_surf, 0.);
 }
 
@@ -51,9 +53,9 @@ fn test_model_steps_equality() {
 
     assert_eq!(model1.ceiling().floor(), model2.ceiling().floor());
 
-    let (model1_gf_now, model1_gf_surf) = model1.gfs_current();
-    let (model2_gf_now, model2_gf_surf) = model1.gfs_current();
-    assert_eq!(model1_gf_now.floor(), model2_gf_now.floor());
+    let Supersaturation { gf_99: model1_gf_99, gf_surf: model1_gf_surf} = model1.supersaturation();
+    let Supersaturation { gf_99: model2_gf_99, gf_surf: model2_gf_surf } = model1.supersaturation();
+    assert_eq!(model1_gf_99.floor(), model2_gf_99.floor());
     assert_eq!(model1_gf_surf.floor(), model2_gf_surf.floor());
 }
 
@@ -112,8 +114,10 @@ fn test_ndl_with_gf() {
 #[test]
 fn test_altitude() {
     let mut model = BuehlmannModel::new(BuehlmannConfig::new().surface_pressure(700));
-    model.step(&40., &(60 * 60), &fixtures::gas_air());
-    assert_eq!(model.gfs_current().1, 314.27462637570085);
+    let air = Gas::new(0.21, 0.);
+    model.step(&40., &(60 * 60), &air);
+    let Supersaturation { gf_surf, ..} = model.supersaturation();
+    assert_eq!(gf_surf, 314.27462637570085);
 }
 
 #[test]

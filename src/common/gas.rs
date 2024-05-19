@@ -19,9 +19,9 @@ pub struct PartialPressures {
     pub he: Pressure,
 }
 
-pub enum IntertGas {
-    HELIUM,
-    NITROGEN
+pub enum InertGas {
+    Helium,
+    Nitrogen
 }
 
 impl Gas {
@@ -44,14 +44,6 @@ impl Gas {
         }
     }
 
-    pub fn _tmp_new_inert_mock(he_pp: Pressure, n2_pp: Pressure) -> Self {
-        Self {
-            o2_pp: 0.,
-            he_pp,
-            n2_pp,
-        }
-    }
-
     /// gas partial pressures
     pub fn partial_pressures(&self, depth: &Depth, surface_pressure: MbarPressure) -> PartialPressures {
         let gas_pressure = (surface_pressure as f64 / 1000.) + (depth / 10.);
@@ -64,16 +56,17 @@ impl Gas {
         self.gas_pressures_compound(gas_pressure)
     }
 
-    pub fn air() -> Self {
-        Self::new(0.21, 0.)
-    }
-
     pub fn gas_pressures_compound(&self, gas_pressure: f64) -> PartialPressures {
         PartialPressures {
             o2: self.o2_pp * gas_pressure,
             n2: self.n2_pp * gas_pressure,
             he: self.he_pp * gas_pressure,
         }
+    }
+
+    // TODO standard nitrox (bottom and deco) and trimix gasses
+    pub fn air() -> Self {
+        Self::new(0.21, 0.)
     }
 }
 

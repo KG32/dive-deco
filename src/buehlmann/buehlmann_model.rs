@@ -1,4 +1,4 @@
-use crate::buehlmann::compartment::Compartment;
+use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{DecoModel, DecoModelConfig, DiveState, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
@@ -104,20 +104,26 @@ impl DecoModel for BuehlmannModel {
 
 impl BuehlmannModel {
     /// set of current gradient factors (GF now, GF surface)
-    pub fn gfs_current(&self) -> (Pressure, Pressure) {
-        let mut gf_now = 0.;
-        let mut gf_surf = 0.;
+    pub fn supersaturation(&self) -> Supersaturation {
+        let mut acc_gf_99 = 0.;
+        let mut acc_gf_surf = 0.;
         for comp in self.compartments.iter() {
-            let (comp_gf_now, comp_gf_surf) = comp.gfs(self.config.surface_pressure, self.state.depth, self.state.gas);
-            if comp_gf_now > gf_now {
-                gf_now = comp_gf_now;
+            let Supersaturation { gf_99, gf_surf } = comp.supersaturation(self.config.surface_pressure, self.state.depth);
+            if gf_99 > acc_gf_99 {
+                acc_gf_99 = gf_99;
             }
-            if comp_gf_surf > gf_surf {
-                gf_surf = comp_gf_surf;
+            if gf_surf > acc_gf_surf {
+                acc_gf_surf = gf_surf;
             }
         }
 
-        (gf_now, gf_surf)
+        Supersaturation { gf_99: acc_gf_99, gf_surf: acc_gf_surf }
+    }
+
+    #[deprecated(since="1.2.0", note="use `supersaturation` method instead")]
+    pub fn gfs_current(&self) -> (Pressure, Pressure) {
+        let Supersaturation { gf_99, gf_surf } = self.supersaturation();
+        (gf_99, gf_surf)
     }
 
     fn leading_comp(&self) -> &Compartment {
@@ -184,8 +190,9 @@ impl BuehlmannModel {
                 while target_depth > 0. {
                     let sim_step_depth = target_depth - 1.;
                     sim_model.step(&sim_step_depth, &0, &sim_gas);
-                    let (gf99, ..) = sim_model.gfs_current();
-                    if gf99 >= gf_low.into() {
+                    // let (gf99, ..) = sim_model.gfs_current();
+                    let Supersaturation { gf_99, .. } = sim_model.supersaturation();
+                    if gf_99 >= gf_low.into() {
                         break;
                     }
                     target_depth = sim_step_depth;

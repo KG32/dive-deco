@@ -11,19 +11,19 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 - step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas
 - current NDL (no-decompression limit)
 - current decompression ceiling
-- current gradient factors
-  - current gradient factor (the raw percentage of the Bühlmann allowable supersaturation at the current depth, i.e. super-saturation percent gradient, a.k.a GF99)
-  - surface gradient factor (the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
+- current supersaturation
+  - GF99 (the raw percentage of the Bühlmann supersaturation at the current depth, i.e. super-saturation percent gradient)
+  - GFsurf(the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
 - configurable model settings
   - gradient factors
   - surface pressure
 
 ### Planned features
 
-- helium support
-- extended deco model config (water density, metric/imprial units)
+- extended deco model config [metric/imprial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
+- TTS
 - deco stops planner
-- linear ascent / descent steps
+- linear ascent / descent steps (Schreiner equation, currently steps are based on constant-depth Haldane equation)
 - optimizations
 
 ### API
@@ -137,16 +137,16 @@ fn main() {
 
 Current tissue oversaturation as gradient factors.
 
-- `gfs_current() -> (now, surf)` - oversaturation in % relative to M-value
-  - now (f64) - a.k.a GF99, current oversaturation relative to ambient pressure
-  - surf (f64) - a.k.a surfGF, current oversaturation relative to surface pressure
+- `supersaturation() -> Supersaturation { gf_99, gf_surf }` - supersaturation in % relative to M-value ()
+  - gf_99 (f64) - GF99, current oversaturation relative to ambient pressure
+  - gf_surf (f64) - Surface GF, current oversaturation relative to surface pressure
 
 ```rust
   // given model state after 120 seconds at 40 msw breathing air
   // (...)
 
   // on-gassing, gf99: 0%, surfGF: 71%
-  let (gf_now, gf_surf) = model.gfs_current(); // (0.0, 71.09852831834125)
+  let (gf_now, gf_surf) = model.supersaturation(); // (0.0, 71.09852831834125)
 ```
 
 #### Common
@@ -157,7 +157,7 @@ Breathing gas used in the model.
 
 - `new(o2, he)`
   - o2 - oxygen partial pressure
-  - he - helium partial pressure (TMX not supported yet)
+  - he - helium partial pressure
 - `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
 - `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
 
