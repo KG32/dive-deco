@@ -15,7 +15,7 @@ pub fn gas_air() -> Gas {
 }
 
 #[macro_export]
-macro_rules! close_to_abs {
+macro_rules! assert_close_to_abs {
     ($a:expr, $b:expr, $tolerance:expr) => {
         if ($a - $b).abs() > $tolerance {
             panic!("{} is not close to {} with tolerance of {}", $a, $b, $tolerance);
@@ -24,7 +24,7 @@ macro_rules! close_to_abs {
 }
 
 #[macro_export]
-macro_rules! close_to_percent {
+macro_rules! assert_close_to_percent {
     ($a:expr, $b:expr, $tolerance_percent:expr) => {
         let tolerance = $b * ($tolerance_percent / 100.0);
         if ($a - $b).abs() > tolerance {

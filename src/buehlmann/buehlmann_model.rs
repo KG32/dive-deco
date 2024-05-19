@@ -190,7 +190,6 @@ impl BuehlmannModel {
                 while target_depth > 0. {
                     let sim_step_depth = target_depth - 1.;
                     sim_model.step(&sim_step_depth, &0, &sim_gas);
-                    // let (gf99, ..) = sim_model.gfs_current();
                     let Supersaturation { gf_99, .. } = sim_model.supersaturation();
                     if gf_99 >= gf_low.into() {
                         break;

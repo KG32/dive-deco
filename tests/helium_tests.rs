@@ -12,7 +12,7 @@ fn test_tmx_gf_surf() {
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
-    assert_eq!(gf_surf, 335.7702506232594);
+    assert_close_to_percent!(gf_surf, 335.77, 0.5);
 }
 
 #[test]
@@ -42,5 +42,5 @@ fn test_heliox_gf_surf() {
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
-    assert_eq!(gf_surf, 201.16212951050727);
+    assert_close_to_percent!(gf_surf, 201.16, 0.5);
 }

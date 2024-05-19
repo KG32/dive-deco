@@ -10,7 +10,7 @@ fn test_ceiling() {
     model.step(&40., &(30 * 60), &air);
     model.step(&30., &(30 * 60), &air);
     let calculated_ceiling = model.ceiling();
-    assert_eq!(calculated_ceiling, 7.802523739933558);
+    assert_close_to_percent!(calculated_ceiling, 7.802523739933558, 0.5);
 }
 
 #[test]

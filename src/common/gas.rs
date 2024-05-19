@@ -83,7 +83,6 @@ mod tests {
         assert_eq!(air.he_pp, 0.);
     }
 
-    // #[ignore = "trimix unsupported"]
     #[test]
     fn test_valid_gas_tmx() {
         let tmx = Gas::new(0.18, 0.35);
