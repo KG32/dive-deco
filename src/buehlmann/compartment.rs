@@ -103,18 +103,18 @@ impl Compartment {
 
         // tissue saturation pressure change for inert gasses
         let (n2_half_time, _, _, he_half_time, ..) = self.params;
-        let he_p_comp_delta = self.compartment_pressure_delta(InertGas::Helium, he_inspired_pp, **time, he_half_time);
-        let n2_p_comp_delta = self.compartment_pressure_delta(InertGas::Nitrogen, n2_inspired, **time, n2_half_time);
+        let he_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Helium, he_inspired_pp, **time, he_half_time);
+        let n2_p_comp_delta = self.compartment_pressure_delta_schreiner(InertGas::Nitrogen, n2_inspired, **time, n2_half_time);
 
         // inert gasses pressures after applying delta P
         let he_final = self.he_ip + he_p_comp_delta;
-        let n2_final = self.n2_ip + n2_p_comp_delta;
+        let n2_final = n2_p_comp_delta;
 
         (he_final, n2_final)
     }
 
-    // compartment pressure change for inert gas
-    fn compartment_pressure_delta(&self, inert_gas: InertGas, gas_inspired_p: Pressure, time: Seconds, half_time: ZHLParam) -> Pressure {
+    // compartment pressure change for inert gas (Haldane equation)
+    fn compartment_pressure_delta_haldane(&self, inert_gas: InertGas, gas_inspired_p: Pressure, time: Seconds, half_time: ZHLParam) -> Pressure {
         let inert_gas_load = match inert_gas {
             InertGas::Helium => self.he_ip,
             InertGas::Nitrogen => self.n2_ip,
@@ -122,6 +122,25 @@ impl Compartment {
 
         // (Pi - Po)(1 - e^(-0.693t/half-time))
         (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time as f64 / 60.) / half_time)))
+    }
+
+    // compartment pressure change for inert gas (Schreiner equation)
+    fn compartment_pressure_delta_schreiner(&self, inert_gas: InertGas, gas_inspired_p: Pressure, time: Seconds, half_time: ZHLParam) -> Pressure {
+        let inert_gas_load = match inert_gas {
+            InertGas::Helium => self.he_ip,
+            InertGas::Nitrogen => self.n2_ip,
+        };
+
+        // R(t - 1/k) - [Pio - Po - (R/k)]e^-kt
+        let r = 0.;
+        let ln2 = 0.6931471805599453;
+        let pio = inert_gas_load;
+        let k = ln2/half_time;
+        let t = time as f64;
+        let po = inert_gas_load;
+        let ekt = (1. - (2_f64.powf((-ln2*t)/half_time)));
+
+        inert_gas_load + r*(t - (1./k)) - (pio - po - (r/k)) * ekt
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buehlmann ZHL params based on tissue inert gasses saturation proportions

@@ -65,6 +65,11 @@ impl DecoModel for BuehlmannModel {
         self.recalculate_compartments(step);
     }
 
+    /// model linear ascent / descent step
+    fn step_travel(&mut self, target_depth: &Depth, time: &Seconds, gas: &Gas) {
+
+    }
+
     fn ndl(&self) -> Minutes {
         let mut ndl: Minutes = Minutes::MAX;
 
