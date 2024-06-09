@@ -33,3 +33,10 @@ fn travel_ascent() {
     assert_close_to_percent!(gf_99, 31., 10.);
     assert_close_to_percent!(gf_surf, 150., 10.);
 }
+
+#[test]
+#[should_panic]
+fn travel_invalid_target_depth() {
+    let mut model = fixtures::model_gf((30, 70));
+    model.step_travel(&-10., &1, &fixtures::gas_air());
+}

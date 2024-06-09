@@ -154,3 +154,9 @@ fn test_example_deco() {
     assert_eq!(model.ceiling(), 11.744868181179458);
 }
 
+#[test]
+#[should_panic]
+fn test_should_panic_on_invalid_depth() {
+    let mut model = fixtures::model_default();
+    model.step(&-10., &1, &fixtures::gas_air());
+}
