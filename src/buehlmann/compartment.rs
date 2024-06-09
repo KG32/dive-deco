@@ -103,8 +103,8 @@ impl Compartment {
 
         // tissue saturation pressure change for inert gasses
         let (n2_half_time, _, _, he_half_time, ..) = self.params;
-        let he_p_comp_delta = self.compartment_pressure_delta(InertGas::Helium, he_inspired_pp, **time, he_half_time);
-        let n2_p_comp_delta = self.compartment_pressure_delta(InertGas::Nitrogen, n2_inspired, **time, n2_half_time);
+        let he_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Helium, he_inspired_pp, **time, he_half_time);
+        let n2_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Nitrogen, n2_inspired, **time, n2_half_time);
 
         // inert gasses pressures after applying delta P
         let he_final = self.he_ip + he_p_comp_delta;
@@ -113,8 +113,8 @@ impl Compartment {
         (he_final, n2_final)
     }
 
-    // compartment pressure change for inert gas
-    fn compartment_pressure_delta(&self, inert_gas: InertGas, gas_inspired_p: Pressure, time: Seconds, half_time: ZHLParam) -> Pressure {
+    // compartment pressure change for inert gas (Haldane equation)
+    fn compartment_pressure_delta_haldane(&self, inert_gas: InertGas, gas_inspired_p: Pressure, time: Seconds, half_time: ZHLParam) -> Pressure {
         let inert_gas_load = match inert_gas {
             InertGas::Helium => self.he_ip,
             InertGas::Nitrogen => self.n2_ip,

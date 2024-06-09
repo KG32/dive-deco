@@ -58,11 +58,34 @@ impl DecoModel for BuehlmannModel {
 
     /// model step: depth (meters), time (seconds), gas
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas) {
+        self.validate_depth(depth);
         self.state.depth = *depth;
         self.state.gas = *gas;
         self.state.time += time;
         let step = StepData { depth, time, gas };
         self.recalculate_compartments(step);
+    }
+
+    /// model travel between depths in 1s intervals
+    // @todo: Schreiner equation instead of Haldane to avoid imprecise intervals
+    fn step_travel(&mut self, target_depth: &Depth, time: &Seconds, gas: &Gas) {
+        self.validate_depth(target_depth);
+        self.state.gas = *gas;
+        self.state.time += time;
+        let mut current_depth = self.state.depth;
+        let distance = target_depth - current_depth;
+        let travel_time = *time as f64;
+        let dist_rate = (distance / travel_time) * 10. / 10.;
+        let mut i = 0;
+        while i < travel_time as usize {
+            current_depth += dist_rate;
+            let step = StepData { depth: &current_depth, time: &1, gas };
+            self.recalculate_compartments(step);
+            i += 1;
+        }
+
+        // align with target depth with lost precision @todo: round / bignumber?
+        self.state.depth = *target_depth;
     }
 
     fn ndl(&self) -> Minutes {
@@ -225,6 +248,12 @@ impl BuehlmannModel {
 
     fn in_deco(&self) -> bool {
         self.ceiling() > 0.
+    }
+
+    fn validate_depth(&self, depth: &Depth) {
+        if *depth < 0. {
+            panic!("Invalid depth [{}]", depth);
+        }
     }
 }
 

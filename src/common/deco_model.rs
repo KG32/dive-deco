@@ -24,8 +24,11 @@ pub trait DecoModel {
     /// model init
     fn new(config: Self::ConfigType) -> Self;
 
-    /// add register step (depth: meters, time: seconds)
+    /// register step (depth: meters, time: seconds)
     fn step(&mut self, depth: &Depth, time: &Seconds, gas: &Gas);
+
+    /// register linear ascent / descent step
+    fn step_travel(&mut self, target_depth: &Depth, time: &Seconds, gas: &Gas);
 
     /// current non decompression limit (NDL)
     fn ndl(&self) -> Minutes;
