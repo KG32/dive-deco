@@ -74,10 +74,27 @@ A DecoModel trait method that represents a single model step as a datapoint.
 
 ```rust
 let depth = 20.;
-let time = 1;
+let time = 1; // 1 second
 let nitrox = Gas::new(0.32, 0.);
 // register 1 second at 20 msw breathing nitrox 32
 model.step(&depth, &time, &nitrox);
+```
+
+#### Step travel
+
+A DecoModel trait method that represents a linear change of depth. It assumes a travel from depth A (current model state depth) to B (target_depth) with rate derived from change of depth and time.
+
+- `.step_travel(target_depth, time, gas)`
+  - target_depth - final depth at the end of the travel
+  - time - duration of travel in seconds
+  - gas: breathing mix using for the duration of this step
+
+```rust
+let target_depth = 30.;
+let descent_time = 4 * 60; // 4 minutes as seconds
+let nitrox = Gas::new(0.32, 0.);
+// register a 4 minute descent to 30m using nitrox 32
+model.step_travel(&target_depth, &time, &nitrox);
 ```
 
 #### NDL (no-decompression limit)
