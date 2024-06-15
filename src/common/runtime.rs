@@ -19,6 +19,7 @@ pub enum DecoEventType {
 #[derive(Copy, Clone, Debug)]
 pub struct DecoEvent {
     pub event_type: DecoEventType,
+    pub start_depth: Depth,
     pub end_depth: Depth,
     pub duration: Minutes,
     pub gas: Gas,
@@ -58,7 +59,8 @@ impl DecoRuntime {
                             let current_sim_time = current_sim_state.time;
                             deco_event = DecoEvent {
                                 event_type,
-                                end_depth: 0.,
+                                start_depth: pre_event_depth,
+                                end_depth: current_sim_state.depth,
                                 duration: current_sim_time - pre_event_time,
                                 gas: current_sim_state.gas,
                             }
@@ -68,6 +70,7 @@ impl DecoRuntime {
                             let sim_state = sim_model.dive_state();
                             deco_event = DecoEvent {
                                 event_type,
+                                start_depth: pre_event_depth,
                                 end_depth: sim_state.depth,
                                 duration: sim_state.time - pre_event_time,
                                 gas: sim_state.gas,
@@ -99,6 +102,9 @@ impl DecoRuntime {
             // no deco obligations - linear ascent
             return Some(DecoEventType::Ascent);
         } else {
+            // check if gas switch needed
+
+
             // deco obligations - ascent + stops
             let ceiling = sim_model.ceiling();
             let ceiling_padding = depth - ceiling;
@@ -106,9 +112,11 @@ impl DecoRuntime {
             if ceiling_padding <= DEFAULT_CEILING_WINDOW {
                 return Some(DecoEventType::Stop);
             }
+            // below deco window
             else if ceiling_padding > DEFAULT_CEILING_WINDOW {
                 return Some(DecoEventType::Ascent);
             }
+            // @todo panic if deco stop violated?
         }
 
 
@@ -119,24 +127,24 @@ impl DecoRuntime {
     fn add_deco_event(&mut self, event: DecoEvent) {
         // let runtime_events = &self.runtime_events;
         // let DecoEvent { event_type, .. } = event;
-        match event.event_type {
+        let push_new_event = match event.event_type {
             DecoEventType::Stop => {
+                let mut push_new = true;
                 let last_event = self.deco_events.last_mut();
                 if let Some(last_event) = last_event {
                     if last_event.event_type == event.event_type {
                         last_event.duration += event.duration;
-                    } else {
-                        self.deco_events.push(event);
+                        push_new = false;
                     }
-                } else {
-                    self.deco_events.push(event);
                 }
+                push_new
             },
-            _ => {
-                self.deco_events.push(event);
-            }
-        }
+            _ => true
+        };
 
+        if push_new_event {
+            self.deco_events.push(event);
+        }
 
         self.tts += event.duration;
     }

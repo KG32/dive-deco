@@ -1,6 +1,4 @@
-use crate::common::global_types::{Pressure, Depth};
-
-use super::MbarPressure;
+use crate::common::global_types::{Pressure, Depth, MbarPressure};
 
 // alveolar water vapor pressure assuming 47 mm Hg at 37C (Buehlmann's value)
 const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
@@ -62,6 +60,11 @@ impl Gas {
             n2: self.n2_pp * gas_pressure,
             he: self.he_pp * gas_pressure,
         }
+    }
+
+    /// MOD
+    pub fn max_operating_depth(&self, pp_o2: Pressure) -> Depth {
+        10. * ((pp_o2 / self.o2_pp) - 1.)
     }
 
     // TODO standard nitrox (bottom and deco) and trimix gasses
@@ -129,5 +132,14 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let inspired_partial_pressures = air.inspired_partial_pressures(&10., 1000);
         assert_eq!(inspired_partial_pressures, PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 });
+    }
+
+    #[test]
+    fn test_mod() {
+        let air = Gas::new(0.21, 0.);
+        let ean_50 = Gas::new(0.50, 0.);
+        assert_eq!(air.max_operating_depth(1.4), 56.66666666666666);
+        assert_eq!(ean_50.max_operating_depth(1.6), 22.);
+
     }
 }
