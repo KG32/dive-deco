@@ -1,6 +1,6 @@
 use crate::common::{Depth, Gas, Seconds, Minutes, AscentRatePerMinute};
 
-use super::{Runtime};
+use super::{DecoRuntime};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
@@ -41,7 +41,7 @@ pub trait DecoModel {
     /// current decompression ceiling in meters
     fn ceiling(&self) -> Depth;
 
-    fn runtime(&self, gas_mixes: Vec<&Gas>) -> Runtime;
+    fn runtime(&self, gas_mixes: Vec<&Gas>) -> DecoRuntime;
 
     /// get model config
     fn config(&self) -> Self::ConfigType;
