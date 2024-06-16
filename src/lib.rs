@@ -14,7 +14,7 @@ pub use common::{
     GradientFactors,
     StepData,
     DecoRuntime,
-    DecoEvent,
-    DecoEventType
+    DecoStage,
+    DecoStageType
 };
 

@@ -14,15 +14,15 @@ enum DecoAction {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum DecoEventType {
+pub enum DecoStageType {
     Ascent,
     DecoStop,
     GasSwitch
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct DecoEvent {
-    pub event_type: DecoEventType,
+pub struct DecoStage {
+    pub stage_type: DecoStageType,
     pub start_depth: Depth,
     pub end_depth: Depth,
     pub duration: Minutes,
@@ -31,14 +31,14 @@ pub struct DecoEvent {
 
 #[derive(Clone, Debug)]
 pub struct DecoRuntime {
-    pub deco_events: Vec<DecoEvent>,
+    pub deco_stages: Vec<DecoStage>,
     pub tts: Minutes,
 }
 
 impl DecoRuntime {
     pub fn new() -> Self {
         Self {
-            deco_events: vec![],
+            deco_stages: vec![],
             tts: 0,
         }
     }
@@ -46,27 +46,27 @@ impl DecoRuntime {
     pub fn calc(&mut self, mut sim_model: impl DecoModel, gas_mixes: Vec<Gas>) -> Self {
         loop {
             let DiveState {
-                depth: pre_event_depth,
-                time: pre_event_time,
-                gas: pre_event_gas
+                depth: pre_stage_depth,
+                time: pre_stage_time,
+                gas: pre_stage_gas
             } = sim_model.dive_state();
             let ceiling = sim_model.ceiling();
-            let next_event_res = self.next_deco_action(&sim_model, gas_mixes.clone());
-            let (deco_action, next_switch_gas) = next_event_res;
-            let mut deco_events: Vec<DecoEvent> = vec![];
+            let next_deco_stage = self.next_deco_action(&sim_model, gas_mixes.clone());
+            let (deco_action, next_switch_gas) = next_deco_stage;
+            let mut deco_stages: Vec<DecoStage> = vec![];
             match deco_action {
                 None => { break; },
                 Some(deco_action) => {
                     match deco_action {
                         DecoAction::AscentToCeil => {
-                            sim_model.step_travel_with_rate(&self.round_ceiling(&ceiling), &DEFAULT_ASCENT_RATE, &pre_event_gas);
+                            sim_model.step_travel_with_rate(&self.round_ceiling(&ceiling), &DEFAULT_ASCENT_RATE, &pre_stage_gas);
                             let current_sim_state = sim_model.dive_state();
                             let current_sim_time = current_sim_state.time;
-                            deco_events.push(DecoEvent {
-                                event_type: DecoEventType::Ascent,
-                                start_depth: pre_event_depth,
+                            deco_stages.push(DecoStage {
+                                stage_type: DecoStageType::Ascent,
+                                start_depth: pre_stage_depth,
                                 end_depth: current_sim_state.depth,
-                                duration: current_sim_time - pre_event_time,
+                                duration: current_sim_time - pre_stage_time,
                                 gas: current_sim_state.gas,
                             })
 
@@ -77,22 +77,22 @@ impl DecoRuntime {
 
                                 // travel to MOD
                                 let switch_gas_mod = next_switch_gas.max_operating_depth(1.6);
-                                sim_model.step_travel_with_rate(&switch_gas_mod, &DEFAULT_ASCENT_RATE, &pre_event_gas);
+                                sim_model.step_travel_with_rate(&switch_gas_mod, &DEFAULT_ASCENT_RATE, &pre_stage_gas);
                                 let state_after_travel_to_mod = sim_model.dive_state();
                                 let gas_switch_depth = state_after_travel_to_mod.depth;
-                                deco_events.push(DecoEvent {
-                                    event_type: DecoEventType::Ascent,
-                                    start_depth: pre_event_depth,
+                                deco_stages.push(DecoStage {
+                                    stage_type: DecoStageType::Ascent,
+                                    start_depth: pre_stage_depth,
                                     end_depth: gas_switch_depth,
-                                    duration: state_after_travel_to_mod.time - pre_event_time,
+                                    duration: state_after_travel_to_mod.time - pre_stage_time,
                                     gas: state_after_travel_to_mod.gas,
                                 });
 
                                 // switch gas @todo configurable gas change duration?
                                 sim_model.step(&sim_model.dive_state().depth, &(1 * 60), &next_switch_gas);
                                 // @todo optional oxygen window stop?
-                                deco_events.push(DecoEvent {
-                                    event_type: DecoEventType::GasSwitch,
+                                deco_stages.push(DecoStage {
+                                    stage_type: DecoStageType::GasSwitch,
                                     start_depth: gas_switch_depth,
                                     end_depth: gas_switch_depth,
                                     duration: 0,
@@ -100,38 +100,38 @@ impl DecoRuntime {
                                 });
                             } else {
                                 // travel to ceiling
-                                sim_model.step_travel_with_rate(&self.round_ceiling(&ceiling), &DEFAULT_ASCENT_RATE, &pre_event_gas);
+                                sim_model.step_travel_with_rate(&self.round_ceiling(&ceiling), &DEFAULT_ASCENT_RATE, &pre_stage_gas);
                                 let current_sim_state = sim_model.dive_state();
                                 let current_sim_time = current_sim_state.time;
-                                deco_events.push(DecoEvent {
-                                    event_type: DecoEventType::Ascent,
-                                    start_depth: pre_event_depth,
+                                deco_stages.push(DecoStage {
+                                    stage_type: DecoStageType::Ascent,
+                                    start_depth: pre_stage_depth,
                                     end_depth: current_sim_state.depth,
-                                    duration: current_sim_time - pre_event_time,
+                                    duration: current_sim_time - pre_stage_time,
                                     gas: current_sim_state.gas,
                                 })
                             }
                         },
                         DecoAction::Stop => {
-                            sim_model.step(&pre_event_depth, &1, &pre_event_gas);
+                            sim_model.step(&pre_stage_depth, &1, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
-                            deco_events.push(DecoEvent {
-                                event_type: DecoEventType::DecoStop,
-                                start_depth: pre_event_depth,
+                            deco_stages.push(DecoStage {
+                                stage_type: DecoStageType::DecoStop,
+                                start_depth: pre_stage_depth,
                                 end_depth: sim_state.depth,
-                                duration: sim_state.time - pre_event_time,
+                                duration: sim_state.time - pre_stage_time,
                                 gas: sim_state.gas,
                             })
                         }
                     }
                 }
             }
-            // add new deco events from iteration to deco runtime events
-            deco_events.into_iter().for_each(|deco_event| self.add_deco_event(deco_event));
+            // add new deco stages from iteration to deco runtime stages
+            deco_stages.into_iter().for_each(|deco_stage| self.add_deco_stage(deco_stage));
         }
 
         Self {
-            deco_events: self.deco_events.clone(),
+            deco_stages: self.deco_stages.clone(),
             tts: self.tts
         }
     }
@@ -151,17 +151,9 @@ impl DecoRuntime {
         } else {
             // check check for next switch gas
             let next_switch_gas = self.next_switch_gas(&current_depth, &current_gas, gas_mixes, surface_pressure);
-            // let last_event = self.deco_events.last();
-            // if last_event.is_none() || (last_event.is_some() && last_event.unwrap().event_type == DecoEventType::Ascent) {
-            //     let optimal_switch_gas = self.next_switch_gas(&current_depth, &current_gas, gas_mixes, surface_pressure);
-            //     if let Some(switch_gas) = optimal_switch_gas {
-            //         return (Some(DecoEventType::GasSwitch), Some(switch_gas));
-            //     }
-            // }
-
-            // deco obligations - ascent + stops
             let ceiling = sim_model.ceiling();
             let ceiling_padding = current_depth - ceiling;
+
             // within deco window
             if ceiling_padding <= DEFAULT_CEILING_WINDOW {
                 return (Some(DecoAction::Stop), None);
@@ -171,7 +163,7 @@ impl DecoRuntime {
                 if let Some(next_switch_gas) = next_switch_gas {
                     return (Some(DecoAction::AscentToGasSwitch), Some(next_switch_gas));
                 }
-                return (Some(DecoAction::AscentToCeil), next_switch_gas);
+                return (Some(DecoAction::AscentToCeil), None);
             }
             // @todo panic if deco stop violated?
         }
@@ -200,14 +192,14 @@ impl DecoRuntime {
             next_switch_gasses.first().copied()
     }
 
-    fn add_deco_event(&mut self, event: DecoEvent) {
-        let push_new_event = match event.event_type {
-            DecoEventType::DecoStop => {
+    fn add_deco_stage(&mut self, stage: DecoStage) {
+        let push_new_stage = match stage.stage_type {
+            DecoStageType::DecoStop => {
                 let mut push_new = true;
-                let last_event = self.deco_events.last_mut();
-                if let Some(last_event) = last_event {
-                    if last_event.event_type == event.event_type {
-                        last_event.duration += event.duration;
+                let last_stage = self.deco_stages.last_mut();
+                if let Some(last_stage) = last_stage {
+                    if last_stage.stage_type == stage.stage_type {
+                        last_stage.duration += stage.duration;
                         push_new = false;
                     }
                 }
@@ -216,11 +208,11 @@ impl DecoRuntime {
             _ => true
         };
 
-        if push_new_event {
-            self.deco_events.push(event);
+        if push_new_stage {
+            self.deco_stages.push(stage);
         }
 
-        self.tts += event.duration;
+        self.tts += stage.duration;
     }
 
     fn round_ceiling(&self, ceiling: &Depth) -> Depth {
