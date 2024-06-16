@@ -213,8 +213,7 @@ impl DecoRuntime {
     }
 
     fn round_ceiling(&self, ceiling: &Depth) -> Depth {
-        let step_size: Depth = 3.;
-        step_size * (ceiling / step_size).ceil()
+        DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
     }
 }
 
