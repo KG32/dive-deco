@@ -44,6 +44,10 @@ impl DecoModelConfig for BuehlmannConfig {
 
         Ok(())
     }
+
+    fn surface_pressure(&self) -> MbarPressure {
+        self.surface_pressure
+    }
 }
 
 impl BuehlmannConfig {

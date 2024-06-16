@@ -122,34 +122,11 @@ impl DecoModel for BuehlmannModel {
         leading_comp.ceiling()
     }
 
-    fn runtime(&self, gas_mixes: Vec<&Gas>) -> DecoRuntime {
+    fn runtime(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut runtime = DecoRuntime::new();
         runtime.calc(self.fork(), gas_mixes);
 
         runtime
-
-
-
-        // let runtime = Runtime::new();
-        // let mut sim_model = self.fork();
-        // let initial_dive_time = sim_model.state.time;
-        // let current_depth = sim_model.state.depth;
-        // let current_gas = sim_model.state.gas;
-
-        // loop {
-        //     let target_depth = 0.;
-        //     sim_model.step_travel_with_rate(&target_depth, &DEFAULT_ASCENT_RATE, &current_gas);
-
-
-        //     //
-        //     let event = DecoEvent { event_type: (), depth: (), duration: (), gas: () }
-        //     runtime.add_deco_event(event);
-        //     if sim_model.state.depth == 0. {
-        //         break;
-        //     }
-        // }
-
-        // runtime
     }
 
     fn config(&self) -> BuehlmannConfig {

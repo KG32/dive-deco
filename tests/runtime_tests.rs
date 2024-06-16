@@ -8,7 +8,7 @@ fn runtime_ascent_no_deco() {
     let mut model = fixtures::model_default();
     model.step(&20., &(5 * 60), &air);
 
-    let DecoRuntime { deco_events: runtime_events, tts } = model.runtime(vec![&air]);
+    let DecoRuntime { deco_events: runtime_events, tts } = model.runtime(vec![air]);
     assert_eq!(runtime_events.len(), 1); // single continuous ascent
     assert_eq!(tts / 60, 2); // tts in minutes
 }
@@ -22,7 +22,7 @@ fn deco_runtime_single_gas() {
     let DecoRuntime {
         deco_events,
         tts
-    } = model.runtime(vec![&air]);
+    } = model.runtime(vec![air]);
 
     assert_close_to_percent!(tts as f64, 800., 1.); // 13.(3) min todo round to 14
     assert_eq!(deco_events.len(), 5);
@@ -40,7 +40,7 @@ fn deco_runtime_multi_gas() {
     let DecoRuntime {
         deco_events,
         tts
-    } = model.runtime(vec![&air, &ean_50]);
+    } = model.runtime(vec![air, ean_50]);
 
     dbg!(deco_events);
 
