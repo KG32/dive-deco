@@ -9,7 +9,7 @@ const DEFAULT_CEILING_WINDOW: Depth = 3.;
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum DecoAction {
     AscentToCeil,
-    AscentToGasSwitch,
+    AscentToGasSwitchDepth,
     Stop,
 }
 
@@ -44,6 +44,7 @@ impl DecoRuntime {
     }
 
     pub fn calc(&mut self, mut sim_model: impl DecoModel, gas_mixes: Vec<Gas>) -> Self {
+        // loop until no deco action
         loop {
             let DiveState {
                 depth: pre_stage_depth,
@@ -58,6 +59,7 @@ impl DecoRuntime {
                 None => { break; },
                 Some(deco_action) => {
                     match deco_action {
+                        // ascent to min depth (deco stop or surface)
                         DecoAction::AscentToCeil => {
                             sim_model.step_travel_with_rate(&self.round_ceiling(&ceiling), &DEFAULT_ASCENT_RATE, &pre_stage_gas);
                             let current_sim_state = sim_model.dive_state();
@@ -71,7 +73,9 @@ impl DecoRuntime {
                             })
 
                         },
-                        DecoAction::AscentToGasSwitch => {
+                        // ascent to min depth with gas switch on next deco gas maximum operating depth
+                        DecoAction::AscentToGasSwitchDepth => {
+                            // @todo unwrap and handler err
                             if let Some(next_switch_gas) = next_switch_gas {
                                 // travel to gas MOD, switch to gas and continue ascent to ceiling
 
@@ -98,23 +102,13 @@ impl DecoRuntime {
                                     duration: 0,
                                     gas: sim_model.dive_state().gas,
                                 });
-                            } else {
-                                // travel to ceiling
-                                sim_model.step_travel_with_rate(&self.round_ceiling(&ceiling), &DEFAULT_ASCENT_RATE, &pre_stage_gas);
-                                let current_sim_state = sim_model.dive_state();
-                                let current_sim_time = current_sim_state.time;
-                                deco_stages.push(DecoStage {
-                                    stage_type: DecoStageType::Ascent,
-                                    start_depth: pre_stage_depth,
-                                    end_depth: current_sim_state.depth,
-                                    duration: current_sim_time - pre_stage_time,
-                                    gas: current_sim_state.gas,
-                                })
                             }
                         },
+                        // deco stop, stop
                         DecoAction::Stop => {
                             sim_model.step(&pre_stage_depth, &1, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
+                            // @todo dedupe here on deco instead of of add deco stage?
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::DecoStop,
                                 start_depth: pre_stage_depth,
@@ -140,7 +134,7 @@ impl DecoRuntime {
         let DiveState { depth: current_depth, gas: current_gas, .. } = sim_model.dive_state();
         let surface_pressure = sim_model.config().surface_pressure();
 
-        // end sim - surface
+        // end deco simulation - surface
         if current_depth == 0. {
             return (None, None);
         }
@@ -160,8 +154,9 @@ impl DecoRuntime {
             }
             // below deco window
             else if ceiling_padding > DEFAULT_CEILING_WINDOW {
+                // ascent to next gas switch depth if next gas' MOD below ceiling
                 if let Some(next_switch_gas) = next_switch_gas {
-                    return (Some(DecoAction::AscentToGasSwitch), Some(next_switch_gas));
+                    return (Some(DecoAction::AscentToGasSwitchDepth), Some(next_switch_gas));
                 }
                 return (Some(DecoAction::AscentToCeil), None);
             }
@@ -171,6 +166,7 @@ impl DecoRuntime {
         (None, None)
     }
 
+    /// check next deco gas in deco (the one with lowest MOD while more oxygen-rich than current)
     fn next_switch_gas(&self, current_depth: &Depth, current_gas: &Gas, gas_mixes: Vec<Gas>, surface_pressure: MbarPressure) -> Option<Gas> {
         let current_gas_partial_pressures = current_gas.partial_pressures(&current_depth, surface_pressure.clone());
         let mut next_switch_gasses = gas_mixes
@@ -194,6 +190,7 @@ impl DecoRuntime {
 
     fn add_deco_stage(&mut self, stage: DecoStage) {
         let push_new_stage = match stage.stage_type {
+            // dedupe iterative deco stops and merge into one
             DecoStageType::DecoStop => {
                 let mut push_new = true;
                 let last_stage = self.deco_stages.last_mut();
