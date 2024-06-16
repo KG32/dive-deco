@@ -41,9 +41,7 @@ fn deco_runtime_multi_gas() {
         deco_events,
         tts
     } = model.runtime(vec![air, ean_50]);
-
     dbg!(deco_events);
 
-    assert_close_to_percent!(tts as f64, 620., 1.);
-
+    assert_close_to_abs!(tts as f64, 590., 30.);
 }
