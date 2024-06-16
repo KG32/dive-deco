@@ -265,10 +265,6 @@ impl BuehlmannModel {
         }
     }
 
-    // fn in_deco(&self) -> bool {
-    //     self.ceiling() > 0.
-    // }
-
     fn validate_depth(&self, depth: &Depth) {
         if *depth < 0. {
             panic!("Invalid depth [{}]", depth);
