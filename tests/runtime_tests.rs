@@ -127,6 +127,13 @@ fn deco_runtime_multi_gas() {
             duration: 305,
             gas: ean_50
         },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 3.0,
+            end_depth: 0.0,
+            duration: 20,
+            gas: ean_50
+        },
     ];
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
@@ -134,6 +141,7 @@ fn deco_runtime_multi_gas() {
 }
 
 fn assert_deco_stages_eq(deco_stages: Vec<DecoStage>, expected_deco_stages: Vec<DecoStage>) {
+    assert_eq!(deco_stages.len(), expected_deco_stages.len());
     for (i, expected_stage) in expected_deco_stages.iter().enumerate() {
         assert_eq!(deco_stages[i].stage_type, expected_stage.stage_type);
         assert_eq!(deco_stages[i].start_depth, expected_stage.start_depth);
