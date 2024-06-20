@@ -50,7 +50,7 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
-            deco: Deco::new(),
+            deco: Deco::default(),
         };
 
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
@@ -93,7 +93,7 @@ impl DecoModel for BuehlmannModel {
     fn step_travel_with_rate(&mut self, target_depth: &Depth, rate: &AscentRatePerMinute, gas: &Gas) {
         self.validate_depth(target_depth);
         let distance = (target_depth - self.state.depth).abs();
-        let travel_time_seconds = ((distance / rate * 60.)) as usize;
+        let travel_time_seconds = (distance / rate * 60.) as usize;
         self.step_travel(target_depth, &travel_time_seconds, gas);
     }
 
@@ -121,7 +121,7 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn deco(&self, gas_mixes: Vec<Gas>) -> Deco {
-        let mut deco = Deco::new();
+        let mut deco = Deco::default();
         deco.calc(self.fork(), gas_mixes);
 
         deco

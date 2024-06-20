@@ -29,20 +29,13 @@ pub struct DecoStage {
     pub gas: Gas,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct Deco {
     pub deco_stages: Vec<DecoStage>,
     pub tts: Minutes,
 }
 
 impl Deco {
-    pub fn new() -> Self {
-        Self {
-            deco_stages: vec![],
-            tts: 0,
-        }
-    }
-
     pub fn calc(&mut self, mut sim_model: impl DecoModel, gas_mixes: Vec<Gas>) -> Self {
         // run model simulation until no deco stages
         loop {
@@ -99,7 +92,7 @@ impl Deco {
                                 });
 
                                 // switch gas @todo configurable gas change duration
-                                sim_model.step(&sim_model.dive_state().depth, &(1 * 60), &next_switch_gas);
+                                sim_model.step(&sim_model.dive_state().depth, &60, &next_switch_gas);
                                 // @todo configurable oxygen window stop
                                 let post_switch_state = sim_model.dive_state();
                                 deco_stages.push(DecoStage {
@@ -176,12 +169,12 @@ impl Deco {
 
     /// check next deco gas in deco (the one with lowest MOD while more oxygen-rich than current)
     fn next_switch_gas(&self, current_depth: &Depth, current_gas: &Gas, gas_mixes: Vec<Gas>, surface_pressure: MbarPressure) -> Option<Gas> {
-        let current_gas_partial_pressures = current_gas.partial_pressures(&current_depth, surface_pressure.clone());
+        let current_gas_partial_pressures = current_gas.partial_pressures(current_depth, surface_pressure);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
         let mut switch_gasses = gas_mixes
             .into_iter()
             .filter(|gas| {
-                let partial_pressures = gas.partial_pressures(&current_depth, surface_pressure);
+                let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
                 partial_pressures.o2 > current_gas_partial_pressures.o2
             })
             .collect::<Vec<Gas>>();
@@ -243,7 +236,7 @@ mod tests {
             (3.00001, 6.),
             (12., 12.),
         ];
-        let deco = Deco::new();
+        let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
             let res = deco.deco_stop_depth(&input_depth);
@@ -275,7 +268,7 @@ mod tests {
             (30., air, vec![air, trimix], Some(trimix)),
         ];
 
-        let deco = Deco::new();
+        let deco = Deco::default();
         for case in test_cases.into_iter() {
             dbg!(&case);
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
