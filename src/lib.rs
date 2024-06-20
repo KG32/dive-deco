@@ -13,7 +13,7 @@ pub use common::{
     Pressure,
     GradientFactors,
     StepData,
-    DecoRuntime,
+    Deco,
     DecoStage,
     DecoStageType
 };

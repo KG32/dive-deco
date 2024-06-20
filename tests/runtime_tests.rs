@@ -1,28 +1,28 @@
-use dive_deco::{DecoModel, DecoRuntime, Gas, DecoStage, DecoStageType};
+use dive_deco::{DecoModel, Deco, Gas, DecoStage, DecoStageType};
 
 pub mod fixtures;
 
 #[test]
-fn runtime_ascent_no_deco() {
+fn deco_ascent_no_deco() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
     model.step(&20., &(5 * 60), &air);
 
-    let DecoRuntime { deco_stages, tts } = model.runtime(vec![air]);
+    let Deco { deco_stages, tts } = model.deco(vec![air]);
     assert_eq!(deco_stages.len(), 1); // single continuous ascent
     assert_eq!(tts / 60, 2); // tts in minutes
 }
 
 #[test]
-fn deco_runtime_single_gas() {
+fn deco_single_gas() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
     model.step(&40., &(20 * 60), &air);
 
-    let DecoRuntime {
+    let Deco {
         deco_stages,
         tts
-    } = model.runtime(vec![air]);
+    } = model.deco(vec![air]);
 
     assert_close_to_percent!(tts as f64, 800., 1.); // 13.(3) min todo round to 14
     assert_eq!(deco_stages.len(), 5);
@@ -69,7 +69,7 @@ fn deco_runtime_single_gas() {
 }
 
 #[test]
-fn deco_runtime_multi_gas() {
+fn deco_multi_gas() {
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
 
@@ -77,10 +77,10 @@ fn deco_runtime_multi_gas() {
 
     model.step(&40., &(20 * 60), &air);
 
-    let DecoRuntime {
+    let Deco {
         deco_stages,
         tts
-    } = model.runtime(vec![air, ean_50]);
+    } = model.deco(vec![air, ean_50]);
 
     assert_eq!(deco_stages.len(), 7);
 

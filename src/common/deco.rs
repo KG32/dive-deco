@@ -30,12 +30,12 @@ pub struct DecoStage {
 }
 
 #[derive(Clone, Debug)]
-pub struct DecoRuntime {
+pub struct Deco {
     pub deco_stages: Vec<DecoStage>,
     pub tts: Minutes,
 }
 
-impl DecoRuntime {
+impl Deco {
     pub fn new() -> Self {
         Self {
             deco_stages: vec![],
@@ -120,7 +120,7 @@ impl DecoRuntime {
                     }
                 }
             }
-            // add new deco stages from iteration to deco runtime stages
+            // add new deco stages from iteration to deco stages
             deco_stages.into_iter().for_each(|deco_stage| self.add_deco_stage(deco_stage));
         }
 
@@ -232,10 +232,10 @@ mod tests {
             (3.00001, 6.),
             (12., 12.),
         ];
-        let runtime = DecoRuntime::new();
+        let deco = Deco::new();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
-            let res = runtime.round_ceiling(&input_depth);
+            let res = deco.round_ceiling(&input_depth);
             assert_eq!(res, expected_depth);
         }
     }
@@ -264,11 +264,11 @@ mod tests {
             (20., air, vec![air, trimix], None),
         ];
 
-        let runtime = DecoRuntime::new();
+        let deco = Deco::new();
         for case in test_cases.into_iter() {
             dbg!(&case);
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
-            let res = runtime.next_switch_gas(&current_depth, &current_gas, available_gas_mixes, 1000);
+            let res = deco.next_switch_gas(&current_depth, &current_gas, available_gas_mixes, 1000);
             assert_eq!(res, expected_switch_gas);
         }
     }

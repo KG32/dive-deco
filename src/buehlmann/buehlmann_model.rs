@@ -1,10 +1,8 @@
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, DecoModel, DecoModelConfig, DecoRuntime, Depth, DiveState, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
+use crate::common::{AscentRatePerMinute, DecoModel, DecoModelConfig, Deco, Depth, DiveState, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
-
-// use super::buehlmann_runtime::BuehlmannRuntime;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -13,7 +11,7 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
-    runtime: DecoRuntime,
+    deco: Deco,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -52,7 +50,7 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
-            runtime: DecoRuntime::new(),
+            deco: Deco::new(),
         };
 
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
@@ -122,11 +120,11 @@ impl DecoModel for BuehlmannModel {
         leading_comp.ceiling()
     }
 
-    fn runtime(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
-        let mut runtime = DecoRuntime::new();
-        runtime.calc(self.fork(), gas_mixes);
+    fn deco(&self, gas_mixes: Vec<Gas>) -> Deco {
+        let mut deco = Deco::new();
+        deco.calc(self.fork(), gas_mixes);
 
-        runtime
+        deco
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -261,7 +259,7 @@ impl BuehlmannModel {
             config: self.config,
             compartments: self.compartments.clone(),
             state: self.state,
-            runtime: self.runtime.clone(),
+            deco: self.deco.clone(),
         }
     }
 
