@@ -8,10 +8,14 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 ### Features
 
-- step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas
-- current NDL (no-decompression limit)
-- current decompression ceiling
-- current supersaturation
+- step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas (incl. helium mixes)
+- GF (gradient factors) ascent profile conservatism
+- current deco runtime / deco stop planner
+  - decompression stages as a runtime based on current model state
+  - TTS (time to surface)
+- NDL (no-decompression limit)
+- decompression ceiling
+- supersaturation
   - GF99 (the raw percentage of the Bühlmann supersaturation at the current depth, i.e. super-saturation percent gradient)
   - GFsurf(the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
 - configurable model settings
@@ -21,14 +25,15 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Planned features
 
 - extended deco model config [metric/imprial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
-- TTS
-- deco stops planner
-- linear ascent / descent steps (Schreiner equation, currently steps are based on constant-depth Haldane equation)
-- optimizations
+- travel steps optimization (linear ascent / descent steps using Schreiner equation instead of iterative Haldane equation)
+- other deco algorithms (VPM-B)
+- other optimizations
 
 ### API
 
 - [API documentation](https://docs.rs/dive-deco/latest/dive_deco/)
+
+---
 
 ### Usage
 
@@ -63,7 +68,11 @@ Current config options:
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
 
-#### Step
+---
+
+#### Updating model state
+
+##### Step
 
 A DecoModel trait method that represents a single model step as a datapoint.
 
@@ -80,7 +89,7 @@ let nitrox = Gas::new(0.32, 0.);
 model.step(&depth, &time, &nitrox);
 ```
 
-#### Step travel
+##### Step travel
 
 A DecoModel trait method that represents a linear change of depth. It assumes a travel from depth A (current model state depth) to B (target_depth) with rate derived from change of depth and time.
 
@@ -97,7 +106,27 @@ let nitrox = Gas::new(0.32, 0.);
 model.step_travel(&target_depth, &time, &nitrox);
 ```
 
-#### NDL (no-decompression limit)
+---
+
+#### Decompression data / model state
+
+##### Decompression stages (current deco runtime) + TTS
+
+All decompression stages calculated to clear deco obligations and resurface in a most efficient way - a partial deco runtime from current model state to resurfacing.
+
+- `deco() -> Vec<DecoStage>`
+
+  ###### DecoStage
+
+  - deco_stage (enum)
+    - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
+    - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
+    - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
+
+  - tts - TTS (time to surface) is the the fastest a diver can resurface while completing all deco obligations and maintaining max ascent speed. TTS is based on deco stages total duration.
+
+
+##### NDL (no-decompression limit)
 
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
 
@@ -126,7 +155,7 @@ fn main() {
 }
 ```
 
-#### Decompression Ceiling
+##### Decompression Ceiling
 
 Minimum theoretical depth that can be reached at the moment without breaking the decompression obligation. In case of Buehlmann algorithm, a depth restricted by M-value given leading tissue saturation and gradient factors setting.
 
@@ -150,7 +179,7 @@ fn main() {
 }
 ```
 
-#### Current tissues oversaturation (gradient factors)
+##### Current tissues oversaturation (gradient factors)
 
 Current tissue oversaturation as gradient factors.
 
@@ -165,6 +194,8 @@ Current tissue oversaturation as gradient factors.
   // on-gassing, gf99: 0%, surfGF: 71%
   let supersaturation = model.supersaturation(); // Supersaturation { gf_99: 0.0, gf_surf: 71.09852831834125 }
 ```
+
+---
 
 #### Common
 
@@ -182,14 +213,19 @@ Breathing gas used in the model.
 let mix = Gas::new(0.21, 0.);
 mix.partial_pressures(&10.); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
 mix.inspired_partial_pressures(&10.); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
-
 ```
+
+---
 
 ### References
 
 - [Eric C. Baker, P.E. Dissolved Gas Decompression Modeling](https://www.shearwater.com/wp-content/uploads/2012/08/Introductory-Deco-Lessons.pdf)
 - [Eric C. Baker, P.E. (1998) Understanding M-Values](http://www.dive-tech.co.uk/resources/mvalues.pdf)
 - [Workman RD. Calculation of decompression schedules for nitrogen-oxygen and helium-oxygen dives.](https://apps.dtic.mil/sti/pdfs/AD0620879.pdf)
+- [Ralph Lembcke and Matthias Heinrichs (2020), Decompression calculations in the OSTC](https://www.heinrichsweikamp.net/downloads/OSTC_GF_web_en.pdf)
+- ["Tauchmedizin.", Albert A. Bühlmann, Ernst B. Völlm (Mitarbeiter), P. Nussberger; 5. edition in 2002, Springer, ISBN 3-540-42979-4](https://books.google.com/books?id=MYAGBgAAQBAJ&printsec=copyright&redir_esc=y#v=onepage&q&f=false)
+- [Salm, Albi & Eisenstein, Yael & Vered, Nurit & Rosenblat, Miri. (2022). On the arbitrariness of the ZH-L Helium coefficients (16.08.2022). 10.13140/RG.2.2.19048.55040.](https://www.researchgate.net/publication/362716934_On_the_arbitrariness_of_the_ZH-L_Helium_coefficients_16082022)
+- [Rosenblat, Miri & Salm, Albi. (2024). Introduction to Decompression Calculation.](https://www.researchgate.net/publication/362716934_On_the_arbitrariness_of_the_ZH-L_Helium_coefficients_16082022)
 
 > :warning: Disclaimer: Not Suitable for Dive Planning,  Work-in-Progress Model
 > This decompression model is currently in a developmental stage and should be treated as a work in progress. Users are advised that the information generated by this model may not be accurate and could contain errors. It is important to exercise caution and verify any critical information provided by the model through alternative sources.
