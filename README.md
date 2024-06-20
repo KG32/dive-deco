@@ -26,6 +26,7 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 - extended deco model config [metric/imprial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
 - travel steps optimization (linear ascent / descent steps using Schreiner equation instead of iterative Haldane equation)
+- BuehlmannModel Default trait implementation
 - other deco algorithms (VPM-B)
 - other optimizations
 
@@ -116,15 +117,44 @@ All decompression stages calculated to clear deco obligations and resurface in a
 
 - `deco() -> Vec<DecoStage>`
 
-  ###### DecoStage
+###### DecoStage
 
-  - deco_stage (enum)
-    - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
-    - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
-    - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
+- stage_type (enum)
+  - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
+  - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
+  - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
+- start_depth - depth at which deco stage started
+- end_depth - depth at which deco stage ended
+- duration - duration of deco stage in seconds
+- tts - TTS (time to surface) is the the fastest a diver can resurface while completing all deco obligations and maintaining max ascent speed. TTS is based on deco stages total duration.
 
-  - tts - TTS (time to surface) is the the fastest a diver can resurface while completing all deco obligations and maintaining max ascent speed. TTS is based on deco stages total duration.
+```rust
+    let config = BuehlmannConfig::new().gradient_factors(30, 70);
+    let mut model = BuehlmannModel::new(config);
 
+    // bottom gas
+    let air = Gas::air();
+    // deco gases
+    let ean_50 = Gas::new(0.5, 0.);
+    let oxygen = Gas::new(1., 0.);
+    let available_gas_mixes = vec![
+        air,
+        ean_50,
+        oxygen,
+    ];
+
+    let bottom_depth = 40.;
+    let bottom_time = 20 * 60; // 20 min
+
+    // descent to 40m at a rate of 9min/min using air
+    model.step_travel_with_rate(&bottom_depth, &9., &available_gas_mixes[0]);
+
+    // 20 min bottom time
+    model.step(&bottom_depth, &bottom_time, &air);
+
+    // calculate deco runtime providing available gasses
+    let deco = model.deco(available_gas_mixes);
+```
 
 ##### NDL (no-decompression limit)
 
