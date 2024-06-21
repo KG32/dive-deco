@@ -270,7 +270,6 @@ mod tests {
 
         let deco = Deco::default();
         for case in test_cases.into_iter() {
-            dbg!(&case);
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
             let res = deco.next_switch_gas(&current_depth, &current_gas, available_gas_mixes, 1000);
             assert_eq!(res, expected_switch_gas);
