@@ -11,7 +11,6 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
-    deco: Deco,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -50,7 +49,6 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
-            deco: Deco::default(),
         };
 
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
@@ -261,8 +259,7 @@ impl BuehlmannModel {
         BuehlmannModel {
             config: self.config,
             compartments: self.compartments.clone(),
-            state: self.state,
-            deco: self.deco.clone(),
+            state: self.state
         }
     }
 
