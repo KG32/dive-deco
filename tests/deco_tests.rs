@@ -75,7 +75,7 @@ fn deco_multi_gas() {
 
     let mut model = fixtures::model_default();
 
-    model.step(&40., &(20 * 60), &air);
+    model.step(&40.0001, &(20 * 60), &air);
 
     let Deco {
         deco_stages,
@@ -87,7 +87,7 @@ fn deco_multi_gas() {
     let expected_deco_stages =  vec![
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: 40.0,
+            start_depth: 40.0001,
             end_depth: 22.,
             duration: 120,
             gas: air
