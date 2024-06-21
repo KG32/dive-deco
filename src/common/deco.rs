@@ -36,7 +36,7 @@ pub struct Deco {
 }
 
 impl Deco {
-    pub fn calc(&mut self, mut sim_model: impl DecoModel, gas_mixes: Vec<Gas>) -> Self {
+    pub fn calc<T: DecoModel>(&mut self, mut sim_model: T, gas_mixes: Vec<Gas>) -> Self {
         // run model simulation until no deco stages
         loop {
             let DiveState {
