@@ -5,3 +5,4 @@ pub type Minutes = usize;
 pub type GradientFactor = u8;
 pub type GradientFactors = (u8, u8);
 pub type MbarPressure = u16;
+pub type AscentRatePerMinute = f64;

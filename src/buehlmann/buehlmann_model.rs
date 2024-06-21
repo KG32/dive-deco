@@ -1,5 +1,5 @@
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{DecoModel, DecoModelConfig, DiveState, Depth, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
+use crate::common::{AscentRatePerMinute, DecoModel, DecoModelConfig, Deco, Depth, DiveState, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
@@ -11,6 +11,7 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
+    deco: Deco,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -49,6 +50,7 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
+            deco: Deco::default(),
         };
 
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
@@ -71,13 +73,13 @@ impl DecoModel for BuehlmannModel {
     fn step_travel(&mut self, target_depth: &Depth, time: &Seconds, gas: &Gas) {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
-        self.state.time += time;
         let mut current_depth = self.state.depth;
         let distance = target_depth - current_depth;
         let travel_time = *time as f64;
-        let dist_rate = (distance / travel_time) * 10. / 10.;
+        let dist_rate = distance / travel_time;
         let mut i = 0;
         while i < travel_time as usize {
+            self.state.time += 1;
             current_depth += dist_rate;
             let step = StepData { depth: &current_depth, time: &1, gas };
             self.recalculate_compartments(step);
@@ -86,6 +88,13 @@ impl DecoModel for BuehlmannModel {
 
         // align with target depth with lost precision @todo: round / bignumber?
         self.state.depth = *target_depth;
+    }
+
+    fn step_travel_with_rate(&mut self, target_depth: &Depth, rate: &AscentRatePerMinute, gas: &Gas) {
+        self.validate_depth(target_depth);
+        let distance = (target_depth - self.state.depth).abs();
+        let travel_time_seconds = (distance / rate * 60.) as usize;
+        self.step_travel(target_depth, &travel_time_seconds, gas);
     }
 
     fn ndl(&self) -> Minutes {
@@ -109,6 +118,13 @@ impl DecoModel for BuehlmannModel {
     fn ceiling(&self) -> Depth {
         let leading_comp: &Compartment = self.leading_comp();
         leading_comp.ceiling()
+    }
+
+    fn deco(&self, gas_mixes: Vec<Gas>) -> Deco {
+        let mut deco = Deco::default();
+        deco.calc(self.fork(), gas_mixes);
+
+        deco
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -243,11 +259,8 @@ impl BuehlmannModel {
             config: self.config,
             compartments: self.compartments.clone(),
             state: self.state,
+            deco: self.deco.clone(),
         }
-    }
-
-    fn in_deco(&self) -> bool {
-        self.ceiling() > 0.
     }
 
     fn validate_depth(&self, depth: &Depth) {
@@ -313,6 +326,4 @@ mod tests {
         let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
         assert_eq!(slope_point, 35);
     }
-
-
 }

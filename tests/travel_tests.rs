@@ -40,3 +40,22 @@ fn travel_invalid_target_depth() {
     let mut model = fixtures::model_gf((30, 70));
     model.step_travel(&-10., &1, &fixtures::gas_air());
 }
+
+#[test]
+fn test_travel_step_with_rate() {
+    let mut model = fixtures::model_default();
+    let air = fixtures::gas_air();
+    let initial_depth = 20.;
+    let bottom_time = 20 * 60;
+    let target_depth = 0.;
+    let expected_travel_time = 133;
+    let ascent_rate = 9.;
+    model.step(&initial_depth, &bottom_time, &air);
+
+    model.step_travel_with_rate(&target_depth, &ascent_rate, &air);
+
+    let state = model.dive_state();
+    assert_eq!(state.depth, target_depth);
+    assert_eq!(state.time, bottom_time + expected_travel_time);
+    assert_close_to_percent!(model.supersaturation().gf_99, 61., 5.);
+}
