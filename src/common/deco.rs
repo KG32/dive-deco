@@ -10,6 +10,7 @@ const DEFAULT_CEILING_WINDOW: Depth = 3.;
 enum DecoAction {
     AscentToCeil,
     AscentToGasSwitchDepth,
+    SwitchGas,
     Stop,
 }
 
@@ -92,7 +93,7 @@ impl Deco {
                                 });
 
                                 // switch gas @todo configurable gas change duration
-                                sim_model.step(&sim_model.dive_state().depth, &60, &next_switch_gas);
+                                sim_model.step(&sim_model.dive_state().depth, &0, &next_switch_gas);
                                 // @todo configurable oxygen window stop
                                 let post_switch_state = sim_model.dive_state();
                                 deco_stages.push(DecoStage {
@@ -103,6 +104,20 @@ impl Deco {
                                     gas: next_switch_gas,
                                 });
                             }
+                        },
+
+                        // switch gas without ascent
+                        DecoAction::SwitchGas => {
+                            let switch_gas = next_switch_gas.unwrap();
+                            // @todo configurable gas switch duration
+                            sim_model.step(&pre_stage_depth, &0, &switch_gas);
+                            deco_stages.push(DecoStage {
+                                stage_type: DecoStageType::GasSwitch,
+                                start_depth: pre_stage_depth,
+                                end_depth: pre_stage_depth,
+                                duration: 0,
+                                gas: switch_gas,
+                            })
                         },
 
                         // decompression stop (a series of 1s segments, merged into one on cleared stop)
@@ -136,7 +151,7 @@ impl Deco {
         let surface_pressure = sim_model.config().surface_pressure();
 
         // end deco simulation - surface
-        if current_depth == 0. {
+        if !(current_depth > 0.) {
             return (None, None);
         }
 
@@ -144,8 +159,17 @@ impl Deco {
             // no deco obligations - linear ascent
             return (Some(DecoAction::AscentToCeil), None);
         } else {
-            // check check for next switch gas
+            // check next switch gas
             let next_switch_gas = self.next_switch_gas(&current_depth, &current_gas, gas_mixes, surface_pressure);
+            // check if within mod @todo min operational depth
+            if let Some(switch_gas) = next_switch_gas {
+                //switch gas without ascent if within mod of next deco gas
+                let gas_mod = switch_gas.max_operating_depth(1.6);
+                if (switch_gas != current_gas) && (current_depth <= gas_mod) {
+                    return (Some(DecoAction::SwitchGas), Some(switch_gas));
+                }
+            }
+
             let ceiling = sim_model.ceiling();
             let ceiling_padding = current_depth - ceiling;
 
