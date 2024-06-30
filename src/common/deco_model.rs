@@ -1,12 +1,11 @@
 use crate::common::{Depth, Gas, Seconds, Minutes, AscentRatePerMinute, CNSPercent};
-use super::{Deco, MbarPressure};
+use super::{ox_tox::OxTox, Deco, MbarPressure};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
     pub field: &'a str,
     pub reason: &'a str,
 }
-
 
 pub trait DecoModelConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr>;
@@ -18,7 +17,7 @@ pub struct DiveState {
     pub depth: Depth,
     pub time: Seconds,
     pub gas: Gas,
-    pub cns: CNSPercent,
+    pub ox_tox: OxTox,
 }
 
 pub trait DecoModel {

@@ -1,7 +1,7 @@
 use std::ops::RangeBounds;
 
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{cns_coefficients, AscentRatePerMinute, CNSCoeffRow, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
+use crate::common::{CNS_COEFFICIENTS, AscentRatePerMinute, CNSCoeffRow, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
@@ -21,7 +21,7 @@ pub struct BuehlmannState {
     time: Seconds,
     gas: Gas,
     gf_low_depth: Option<Depth>,
-    cns: CNSPercent,
+    ox_tox: OxTox,
 }
 
 impl BuehlmannState {
@@ -31,7 +31,7 @@ impl BuehlmannState {
             time: 0,
             gas: Gas::air(),
             gf_low_depth: None,
-            cns: 0,
+            ox_tox: OxTox::default(),
         }
     }
 }
@@ -134,17 +134,17 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn dive_state(&self) -> DiveState {
-        let BuehlmannState { depth, time, gas, cns, .. } = self.state;
+        let BuehlmannState { depth, time, gas, ox_tox, .. } = self.state;
         DiveState {
             depth,
             time,
             gas,
-            cns
+            ox_tox,
         }
     }
 
     fn cns(&self) -> CNSPercent {
-        self.state.cns
+        self.state.ox_tox.cns()
     }
 }
 
@@ -216,72 +216,16 @@ impl BuehlmannModel {
         self.recalculate_leading_compartment_with_gf(step);
     }
 
-    fn recalculate_cns(&mut self, step: &StepData) {
-        let current_gas = self.state.gas;
-        let pp_o2 = current_gas
-            .partial_pressures(step.depth, self.config().surface_pressure)
-            .o2;
-        // only calculate CNS change if o2 partial pressure higher than 0.5
-        if pp_o2 > 0.5 {
-            // find coefficients for PO2 range
-            let mut coeffs_for_range: Option<CNSCoeffRow> = None;
-            for row in cns_coefficients.into_iter() {
-                let row_range = row.0.clone();
-                let in_range = row_range.contains(&(pp_o2 as f32));
-                if in_range {
-                    coeffs_for_range = Some(row);
-                    break;
-                }
-            }
-            // if CNS coefficients found for PO2 range
-            if let Some((.., slope, intercept)) = coeffs_for_range {
-                // time limit for given P02
-                let t_lim = (slope as f64) * pp_o2 + (intercept as f64);
-                let cns_fraction = (*step.time as f64) / t_lim;
-                self.state.cns += cns_fraction as u8;
-            } else {
-                // PO2 out of cns table range
-                todo!("handle out range PO2");
-            }
-        }
-    }
-
-    // fn recalculate_cns(&mut self, step: &StepData) {
-    //     let current_gas = self.state.gas;
-    //     let pp_o2 = current_gas
-    //         .partial_pressures(step.depth, self.config().surface_pressure)
-    //         .o2;
-    //     // only calculate CNS change if o2 partial pressure higher than 0.5
-    //     if pp_o2 > 0.5 {
-    //         // find coefficients for PO2 range
-    //         let mut coeffs_for_range: Option<CNSCoeffRow> = None;
-    //         for row in cns_coefficients.into_iter() {
-    //             let row_range = row.0.clone();
-    //             let in_range = row_range.contains(&(pp_o2 as f32));
-    //             if in_range {
-    //                 coeffs_for_range = Some(row);
-    //                 break;
-    //             }
-    //         }
-    //         // if CNS coefficients found for PO2 range
-    //         if let Some((.., slope, intercept)) = coeffs_for_range {
-    //             // time limit for given P02
-    //             let t_lim = (slope as f64) * pp_o2 + (intercept as f64);
-    //             let cns_fraction = (*step.time as f64) / t_lim;
-    //             self.state.cns += cns_fraction as u8;
-    //         } else {
-    //             // PO2 out of cns table range
-    //             todo!("handle out range PO2");
-    //         }
-    //     }
-    // }
-
     fn recalculate_leading_compartment_with_gf(&mut self, step: &StepData) {
         let BuehlmannConfig { gf, surface_pressure } = self.config;
         let max_gf = self.max_gf(gf, *step.depth);
         let leading = self.leading_comp_mut();
         let recalc_step = StepData { depth: step.depth,  time: &0, gas: step.gas };
         leading.recalculate(&recalc_step, max_gf, surface_pressure);
+    }
+
+    fn recalculate_cns(&mut self, step: &StepData) {
+        self.state.ox_tox.recalculate_cns(step, self.config().surface_pressure);
     }
 
     fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
@@ -363,7 +307,7 @@ mod tests {
                 time: (25 * 60),
                 gas: nx32,
                 gf_low_depth: None,
-                cns: 0,
+                ox_tox: OxTox::default(),
             }
         );
     }

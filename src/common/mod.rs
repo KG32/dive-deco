@@ -21,5 +21,5 @@ pub use global_types::{
 };
 pub use step::StepData;
 pub use deco::{Deco, DecoStage, DecoStageType};
-
-pub use cns_table::{CNSCoeffRow, cns_coefficients};
+pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
+pub use ox_tox::OxTox;
