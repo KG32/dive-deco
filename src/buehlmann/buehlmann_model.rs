@@ -1,5 +1,7 @@
+use std::ops::RangeBounds;
+
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, DecoModel, DecoModelConfig, Deco, Depth, DiveState, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
+use crate::common::{cns_coefficients, AscentRatePerMinute, CNSCoeffRow, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
@@ -19,6 +21,7 @@ pub struct BuehlmannState {
     time: Seconds,
     gas: Gas,
     gf_low_depth: Option<Depth>,
+    cns: CNSPercent,
 }
 
 impl BuehlmannState {
@@ -28,6 +31,7 @@ impl BuehlmannState {
             time: 0,
             gas: Gas::air(),
             gf_low_depth: None,
+            cns: 0,
         }
     }
 }
@@ -63,7 +67,7 @@ impl DecoModel for BuehlmannModel {
         self.state.gas = *gas;
         self.state.time += time;
         let step = StepData { depth, time, gas };
-        self.recalculate_compartments(step);
+        self.recalculate(step);
     }
 
     /// model travel between depths in 1s intervals
@@ -80,7 +84,7 @@ impl DecoModel for BuehlmannModel {
             self.state.time += 1;
             current_depth += dist_rate;
             let step = StepData { depth: &current_depth, time: &1, gas };
-            self.recalculate_compartments(step);
+            self.recalculate(step);
             i += 1;
         }
 
@@ -130,12 +134,17 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn dive_state(&self) -> DiveState {
-        let BuehlmannState { depth, time, gas, .. } = self.state;
+        let BuehlmannState { depth, time, gas, cns, .. } = self.state;
         DiveState {
             depth,
             time,
             gas,
+            cns
         }
+    }
+
+    fn cns(&self) -> CNSPercent {
+        self.state.cns
     }
 }
 
@@ -195,14 +204,79 @@ impl BuehlmannModel {
         self.compartments = compartments;
     }
 
-    fn recalculate_compartments(&mut self, step: StepData) {
+    fn recalculate(&mut self, step: StepData) {
+        self.recalculate_compartments(&step);
+        self.recalculate_cns(&step);
+    }
+
+    fn recalculate_compartments(&mut self, step: &StepData) {
         for compartment in self.compartments.iter_mut() {
             compartment.recalculate(&step, self.config.gf.1, self.config.surface_pressure);
         }
         self.recalculate_leading_compartment_with_gf(step);
     }
 
-    fn recalculate_leading_compartment_with_gf(&mut self, step: StepData) {
+    fn recalculate_cns(&mut self, step: &StepData) {
+        let current_gas = self.state.gas;
+        let pp_o2 = current_gas
+            .partial_pressures(step.depth, self.config().surface_pressure)
+            .o2;
+        // only calculate CNS change if o2 partial pressure higher than 0.5
+        if pp_o2 > 0.5 {
+            // find coefficients for PO2 range
+            let mut coeffs_for_range: Option<CNSCoeffRow> = None;
+            for row in cns_coefficients.into_iter() {
+                let row_range = row.0.clone();
+                let in_range = row_range.contains(&(pp_o2 as f32));
+                if in_range {
+                    coeffs_for_range = Some(row);
+                    break;
+                }
+            }
+            // if CNS coefficients found for PO2 range
+            if let Some((.., slope, intercept)) = coeffs_for_range {
+                // time limit for given P02
+                let t_lim = (slope as f64) * pp_o2 + (intercept as f64);
+                let cns_fraction = (*step.time as f64) / t_lim;
+                self.state.cns += cns_fraction as u8;
+            } else {
+                // PO2 out of cns table range
+                todo!("handle out range PO2");
+            }
+        }
+    }
+
+    // fn recalculate_cns(&mut self, step: &StepData) {
+    //     let current_gas = self.state.gas;
+    //     let pp_o2 = current_gas
+    //         .partial_pressures(step.depth, self.config().surface_pressure)
+    //         .o2;
+    //     // only calculate CNS change if o2 partial pressure higher than 0.5
+    //     if pp_o2 > 0.5 {
+    //         // find coefficients for PO2 range
+    //         let mut coeffs_for_range: Option<CNSCoeffRow> = None;
+    //         for row in cns_coefficients.into_iter() {
+    //             let row_range = row.0.clone();
+    //             let in_range = row_range.contains(&(pp_o2 as f32));
+    //             if in_range {
+    //                 coeffs_for_range = Some(row);
+    //                 break;
+    //             }
+    //         }
+    //         // if CNS coefficients found for PO2 range
+    //         if let Some((.., slope, intercept)) = coeffs_for_range {
+    //             // time limit for given P02
+    //             let t_lim = (slope as f64) * pp_o2 + (intercept as f64);
+    //             let cns_fraction = (*step.time as f64) / t_lim;
+    //             self.state.cns += cns_fraction as u8;
+    //         } else {
+    //             // PO2 out of cns table range
+    //             todo!("handle out range PO2");
+    //         }
+    //     }
+    // }
+
+    fn recalculate_leading_compartment_with_gf(&mut self, step: &StepData) {
         let BuehlmannConfig { gf, surface_pressure } = self.config;
         let max_gf = self.max_gf(gf, *step.depth);
         let leading = self.leading_comp_mut();
@@ -282,7 +356,16 @@ mod tests {
         let nx32 = Gas::new(0.32, 0.);
         model.step(&10., &(10 * 60), &air);
         model.step(&15., &(15 * 60), &nx32);
-        assert_eq!(model.state, BuehlmannState { depth: 15., time: (25 * 60), gas: nx32, gf_low_depth: None });
+        assert_eq!(
+            model.state,
+            BuehlmannState {
+                depth: 15.,
+                time: (25 * 60),
+                gas: nx32,
+                gf_low_depth: None,
+                cns: 0,
+            }
+        );
     }
 
     #[test]

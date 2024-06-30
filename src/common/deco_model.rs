@@ -1,5 +1,4 @@
-use crate::common::{Depth, Gas, Seconds, Minutes, AscentRatePerMinute};
-
+use crate::common::{Depth, Gas, Seconds, Minutes, AscentRatePerMinute, CNSPercent};
 use super::{Deco, MbarPressure};
 
 #[derive(Debug, PartialEq)]
@@ -19,10 +18,17 @@ pub struct DiveState {
     pub depth: Depth,
     pub time: Seconds,
     pub gas: Gas,
+    pub cns: CNSPercent,
 }
 
 pub trait DecoModel {
     type ConfigType: DecoModelConfig;
+
+    /// get model config
+    fn config(&self) -> Self::ConfigType;
+
+    /// get model dive state
+    fn dive_state(&self) -> DiveState;
 
     /// model init
     fn new(config: Self::ConfigType) -> Self;
@@ -42,15 +48,15 @@ pub trait DecoModel {
     /// current decompression ceiling in meters
     fn ceiling(&self) -> Depth;
 
+    /// deco stages, TTL
     fn deco(&self, gas_mixes: Vec<Gas>) -> Deco;
 
-    /// get model config
-    fn config(&self) -> Self::ConfigType;
+    /// central nervous system oxygen toxicity
+    fn cns(&self) -> CNSPercent;
 
-    /// get model dive state
-    fn dive_state(&self) -> DiveState;
-
+    /// is in deco check
     fn in_deco(&self) -> bool {
         self.ceiling() > 0.
     }
+
 }
