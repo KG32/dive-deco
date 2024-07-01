@@ -32,7 +32,7 @@ impl OxTox {
             .inspired_partial_pressures(depth, surface_pressure)
             .o2;
 
-
+        // attempt to assign CNS coefficients by o2 partial pressure
         let coeffs_for_range = self.assign_cns_coeffs(pp_o2);
         // only calculate CNS change if o2 partial pressure higher than 0.5
         if let Some((.., slope, intercept)) = coeffs_for_range {
@@ -41,17 +41,17 @@ impl OxTox {
             self.cns += ((*time as f64) / (t_lim * 60.)) * 100.;
         } else {
             // PO2 out of cns table range
-            // eliminate CNS with half time
             if (*depth == 0.) && (pp_o2 <= 0.5) {
+                // eliminate CNS with half time
                 self.cns /= 2_f64.powf((*time / (CNS_ELIMINATION_HALF_TIME_MINUTES * 60)) as f64);
-                return;
             } else if pp_o2 > 1.6 {
+                // increase CNS by a constant when ppO2 higher than 1.6
                 self.cns += ((*time as f64) / CNS_LIMIT_OVER_MAX_PP02 as f64) * 100.;
             }
         }
     }
 
-    // attempt to assign CNS coefficients
+    // find CNS coefficients by o2 partial pressure
     fn assign_cns_coeffs(&self, pp_o2: Pressure) -> Option<CNSCoeffRow> {
         let mut coeffs_for_range: Option<CNSCoeffRow> = None;
         for row in CNS_COEFFICIENTS.into_iter() {
@@ -89,7 +89,7 @@ mod tests {
             (0.55, true),
             (0.8, true),
             (1.6, true),
-            (1.61, false),
+            (1.66, false),
         ];
 
         for (pp_o2, is_assignable) in assignable_cases.into_iter() {

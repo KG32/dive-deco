@@ -1,7 +1,7 @@
 use std::ops::RangeBounds;
 
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{CNS_COEFFICIENTS, AscentRatePerMinute, CNSCoeffRow, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
+use crate::common::{AscentRatePerMinute, CNSCoeffRow, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
