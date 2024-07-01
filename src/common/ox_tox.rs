@@ -1,7 +1,10 @@
-use crate::{common::CNS_COEFFICIENTS};
-use crate::{Pressure, StepData};
+use crate::common::CNS_COEFFICIENTS;
+use crate::{Minutes, Pressure, Seconds, StepData};
 
-use super::{CNSCoeffRow, CNSPercent, DiveState, MbarPressure};
+use super::{CNSCoeffRow, CNSPercent, MbarPressure};
+
+const CNS_ELIMINATION_HALF_TIME_MINUTES: Minutes = 90;
+const CNS_LIMIT_OVER_MAX_PP02: Seconds = 400;
 
 #[derive(Copy, Clone, Debug)]
 #[derive(PartialEq)]
@@ -23,8 +26,29 @@ impl OxTox {
     }
 
     pub fn recalculate_cns(&mut self, step: &StepData, surface_pressure: MbarPressure) {
-        let cns_fraction = self.calc_cns_segment(step, surface_pressure);
-        self.cns += cns_fraction;
+        let StepData { depth, time, gas } = *step;
+
+        let pp_o2 = gas
+            .inspired_partial_pressures(depth, surface_pressure)
+            .o2;
+
+
+        let coeffs_for_range = self.assign_cns_coeffs(pp_o2);
+        // only calculate CNS change if o2 partial pressure higher than 0.5
+        if let Some((.., slope, intercept)) = coeffs_for_range {
+            // time limit for given P02
+            let t_lim = ((slope as f64) * pp_o2) + (intercept as f64);
+            self.cns += ((*time as f64) / (t_lim * 60.)) * 100.;
+        } else {
+            // PO2 out of cns table range
+            // eliminate CNS with half time
+            if (*depth == 0.) && (pp_o2 <= 0.5) {
+                self.cns /= 2_f64.powf((*time / (CNS_ELIMINATION_HALF_TIME_MINUTES * 60)) as f64);
+                return;
+            } else if pp_o2 > 1.6 {
+                self.cns += ((*time as f64) / CNS_LIMIT_OVER_MAX_PP02 as f64) * 100.;
+            }
+        }
     }
 
     // attempt to assign CNS coefficients
@@ -40,24 +64,6 @@ impl OxTox {
         }
 
         coeffs_for_range
-    }
-
-    fn calc_cns_segment(&self, step: &StepData, surface_pressure: MbarPressure) -> CNSPercent {
-        let current_gas = step.gas;
-        let pp_o2 = current_gas
-            .inspired_partial_pressures(step.depth, surface_pressure)
-            .o2;
-        let coeffs_for_range = self.assign_cns_coeffs(pp_o2);
-        // only calculate CNS change if o2 partial pressure higher than 0.5
-        if let Some((.., slope, intercept)) = coeffs_for_range {
-            // time limit for given P02
-            let t_lim: f64 = ((slope as f64) * pp_o2) + (intercept as f64);
-            return ((*step.time as f64) / (t_lim * 60.)) * 100.;
-        } else {
-            // PO2 out of cns table range
-            // @todo handle CNS half time + above 1.6 extrapolation
-            return 0.;
-        }
     }
 }
 
@@ -102,8 +108,8 @@ mod tests {
     }
 
     #[test]
-    fn test_calc_segment() {
-        let ox_tox = OxTox::default();
+    fn test_cns_segment() {
+        let mut ox_tox = OxTox::default();
 
         // static depth segment
         let depth = 36.;
@@ -115,7 +121,35 @@ mod tests {
             gas: &ean_32,
         };
 
-        let segment_cns_delta = ox_tox.calc_cns_segment(&step, 1013);
-        assert_eq!(segment_cns_delta, 15.018262206843517);
+        ox_tox.recalculate_cns(&step, 1013);
+        assert_eq!(ox_tox.cns(), 15.018262206843517);
+    }
+
+    #[test]
+    fn test_cns_half_time_elimination() {
+        let mut ox_tox = OxTox::default();
+        // CNS ~50%
+        let step = StepData { depth: &30., time: &(75 * 60), gas: &Gas::new(0.35, 0.) };
+        ox_tox.recalculate_cns(&step, 1013);
+        assert_eq!(ox_tox.cns, 48.31898259550245);
+        // 2x 90 mins half time
+        let mut i = 0;
+        while i < 2 {
+            ox_tox.recalculate_cns(&StepData { depth: &0., time: &(90 * 60), gas: &Gas::air() }, 1013);
+            i += 1;
+        }
+        assert_eq!(ox_tox.cns, 12.079745648875612);
+    }
+
+    #[test]
+    fn test_cns_above_max_ppo2() {
+        let mut ox_tox = OxTox::default();
+        let step = StepData {
+            depth: &30.,
+            time: &400,
+            gas: &Gas::new(0.5, 0.),
+        };
+        ox_tox.recalculate_cns(&step, 1013);
+        assert_eq!(ox_tox.cns(), 100.)
     }
 }

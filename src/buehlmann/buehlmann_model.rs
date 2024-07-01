@@ -300,16 +300,11 @@ mod tests {
         let nx32 = Gas::new(0.32, 0.);
         model.step(&10., &(10 * 60), &air);
         model.step(&15., &(15 * 60), &nx32);
-        assert_eq!(
-            model.state,
-            BuehlmannState {
-                depth: 15.,
-                time: (25 * 60),
-                gas: nx32,
-                gf_low_depth: None,
-                ox_tox: OxTox::default(),
-            }
-        );
+        assert_eq!(model.state.depth, 15.);
+        assert_eq!(model.state.time, (25 * 60));
+        assert_eq!(model.state.gas, nx32);
+        assert_eq!(model.state.gf_low_depth, None);
+        assert_ne!(model.state.ox_tox, OxTox::default());
     }
 
     #[test]
