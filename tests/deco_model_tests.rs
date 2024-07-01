@@ -1,9 +1,8 @@
-use dive_deco::{DecoModel, Deco, Gas, DecoStage, DecoStageType};
+use dive_deco::{DecoModel, Gas};
 
 pub mod fixtures;
 
 #[test]
-// #[ignore = "cns wip"]
 fn test_cns() {
     let mut model = fixtures::model_default();
 
@@ -18,8 +17,7 @@ fn test_cns() {
 }
 
 #[test]
-// #[ignore = "cns wip"]
-fn test_cns_2() {
+fn test_cns_multi_stage() {
     let mut model = fixtures::model_default();
     let nitrox = Gas::new(0.32, 0.);
 

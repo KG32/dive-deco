@@ -152,7 +152,7 @@ impl Deco {
         let surface_pressure = sim_model.config().surface_pressure();
 
         // end deco simulation - surface
-        if !(current_depth > 0.) {
+        if current_depth <= 0. {
             return (None, None);
         }
 

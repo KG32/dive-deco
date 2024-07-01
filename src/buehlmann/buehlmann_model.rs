@@ -1,7 +1,5 @@
-use std::ops::RangeBounds;
-
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, CNSCoeffRow, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
+use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::GradientFactors;
@@ -211,7 +209,7 @@ impl BuehlmannModel {
 
     fn recalculate_compartments(&mut self, step: &StepData) {
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&step, self.config.gf.1, self.config.surface_pressure);
+            compartment.recalculate(step, self.config.gf.1, self.config.surface_pressure);
         }
         self.recalculate_leading_compartment_with_gf(step);
     }
