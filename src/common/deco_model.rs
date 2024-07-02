@@ -23,14 +23,17 @@ pub struct DiveState {
 pub trait DecoModel {
     type ConfigType: DecoModelConfig;
 
+    // default
+    fn default() -> Self;
+
+    /// model init
+    fn new(config: Self::ConfigType) -> Self;
+
     /// get model config
     fn config(&self) -> Self::ConfigType;
 
     /// get model dive state
     fn dive_state(&self) -> DiveState;
-
-    /// model init
-    fn new(config: Self::ConfigType) -> Self;
 
     /// register step (depth: meters, time: seconds)
     fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas);

@@ -37,22 +37,24 @@ impl BuehlmannState {
 impl DecoModel for BuehlmannModel {
     type ConfigType = BuehlmannConfig;
 
+    // initialize with default config
+    fn default() -> Self {
+        Self::new(BuehlmannConfig::default())
+    }
+
     /// initialize new Buehlmann (ZH-L16C) model with gradient factors
     fn new(config: BuehlmannConfig) -> Self {
         // validate config
         if let Err(e) = config.validate() {
             panic!("Config error [{}]: {}", e.field, e.reason);
         }
-
         // air as a default init gas
         let initial_model_state = BuehlmannState::initial();
-
         let mut model = Self {
             config,
             compartments: vec![],
             state: initial_model_state,
         };
-
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
         model

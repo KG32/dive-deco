@@ -1,7 +1,7 @@
 use dive_deco::{ BuehlmannModel, BuehlmannConfig, DecoModel, Gas, GradientFactors };
 
 pub fn model_default() -> BuehlmannModel {
-    BuehlmannModel::new(BuehlmannConfig::default())
+    BuehlmannModel::default()
 }
 
 pub fn model_gf(gf: GradientFactors) -> BuehlmannModel {

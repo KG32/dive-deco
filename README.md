@@ -48,8 +48,7 @@ use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel };
 
 fn main() {
     // model with default config (GF 100/100)
-    let default_config = BuehlmannConfig::default();
-    let model = BuehlmannModel::new(default_config);
+    let model = BuehlmannModel::default();
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (100, 100) }
 }
 ```
