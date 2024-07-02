@@ -19,10 +19,10 @@ fn main() {
     let bottom_time = 20 * 60; // 20 min
 
     // descent to 40m at a rate of 9min/min using air
-    model.step_travel_with_rate(&bottom_depth, &9., &available_gas_mixes[0]);
+    model.step_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);
 
     // 20 min bottom time
-    model.step(&bottom_depth, &bottom_time, &air);
+    model.step(bottom_depth, bottom_time, &air);
 
     // calculate deco runtime providing available gasses
     let deco = model.deco(available_gas_mixes);

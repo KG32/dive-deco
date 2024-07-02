@@ -4,4 +4,4 @@ version = 3
 
 [[package]]
 name = "dive-deco"
-version = "1.4.0"
+version = "2.0.0"

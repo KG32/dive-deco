@@ -6,7 +6,7 @@ fn travel_descent() {
     let mut model = fixtures::model_default();
     let target_depth = 40.;
     let descent_time = 10 * 60;
-    model.step_travel(&target_depth, &descent_time, &fixtures::gas_air());
+    model.step_travel(target_depth, descent_time, &fixtures::gas_air());
     let dive_state = model.dive_state();
     let Supersaturation { gf_surf, .. } = model.supersaturation();
     assert_eq!(dive_state.depth, target_depth);
@@ -20,11 +20,11 @@ fn travel_ascent() {
     let air = fixtures::gas_air();
     let initial_depth = 40.;
     let bottom_time = 20 * 60;
-    model.step(&initial_depth, &bottom_time, &air);
+    model.step(initial_depth, bottom_time, &air);
 
     let target_depth = 15.;
     let ascent_time = 3 * 30;
-    model.step_travel(&target_depth, &ascent_time, &air);
+    model.step_travel(target_depth, ascent_time, &air);
 
     let dive_state = model.dive_state();
     let Supersaturation { gf_99, gf_surf } = model.supersaturation();
@@ -38,7 +38,7 @@ fn travel_ascent() {
 #[should_panic]
 fn travel_invalid_target_depth() {
     let mut model = fixtures::model_gf((30, 70));
-    model.step_travel(&-10., &1, &fixtures::gas_air());
+    model.step_travel(-10., 1, &fixtures::gas_air());
 }
 
 #[test]
@@ -50,9 +50,9 @@ fn test_travel_step_with_rate() {
     let target_depth = 0.;
     let expected_travel_time = 133;
     let ascent_rate = 9.;
-    model.step(&initial_depth, &bottom_time, &air);
+    model.step(initial_depth, bottom_time, &air);
 
-    model.step_travel_with_rate(&target_depth, &ascent_rate, &air);
+    model.step_travel_with_rate(target_depth, ascent_rate, &air);
 
     let state = model.dive_state();
     assert_eq!(state.depth, target_depth);
