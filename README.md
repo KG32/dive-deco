@@ -156,6 +156,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
     let deco = model.deco(available_gas_mixes);
 ```
 
+:warning: Current deco stops implementation consideres gas switches based on MOD only - don't use with hypoxic trimix mixes
+
 ##### NDL (no-decompression limit)
 
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
