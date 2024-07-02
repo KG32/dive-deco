@@ -95,7 +95,7 @@ impl Compartment {
     // tissue inert gasses pressure after step
     fn compartment_inert_pressure(&self, step: &StepData, surface_pressure: MbarPressure) -> (Pressure, Pressure) { // (he, n2)
         let StepData { depth, time, gas  } = step;
-        let PartialPressures { n2: n2_pp, he: he_pp, .. } = gas.inspired_partial_pressures(depth, surface_pressure);
+        let PartialPressures { n2: n2_pp, he: he_pp, .. } = gas.inspired_partial_pressures(*depth, surface_pressure);
 
         // partial pressure of inert gases in inspired gas (adjusted alveoli water vapor pressure)
         let he_inspired_pp = he_pp;
@@ -103,8 +103,8 @@ impl Compartment {
 
         // tissue saturation pressure change for inert gasses
         let (n2_half_time, _, _, he_half_time, ..) = self.params;
-        let he_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Helium, he_inspired_pp, **time, he_half_time);
-        let n2_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Nitrogen, n2_inspired, **time, n2_half_time);
+        let he_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Helium, he_inspired_pp, *time, he_half_time);
+        let n2_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Nitrogen, n2_inspired, *time, n2_half_time);
 
         // inert gasses pressures after applying delta P
         let he_final = self.he_ip + he_p_comp_delta;
@@ -194,7 +194,7 @@ mod tests {
     fn test_recalculation_ongassing() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
+        let step = StepData { depth: 30., time: (10 * 60), gas: &air };
         comp.recalculate(&step, 100, 1000);
         assert_eq!(comp.total_ip, 1.315391144211091);
     }
@@ -210,7 +210,7 @@ mod tests {
     fn test_min_pressure_calculation() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let step = StepData { depth: &30., time: &(10 * 60), gas: &air };
+        let step = StepData { depth: 30., time: (10 * 60), gas: &air };
         comp.recalculate(&step, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.4342609809161748);

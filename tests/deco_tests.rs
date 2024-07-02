@@ -6,7 +6,7 @@ pub mod fixtures;
 fn test_deco_ascent_no_deco() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
-    model.step(&20., &(5 * 60), &air);
+    model.step(20., 5 * 60, &air);
 
     let Deco { deco_stages, tts } = model.deco(vec![air]);
     assert_eq!(deco_stages.len(), 1); // single continuous ascent
@@ -17,7 +17,7 @@ fn test_deco_ascent_no_deco() {
 fn test_deco_single_gas() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
-    model.step(&40., &(20 * 60), &air);
+    model.step(40., 20 * 60, &air);
 
     let Deco {
         deco_stages,
@@ -75,7 +75,7 @@ fn test_deco_multi_gas() {
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
 
-    model.step(&40.0001, &(20 * 60), &air);
+    model.step(40.0001, 20 * 60, &air);
 
     let Deco {
         deco_stages,
@@ -145,7 +145,7 @@ fn test_deco_with_deco_mod_at_bottom() {
     let air = Gas::air();
     let ean_36 = Gas::new(0.36, 0.);
 
-    model.step(&30., &(30 * 60), &air);
+    model.step(30., 30 * 60, &air);
 
     let Deco { deco_stages, tts } = model.deco(vec![air, ean_36]);
 

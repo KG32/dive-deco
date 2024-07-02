@@ -61,7 +61,7 @@ impl Deco {
                     match deco_action {
                         // ascent to min depth (deco stop or surface)
                         DecoAction::AscentToCeil => {
-                            sim_model.step_travel_with_rate(&self.deco_stop_depth(&ceiling), &DEFAULT_ASCENT_RATE, &pre_stage_gas);
+                            sim_model.step_travel_with_rate(self.deco_stop_depth(ceiling), DEFAULT_ASCENT_RATE, &pre_stage_gas);
                             let current_sim_state = sim_model.dive_state();
                             let current_sim_time = current_sim_state.time;
                             deco_stages.push(DecoStage {
@@ -79,7 +79,7 @@ impl Deco {
                             if let Some(next_switch_gas) = next_switch_gas {
                                 // travel to MOD
                                 let switch_gas_mod = next_switch_gas.max_operating_depth(1.6);
-                                sim_model.step_travel_with_rate(&switch_gas_mod, &DEFAULT_ASCENT_RATE, &pre_stage_gas);
+                                sim_model.step_travel_with_rate(switch_gas_mod, DEFAULT_ASCENT_RATE, &pre_stage_gas);
                                 let DiveState {
                                     depth: post_ascent_depth,
                                     time: post_ascent_time,
@@ -94,7 +94,7 @@ impl Deco {
                                 });
 
                                 // switch gas @todo configurable gas change duration
-                                sim_model.step(&sim_model.dive_state().depth, &0, &next_switch_gas);
+                                sim_model.step(sim_model.dive_state().depth, 0, &next_switch_gas);
                                 // @todo configurable oxygen window stop
                                 let post_switch_state = sim_model.dive_state();
                                 deco_stages.push(DecoStage {
@@ -111,7 +111,7 @@ impl Deco {
                         DecoAction::SwitchGas => {
                             let switch_gas = next_switch_gas.unwrap();
                             // @todo configurable gas switch duration
-                            sim_model.step(&pre_stage_depth, &0, &switch_gas);
+                            sim_model.step(pre_stage_depth, 0, &switch_gas);
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::GasSwitch,
                                 start_depth: pre_stage_depth,
@@ -123,7 +123,7 @@ impl Deco {
 
                         // decompression stop (a series of 1s segments, merged into one on cleared stop)
                         DecoAction::Stop => {
-                            sim_model.step(&pre_stage_depth, &1, &pre_stage_gas);
+                            sim_model.step(pre_stage_depth, 1, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
                             // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
@@ -161,7 +161,7 @@ impl Deco {
             return (Some(DecoAction::AscentToCeil), None);
         } else {
             // check next switch gas
-            let next_switch_gas = self.next_switch_gas(&current_depth, &current_gas, gas_mixes, surface_pressure);
+            let next_switch_gas = self.next_switch_gas(current_depth, &current_gas, gas_mixes, surface_pressure);
             // check if within mod @todo min operational depth
             if let Some(switch_gas) = next_switch_gas {
                 //switch gas without ascent if within mod of next deco gas
@@ -193,7 +193,7 @@ impl Deco {
     }
 
     /// check next deco gas in deco (the one with lowest MOD while more oxygen-rich than current)
-    fn next_switch_gas(&self, current_depth: &Depth, current_gas: &Gas, gas_mixes: Vec<Gas>, surface_pressure: MbarPressure) -> Option<Gas> {
+    fn next_switch_gas(&self, current_depth: Depth, current_gas: &Gas, gas_mixes: Vec<Gas>, surface_pressure: MbarPressure) -> Option<Gas> {
         let current_gas_partial_pressures = current_gas.partial_pressures(current_depth, surface_pressure);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
         let mut switch_gasses = gas_mixes
@@ -241,7 +241,7 @@ impl Deco {
     }
 
     // round ceiling up to the bottom of deco window
-    fn deco_stop_depth(&self, ceiling: &Depth) -> Depth {
+    fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
         DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
     }
 }
@@ -264,7 +264,7 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
-            let res = deco.deco_stop_depth(&input_depth);
+            let res = deco.deco_stop_depth(input_depth);
             assert_eq!(res, expected_depth);
         }
     }
@@ -296,7 +296,7 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
-            let res = deco.next_switch_gas(&current_depth, &current_gas, available_gas_mixes, 1000);
+            let res = deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
             assert_eq!(res, expected_switch_gas);
         }
     }

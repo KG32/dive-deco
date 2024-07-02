@@ -38,15 +38,15 @@ impl OxTox {
         if let Some((.., slope, intercept)) = coeffs_for_range {
             // time limit for given P02
             let t_lim = ((slope as f64) * pp_o2) + (intercept as f64);
-            self.cns += ((*time as f64) / (t_lim * 60.)) * 100.;
+            self.cns += ((time as f64) / (t_lim * 60.)) * 100.;
         } else {
             // PO2 out of cns table range
-            if (*depth == 0.) && (pp_o2 <= 0.5) {
+            if (depth == 0.) && (pp_o2 <= 0.5) {
                 // eliminate CNS with half time
-                self.cns /= 2_f64.powf((*time / (CNS_ELIMINATION_HALF_TIME_MINUTES * 60)) as f64);
+                self.cns /= 2_f64.powf((time / (CNS_ELIMINATION_HALF_TIME_MINUTES * 60)) as f64);
             } else if pp_o2 > 1.6 {
                 // increase CNS by a constant when ppO2 higher than 1.6
-                self.cns += ((*time as f64) / CNS_LIMIT_OVER_MAX_PP02 as f64) * 100.;
+                self.cns += ((time as f64) / CNS_LIMIT_OVER_MAX_PP02 as f64) * 100.;
             }
         }
     }
@@ -116,8 +116,8 @@ mod tests {
         let time = 20 * 60;
         let ean_32 = Gas::new(0.32, 0.);
         let step = StepData {
-            depth: &depth,
-            time: &time,
+            depth: depth,
+            time: time,
             gas: &ean_32,
         };
 
@@ -129,13 +129,13 @@ mod tests {
     fn test_cns_half_time_elimination() {
         let mut ox_tox = OxTox::default();
         // CNS ~50%
-        let step = StepData { depth: &30., time: &(75 * 60), gas: &Gas::new(0.35, 0.) };
+        let step = StepData { depth: 30., time: (75 * 60), gas: &Gas::new(0.35, 0.) };
         ox_tox.recalculate_cns(&step, 1013);
         assert_eq!(ox_tox.cns, 48.31898259550245);
         // 2x 90 mins half time
         let mut i = 0;
         while i < 2 {
-            ox_tox.recalculate_cns(&StepData { depth: &0., time: &(90 * 60), gas: &Gas::air() }, 1013);
+            ox_tox.recalculate_cns(&StepData { depth: 0., time: (90 * 60), gas: &Gas::air() }, 1013);
             i += 1;
         }
         assert_eq!(ox_tox.cns, 12.079745648875612);
@@ -145,8 +145,8 @@ mod tests {
     fn test_cns_above_max_ppo2() {
         let mut ox_tox = OxTox::default();
         let step = StepData {
-            depth: &30.,
-            time: &400,
+            depth: 30.,
+            time: 400,
             gas: &Gas::new(0.5, 0.),
         };
         ox_tox.recalculate_cns(&step, 1013);
