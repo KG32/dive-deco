@@ -43,7 +43,8 @@ impl Deco {
             let DiveState {
                 depth: pre_stage_depth,
                 time: pre_stage_time,
-                gas: pre_stage_gas
+                gas: pre_stage_gas,
+                ..
             } = sim_model.dive_state();
             let ceiling = sim_model.ceiling();
             let next_deco_stage = self.next_deco_action(&sim_model, gas_mixes.clone());
@@ -151,7 +152,7 @@ impl Deco {
         let surface_pressure = sim_model.config().surface_pressure();
 
         // end deco simulation - surface
-        if !(current_depth > 0.) {
+        if current_depth <= 0. {
             return (None, None);
         }
 
