@@ -95,7 +95,7 @@ impl DecoModel for BuehlmannModel {
     fn step_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas) {
         self.validate_depth(target_depth);
         let distance = (target_depth - self.state.depth).abs();
-        let travel_time_seconds = (distance / rate * 60.) as usize;
+        let travel_time_seconds = (distance / rate * 60.) as Seconds;
         self.step_travel(target_depth, travel_time_seconds, gas);
     }
 

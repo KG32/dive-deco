@@ -42,7 +42,7 @@ fn test_model_steps_equality() {
 
     let air = Gas::new(0.21, 0.);
     let test_depth = 50.;
-    let test_time_minutes: usize = 100;
+    let test_time_minutes: Minutes = 100;
 
     model1.step(test_depth, test_time_minutes * 60, &air);
 
