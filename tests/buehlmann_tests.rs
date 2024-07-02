@@ -71,7 +71,7 @@ fn test_ndl_calculation() {
     assert_eq!(model.ndl(), 16);
 
     // expect NDL 15 after 1 min
-    model.step(depth, (1*60), &air);
+    model.step(depth, 1*60, &air);
     assert_eq!(model.ndl(), 15);
 }
 

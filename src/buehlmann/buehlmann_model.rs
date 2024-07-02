@@ -296,8 +296,8 @@ mod tests {
         let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let nx32 = Gas::new(0.32, 0.);
-        model.step(10., (10 * 60), &air);
-        model.step(15., (15 * 60), &nx32);
+        model.step(10., 10 * 60, &air);
+        model.step(15., 15 * 60, &nx32);
         assert_eq!(model.state.depth, 15.);
         assert_eq!(model.state.time, (25 * 60));
         assert_eq!(model.state.gas, nx32);
@@ -332,9 +332,9 @@ mod tests {
         let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
-        model.step(40., (30 * 60), &air);
-        model.step(21., (5 * 60), &air);
-        model.step(14., (0 * 60), &air);
+        model.step(40., 30 * 60, &air);
+        model.step(21., 5 * 60, &air);
+        model.step(14., 0 * 60, &air);
         assert_eq!(model.max_gf(gf, 14.), 40);
     }
 
