@@ -25,7 +25,7 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 ### Planned features
 
-- extended deco model config [metric/imprial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
+- extended deco model config [metric/imperial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
 - travel steps optimization (linear ascent / descent steps using Schreiner equation instead of iterative Haldane equation)
 - BuehlmannModel Default trait implementation
 - other deco algorithms (VPM-B)
@@ -253,6 +253,8 @@ Breathing gas used in the model.
   - he - helium partial pressure
 - `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
 - `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
+- `maximum_operating_depth(pp_o2_limit)` - maximum operating depth considering o2 partial, with maximum o2 partial pressure as parameter
+- `equivalent_narcotic_depth(depth)` - equivalent depth at which given gas has the same narcotic potential as air. Assumes o2 - n2 1:1 narcotic ratio.
 
 ```rust
 let mix = Gas::new(0.21, 0.);

@@ -63,8 +63,17 @@ impl Gas {
     }
 
     /// MOD
-    pub fn max_operating_depth(&self, pp_o2: Pressure) -> Depth {
-        10. * ((pp_o2 / self.o2_pp) - 1.)
+    pub fn max_operating_depth(&self, pp_o2_limit: Pressure) -> Depth {
+        10. * ((pp_o2_limit / self.o2_pp) - 1.)
+    }
+
+    /// END
+    pub fn equivalent_narcotic_depth(&self, depth: Depth) -> Depth {
+        let mut end = (depth + 10.) * (1. - self.he_pp) - 10.;
+        if end < 0. {
+           end = 0.;
+        }
+        end
     }
 
     // TODO standard nitrox (bottom and deco) and trimix gasses
@@ -76,6 +85,8 @@ impl Gas {
 
 #[cfg(test)]
 mod tests {
+    use std::f64::INFINITY;
+
     use super::*;
 
     #[test]
@@ -136,10 +147,32 @@ mod tests {
 
     #[test]
     fn test_mod() {
-        let air = Gas::new(0.21, 0.);
-        let ean_50 = Gas::new(0.50, 0.);
-        assert_eq!(air.max_operating_depth(1.4), 56.66666666666666);
-        assert_eq!(ean_50.max_operating_depth(1.6), 22.);
+        // o2, he, max_ppo2, MOD
+        let test_cases = [
+            (0.21, 0., 1.4, 56.66666666666666),
+            (0.50, 0., 1.6, 22.),
+            (0.21, 0.35, 1.4, 56.66666666666666),
+            (0., 0., 1.4, INFINITY),
+        ];
+        for (pp_o2, pe_he, max_pp_o2, expected_mod) in test_cases {
+            let gas = Gas::new(pp_o2, pe_he);
+            let calculated_mod = gas.max_operating_depth(max_pp_o2);
+            assert_eq!(calculated_mod, expected_mod);
+        }
+    }
 
+    #[test]
+    fn test_end() {
+        // depth, o2, he, END
+        let test_cases = [
+            (60., 0.21, 0.40, 32.),
+            (0., 0.21, 0.40, 0.),
+            (40., 0.21, 0., 40.),
+        ];
+        for (depth, o2_pp, he_pp, expected_end) in test_cases {
+            let tmx = Gas::new(o2_pp, he_pp);
+            let calculated_end = tmx.equivalent_narcotic_depth(depth);
+            assert_eq!(calculated_end, expected_end);
+        }
     }
 }
