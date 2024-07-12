@@ -1,10 +1,10 @@
 use crate::{DecoModel, Depth, Gas, Minutes};
-
 use super::{AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure};
 
-const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;
 // @todo move to model config
+const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;
 const DEFAULT_CEILING_WINDOW: Depth = 3.;
+const DEFAULT_MAX_END_DEPTH: Depth = 30.;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum DecoAction {
@@ -166,7 +166,8 @@ impl Deco {
             if let Some(switch_gas) = next_switch_gas {
                 //switch gas without ascent if within mod of next deco gas
                 let gas_mod = switch_gas.max_operating_depth(1.6);
-                if (switch_gas != current_gas) && (current_depth <= gas_mod) {
+                let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
+                if (switch_gas != current_gas) && (current_depth <= gas_mod) && (gas_end <= DEFAULT_MAX_END_DEPTH) {
                     return (Some(DecoAction::SwitchGas), Some(switch_gas));
                 }
             }
