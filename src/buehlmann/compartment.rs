@@ -32,7 +32,10 @@ impl Compartment {
         model_config: BuehlmannConfig,
     ) -> Self {
         let init_gas = Gas::air();
-        let init_gas_compound_pressures = init_gas.gas_pressures_compound(1.);
+        let init_gas_compound_pressures = init_gas.inspired_partial_pressures(
+            0.,
+            model_config.surface_pressure
+        );
         let n2_ip = init_gas_compound_pressures.n2;
         let he_ip = init_gas_compound_pressures.he;
 
@@ -179,11 +182,11 @@ mod tests {
             comp,
             Compartment {
                 no: 1,
-                params: (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245),
-                he_ip: 0.,
-                n2_ip: 0.79,
-                total_ip: 0.79,
-                min_tolerable_amb_pressure: -0.2372995,
+                min_tolerable_amb_pressure: -0.257127315,
+                he_ip: 0.0,
+                n2_ip: 0.750737,
+                total_ip: 0.750737,
+                params: (4.0, 1.2599, 0.505, 1.51, 1.7424, 0.4245),
                 // mocked config and state
                 model_config: BuehlmannConfig::default(),
             }
@@ -196,7 +199,7 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let step = StepData { depth: 30., time: (10 * 60), gas: &air };
         comp.recalculate(&step, 100, 1000);
-        assert_eq!(comp.total_ip, 1.315391144211091);
+        assert_eq!(comp.total_ip, 1.2850179204911072);
     }
 
     #[test]
@@ -213,7 +216,7 @@ mod tests {
         let step = StepData { depth: 30., time: (10 * 60), gas: &air };
         comp.recalculate(&step, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
-        assert_eq!(min_tolerable_pressure, 0.4342609809161748);
+        assert_eq!(min_tolerable_pressure, 0.40957969932131577);
     }
 
 }

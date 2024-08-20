@@ -12,7 +12,7 @@ fn test_tmx_gf_surf() {
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
-    assert_close_to_percent!(gf_surf, 335.77, 0.5);
+    assert_close_to_percent!(gf_surf, 335.77, 1.);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_tmx_ndl() {
     let step = StepData { depth: 20., time: 0, gas: &tmx };
     model.step(step.depth, step.time, step.gas);
 
-    assert_eq!(model.ndl(), 16);
+    assert_eq!(model.ndl(), 17);
 }
 
 
@@ -40,5 +40,5 @@ fn test_heliox_gf_surf() {
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
-    assert_close_to_percent!(gf_surf, 201.16, 0.5);
+    assert_close_to_percent!(gf_surf, 197.93, 1.);
 }

@@ -348,4 +348,23 @@ mod tests {
         let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
         assert_eq!(slope_point, 35);
     }
+
+    #[test]
+    fn test_initial_supersaturation() {
+        fn extract_supersaturations(model: BuehlmannModel) -> Vec<Supersaturation> {
+            model.compartments.clone().into_iter().map(|comp| {
+            comp.supersaturation(model.config().surface_pressure, 0.)
+            }).collect::<Vec<Supersaturation>>()
+        }
+
+        let model_initial = BuehlmannModel::default();
+
+        let mut model_with_surface_interval = BuehlmannModel::default();
+        model_with_surface_interval.step(0., 999999, &Gas::air());
+
+        let initial_gfs = extract_supersaturations(model_initial);
+        let surface_interval_gfs = extract_supersaturations(model_with_surface_interval);
+
+        assert_eq!(initial_gfs, surface_interval_gfs);
+    }
 }

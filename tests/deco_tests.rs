@@ -24,7 +24,7 @@ fn test_deco_single_gas() {
         tts
     } = model.deco(vec![air]);
 
-    assert_close_to_percent!(tts as f64, 800., 1.); // 13.(3) min todo round to 14
+    assert_close_to_percent!(tts as f64, 754., 1.); // 13.(3) min todo round to 14
     assert_eq!(deco_stages.len(), 5);
 
     let expected_deco_stages =  vec![
@@ -39,7 +39,7 @@ fn test_deco_single_gas() {
             stage_type: DecoStageType::DecoStop,
             start_depth: 6.0,
             end_depth: 6.0,
-            duration: 95,
+            duration: 88,
             gas: air
         },
         DecoStage {
@@ -53,7 +53,7 @@ fn test_deco_single_gas() {
             stage_type: DecoStageType::DecoStop,
             start_depth: 3.0,
             end_depth: 3.0,
-            duration: 436,
+            duration: 400,
             gas: air
         },
         DecoStage {
@@ -108,7 +108,7 @@ fn test_deco_multi_gas() {
             stage_type: DecoStageType::DecoStop,
             start_depth: 6.0,
             end_depth: 6.0,
-            duration: 39,
+            duration: 34,
             gas: ean_50
         },
         DecoStage {
@@ -122,7 +122,7 @@ fn test_deco_multi_gas() {
             stage_type: DecoStageType::DecoStop,
             start_depth: 3.0,
             end_depth: 3.0,
-            duration: 301,
+            duration: 291,
             gas: ean_50
         },
         DecoStage {
@@ -168,7 +168,7 @@ fn test_deco_with_deco_mod_at_bottom() {
             stage_type: DecoStageType::DecoStop,
             start_depth: 3.0,
             end_depth: 3.0,
-            duration: 300,
+            duration: 268,
             gas: ean_36,
         },
         DecoStage {
@@ -181,7 +181,7 @@ fn test_deco_with_deco_mod_at_bottom() {
     ];
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_eq!(tts, 500);
+    assert_eq!(tts, 468);
 }
 
 fn assert_deco_stages_eq(deco_stages: Vec<DecoStage>, expected_deco_stages: Vec<DecoStage>) {
