@@ -1,5 +1,5 @@
 use crate::common::{Depth, Gas, Seconds, Minutes, AscentRatePerMinute, CNSPercent};
-use super::{ox_tox::OxTox, Deco, MbarPressure};
+use super::{ox_tox::OxTox, Deco, DecoRuntime, MbarPressure};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
@@ -51,7 +51,7 @@ pub trait DecoModel {
     fn ceiling(&self) -> Depth;
 
     /// deco stages, TTL
-    fn deco(&self, gas_mixes: Vec<Gas>) -> Deco;
+    fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime;
 
     /// central nervous system oxygen toxicity
     fn cns(&self) -> CNSPercent;

@@ -2,7 +2,7 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::GradientFactors;
+use crate::{DecoRuntime, GradientFactors};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -122,11 +122,9 @@ impl DecoModel for BuehlmannModel {
         leading_comp.ceiling()
     }
 
-    fn deco(&self, gas_mixes: Vec<Gas>) -> Deco {
+    fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        deco.calc(self.fork(), gas_mixes);
-
-        deco
+        deco.calc(self.fork(), gas_mixes)
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -164,12 +162,6 @@ impl BuehlmannModel {
         }
 
         Supersaturation { gf_99: acc_gf_99, gf_surf: acc_gf_surf }
-    }
-
-    #[deprecated(since="1.2.0", note="use `supersaturation` method instead")]
-    pub fn gfs_current(&self) -> (Pressure, Pressure) {
-        let Supersaturation { gf_99, gf_surf } = self.supersaturation();
-        (gf_99, gf_surf)
     }
 
     fn leading_comp(&self) -> &Compartment {

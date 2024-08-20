@@ -15,6 +15,7 @@ pub use common::{
     StepData,
     Deco,
     DecoStage,
-    DecoStageType
+    DecoStageType,
+    DecoRuntime,
 };
 

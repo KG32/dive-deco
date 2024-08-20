@@ -1,5 +1,5 @@
 use crate::{DecoModel, Depth, Gas, Minutes};
-use super::{AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure};
+use super::{global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds};
 
 // @todo move to model config
 const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;
@@ -26,18 +26,26 @@ pub struct DecoStage {
     pub stage_type: DecoStageType,
     pub start_depth: Depth,
     pub end_depth: Depth,
-    pub duration: Minutes,
+    pub duration: Seconds,
     pub gas: Gas,
 }
 
 #[derive(Default, Clone, Debug)]
 pub struct Deco {
+    deco_stages: Vec<DecoStage>,
+    tts_seconds: Seconds,
+}
+
+#[derive(Debug)]
+pub struct DecoRuntime {
+    // runtime
     pub deco_stages: Vec<DecoStage>,
+    // current TTS in minutes
     pub tts: Minutes,
 }
 
 impl Deco {
-    pub fn calc<T: DecoModel>(&mut self, mut sim_model: T, gas_mixes: Vec<Gas>) -> Self {
+    pub fn calc<T: DecoModel>(&mut self, mut sim_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
         // run model simulation until no deco stages
         loop {
             let DiveState {
@@ -141,9 +149,11 @@ impl Deco {
             deco_stages.into_iter().for_each(|deco_stage| self.register_deco_stage(deco_stage));
         }
 
-        Self {
+        let tts = (self.tts_seconds as f64 / 60.).ceil() as Minutes;
+
+        DecoRuntime {
             deco_stages: self.deco_stages.clone(),
-            tts: self.tts
+            tts,
         }
     }
 
@@ -238,7 +248,7 @@ impl Deco {
         }
 
         // increment TTS by deco stage duration
-        self.tts += stage.duration;
+        self.tts_seconds += stage.duration;
     }
 
     // round ceiling up to the bottom of deco window

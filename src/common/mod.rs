@@ -20,6 +20,6 @@ pub use global_types::{
     CNSPercent
 };
 pub use step::StepData;
-pub use deco::{Deco, DecoStage, DecoStageType};
+pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime};
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use ox_tox::OxTox;
