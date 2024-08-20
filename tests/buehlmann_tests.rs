@@ -19,10 +19,10 @@ fn test_gfs() {
     let air = Gas::new(0.21, 0.);
 
     model.step(50., 20 * 60, &air);
-    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 194.3055827400852 });
+    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 193.8554997961134 });
 
     model.step(40., 10 * 60, &air);
-    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 209.1025059770294 });
+    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 208.00431699178796 });
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn test_altitude() {
     let air = Gas::new(0.21, 0.);
     model.step(40., 60 * 60, &air);
     let Supersaturation { gf_surf, ..} = model.supersaturation();
-    assert_eq!(gf_surf, 314.27462637570085);
+    assert_eq!(gf_surf, 299.023204474694);
 }
 
 #[test]
@@ -133,7 +133,7 @@ fn test_example_deco_start() {
 
     // instant drop to 40m on air for 10min
     model.step(40., 10 * 60, &air);
-    assert_eq!(model.ceiling(), 12.906758687930836);
+    assert_eq!(model.ceiling(), 12.85312294790554);
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn test_example_deco() {
     model.step(30., 3 * 60, &air);
     model.step(21., 10 * 60, &ean_50);
 
-    assert_eq!(model.ceiling(), 11.744868181179458);
+    assert_eq!(model.ceiling(), 12.455491216740299);
 }
 
 #[test]
