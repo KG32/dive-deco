@@ -169,7 +169,7 @@ impl Deco {
             let mut nested_sim_deco = Deco::new_sim();
             let mut nested_sim_model = deco_model.clone();
             let DiveState { depth: sim_depth, gas: sim_gas, .. } = nested_sim_model.dive_state();
-            nested_sim_model.step(sim_depth, 5 * 60, &sim_gas); // tmp
+            nested_sim_model.step(sim_depth, 5 * 60, &sim_gas);
             let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone());
             tts_at_5 = nested_deco.tts;
             tts_delta_at_5 = (tts_at_5 - tts) as MinutesSigned;
@@ -284,65 +284,64 @@ impl Deco {
 
     fn fork(&self) -> Self {
         Self {
-            deco_stages: self.deco_stages.clone(),
-            tts_seconds: self.tts_seconds,
             sim: true,
+            ..self.clone()
         }
     }
 }
 
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_ceiling_rounding() {
-//         let test_cases: Vec<(Depth, Depth)> = vec![
-//             (0., 0.),
-//             (2., 3.),
-//             (2.999, 3.),
-//             (3., 3.),
-//             (3.00001, 6.),
-//             (12., 12.),
-//         ];
-//         let deco = Deco::default();
-//         for case in test_cases.into_iter() {
-//             let (input_depth, expected_depth) = case;
-//             let res = deco.deco_stop_depth(input_depth);
-//             assert_eq!(res, expected_depth);
-//         }
-//     }
+    #[test]
+    fn test_ceiling_rounding() {
+        let test_cases: Vec<(Depth, Depth)> = vec![
+            (0., 0.),
+            (2., 3.),
+            (2.999, 3.),
+            (3., 3.),
+            (3.00001, 6.),
+            (12., 12.),
+        ];
+        let deco = Deco::default();
+        for case in test_cases.into_iter() {
+            let (input_depth, expected_depth) = case;
+            let res = deco.deco_stop_depth(input_depth);
+            assert_eq!(res, expected_depth);
+        }
+    }
 
-//     #[test]
-//     fn test_next_switch_gas() {
-//         let air = Gas::air();
-//         let ean_50 = Gas::new(0.5, 0.);
-//         let oxygen = Gas::new(1., 0.);
-//         let trimix = Gas::new(0.5, 0.2);
+    #[test]
+    fn test_next_switch_gas() {
+        let air = Gas::air();
+        let ean_50 = Gas::new(0.5, 0.);
+        let oxygen = Gas::new(1., 0.);
+        let trimix = Gas::new(0.5, 0.2);
 
-//         // potential switch if in deco!
-//         // [ (current_depth, current_gas, gas_mixes, expected_result) ]
-//         let test_cases: Vec<(Depth, Gas, Vec<Gas>, Option<Gas>)> = vec![
-//             // single gas air
-//             (10., air, vec![air], None),
-//             // air + ean50 within MOD
-//             (10., air, vec![air, ean_50], Some(ean_50)),
-//             // air + ean50 over MOD
-//             (30., air, vec![air, ean_50], Some(ean_50)),
-//             // air + ean50 + oxygen, ean50 withing MOD, oxygen out
-//             (20., air, vec![air, ean_50, oxygen], Some(ean_50)),
-//             // air + ean50 + oxy, deco on ean50, oxygen within MOD
-//             (5.5, ean_50, vec![air, ean_50, oxygen], Some(oxygen)),
-//             // air + heliox within o2 MOD, not considered deco gas
-//             (30., air, vec![air, trimix], Some(trimix)),
-//         ];
+        // potential switch if in deco!
+        // [ (current_depth, current_gas, gas_mixes, expected_result) ]
+        let test_cases: Vec<(Depth, Gas, Vec<Gas>, Option<Gas>)> = vec![
+            // single gas air
+            (10., air, vec![air], None),
+            // air + ean50 within MOD
+            (10., air, vec![air, ean_50], Some(ean_50)),
+            // air + ean50 over MOD
+            (30., air, vec![air, ean_50], Some(ean_50)),
+            // air + ean50 + oxygen, ean50 withing MOD, oxygen out
+            (20., air, vec![air, ean_50, oxygen], Some(ean_50)),
+            // air + ean50 + oxy, deco on ean50, oxygen within MOD
+            (5.5, ean_50, vec![air, ean_50, oxygen], Some(oxygen)),
+            // air + heliox within o2 MOD, not considered deco gas
+            (30., air, vec![air, trimix], Some(trimix)),
+        ];
 
-//         let deco = Deco::default();
-//         for case in test_cases.into_iter() {
-//             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
-//             let res = deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
-//             assert_eq!(res, expected_switch_gas);
-//         }
-//     }
-// }
+        let deco = Deco::default();
+        for case in test_cases.into_iter() {
+            let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
+            let res = deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
+            assert_eq!(res, expected_switch_gas);
+        }
+    }
+}

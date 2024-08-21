@@ -137,7 +137,6 @@ fn test_deco_multi_gas() {
     ];
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    // assert_close_to_abs!(tts, 590., 30.);
     assert_eq!(tts, 10);
 }
 

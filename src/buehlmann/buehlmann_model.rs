@@ -11,7 +11,6 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
-    sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -55,7 +54,6 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
-            sim: false,
         };
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
@@ -270,12 +268,7 @@ impl BuehlmannModel {
 
     fn fork(&self) -> Self {
         // todo fork with sim prop
-        Self {
-            compartments: self.compartments.clone(),
-            sim: true,
-            config: self.config,
-            state: self.state,
-        }
+        self.clone()
     }
 
     fn validate_depth(&self, depth: Depth) {
