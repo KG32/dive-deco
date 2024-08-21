@@ -1,5 +1,5 @@
 use crate::{DecoModel, Depth, Gas, Minutes};
-use super::{global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds};
+use super::{global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
 
 // @todo move to model config
 const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;
@@ -49,6 +49,18 @@ pub struct DecoRuntime {
     pub tts_at_5: Minutes,
     // TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
     pub tts_delta_at_5: MinutesSigned,
+}
+
+impl Sim for Deco {
+    fn fork(&self) -> Self {
+        Self {
+            sim: true,
+            ..self.clone()
+        }
+    }
+    fn is_sim(&self) -> bool {
+        self.sim
+    }
 }
 
 impl Deco {
@@ -165,7 +177,7 @@ impl Deco {
         let tts = (self.tts_seconds as f64 / 60.).ceil() as Minutes;
         let mut tts_at_5 = 0;
         let mut tts_delta_at_5: MinutesSigned = 0;
-        if !self.sim {
+        if !self.is_sim(){
             let mut nested_sim_deco = Deco::new_sim();
             let mut nested_sim_model = deco_model.clone();
             let DiveState { depth: sim_depth, gas: sim_gas, .. } = nested_sim_model.dive_state();
@@ -280,13 +292,6 @@ impl Deco {
     // round ceiling up to the bottom of deco window
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
         DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
-    }
-
-    fn fork(&self) -> Self {
-        Self {
-            sim: true,
-            ..self.clone()
-        }
     }
 }
 

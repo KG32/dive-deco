@@ -2,7 +2,7 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::{DecoRuntime, GradientFactors};
+use crate::{DecoRuntime, GradientFactors, Sim};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -11,6 +11,7 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
+    sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -22,8 +23,8 @@ pub struct BuehlmannState {
     ox_tox: OxTox,
 }
 
-impl BuehlmannState {
-    pub fn initial() -> Self {
+impl Default for BuehlmannState {
+    fn default() -> Self {
         Self {
             depth: 0.,
             time: 0,
@@ -49,11 +50,12 @@ impl DecoModel for BuehlmannModel {
             panic!("Config error [{}]: {}", e.field, e.reason);
         }
         // air as a default init gas
-        let initial_model_state = BuehlmannState::initial();
+        let initial_model_state = BuehlmannState::default();
         let mut model = Self {
             config,
             compartments: vec![],
             state: initial_model_state,
+            sim: false,
         };
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
@@ -143,6 +145,18 @@ impl DecoModel for BuehlmannModel {
 
     fn cns(&self) -> CNSPercent {
         self.state.ox_tox.cns()
+    }
+}
+
+impl Sim for BuehlmannModel {
+    fn fork(&self) -> Self {
+        Self {
+            sim: true,
+            ..self.clone()
+        }
+    }
+    fn is_sim(&self) -> bool {
+        self.sim
     }
 }
 
@@ -264,11 +278,6 @@ impl BuehlmannModel {
         let slope_point: f64 = gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth ) * depth;
 
         slope_point as u8
-    }
-
-    fn fork(&self) -> Self {
-        // todo fork with sim prop
-        self.clone()
     }
 
     fn validate_depth(&self, depth: Depth) {

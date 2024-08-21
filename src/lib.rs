@@ -18,5 +18,6 @@ pub use common::{
     DecoStage,
     DecoStageType,
     DecoRuntime,
+    Sim
 };
 
