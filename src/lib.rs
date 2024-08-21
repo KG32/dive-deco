@@ -6,7 +6,6 @@ pub use buehlmann::{BuehlmannModel, BuehlmannConfig, Supersaturation};
 
 pub use common::{
     DecoModel,
-    Sim,
     Gas,
     Depth,
     Minutes,

@@ -1,5 +1,5 @@
 use crate::{BuehlmannModel, DecoModel, Depth, Gas, Minutes};
-use super::{gas, global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
+use super::{gas, global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds};
 
 // @todo move to model config
 const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;

@@ -2,7 +2,7 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::{DecoRuntime, GradientFactors, Sim};
+use crate::{DecoRuntime, GradientFactors};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -32,12 +32,6 @@ impl BuehlmannState {
             gf_low_depth: None,
             ox_tox: OxTox::default(),
         }
-    }
-}
-
-impl Sim for BuehlmannModel {
-    fn is_sim(&self) -> bool {
-        self.sim
     }
 }
 
