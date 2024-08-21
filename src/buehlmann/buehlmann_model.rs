@@ -2,7 +2,7 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::{DecoRuntime, GradientFactors};
+use crate::{DecoRuntime, GradientFactors, Sim};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -11,6 +11,7 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
+    sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -34,6 +35,12 @@ impl BuehlmannState {
     }
 }
 
+impl Sim for BuehlmannModel {
+    fn is_sim(&self) -> bool {
+        self.sim
+    }
+}
+
 impl DecoModel for BuehlmannModel {
     type ConfigType = BuehlmannConfig;
 
@@ -54,6 +61,7 @@ impl DecoModel for BuehlmannModel {
             config,
             compartments: vec![],
             state: initial_model_state,
+            sim: false,
         };
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
@@ -198,6 +206,7 @@ impl BuehlmannModel {
 
     fn recalculate(&mut self, step: StepData) {
         self.recalculate_compartments(&step);
+        // todo skip on sim
         self.recalculate_cns(&step);
     }
 
@@ -265,11 +274,12 @@ impl BuehlmannModel {
         slope_point as u8
     }
 
-    fn fork(&self) -> BuehlmannModel {
-        BuehlmannModel {
-            config: self.config,
+    fn fork(&self) -> Self {
+        // todo fork with sim prop
+        Self {
             compartments: self.compartments.clone(),
-            state: self.state
+            sim: true,
+            ..self.clone()
         }
     }
 

@@ -60,5 +60,8 @@ pub trait DecoModel {
     fn in_deco(&self) -> bool {
         self.ceiling() > 0.
     }
+}
 
+pub trait Sim {
+    fn is_sim(&self) -> bool;
 }

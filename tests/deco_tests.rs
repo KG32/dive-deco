@@ -1,4 +1,4 @@
-use dive_deco::{Deco, DecoModel, DecoRuntime, DecoStage, DecoStageType, Gas};
+use dive_deco::{Deco, DecoModel, DecoRuntime, DecoStage, DecoStageType, Gas, Minutes, MinutesSigned};
 
 pub mod fixtures;
 
@@ -190,9 +190,16 @@ fn test_tts_delta() {
     let mut model = fixtures::model_gf((30, 70));
     let air = Gas::air();
     let ean_50 = Gas::new(0.5, 0.);
+    let gas_mixes = vec![air, ean_50];
     model.step(40., 20 * 60, &air);
 
-    dbg!(model.deco(vec![air, ean_50]));
+    let DecoRuntime { tts, tts_at_5, tts_delta_5, ..} = model.deco(gas_mixes.clone());
+
+    model.step(40., 5 * 60, &air);
+    dbg!(model.deco(gas_mixes.clone()));
+    let deco_after_5 = model.deco(gas_mixes);
+    assert_eq!(tts_at_5, deco_after_5.tts);
+    assert_eq!(tts_delta_5, (deco_after_5.tts - tts) as MinutesSigned);
 }
 
 fn assert_deco_stages_eq(deco_stages: Vec<DecoStage>, expected_deco_stages: Vec<DecoStage>) {
