@@ -273,7 +273,8 @@ impl BuehlmannModel {
         Self {
             compartments: self.compartments.clone(),
             sim: true,
-            ..self.clone()
+            config: self.config,
+            state: self.state,
         }
     }
 

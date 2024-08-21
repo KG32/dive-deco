@@ -30,10 +30,17 @@ pub struct DecoStage {
     pub gas: Gas,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Deco {
     deco_stages: Vec<DecoStage>,
     tts_seconds: Seconds,
+    sim: bool,
+}
+
+impl Default for Deco {
+    fn default() -> Self {
+        Self { deco_stages: Vec::new(), tts_seconds: 0, sim: false }
+    }
 }
 
 #[derive(Debug)]
@@ -49,8 +56,9 @@ pub struct DecoRuntime {
 }
 
 impl Deco {
-    pub fn calc<T: DecoModel>(&mut self, mut sim_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
+    pub fn calc<T: DecoModel + Clone>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
         // run model simulation until no deco stages
+        let mut sim_model = deco_model.clone();
         loop {
             let DiveState {
                 depth: pre_stage_depth,
@@ -156,6 +164,14 @@ impl Deco {
         let tts = (self.tts_seconds as f64 / 60.).ceil() as Minutes;
         let mut tts_at_5 = 0;
         let mut tts_delta_5 = 0;
+        if !self.sim {
+            let mut nested_sim_deco = self.fork();
+            let mut nested_sim_model = deco_model.clone();
+            let DiveState { depth: sim_depth, gas: sim_gas, .. } = nested_sim_model.dive_state();
+            nested_sim_model.step(sim_depth, 5 * 60, &sim_gas); // tmp
+            let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone());
+            tts_at_5 = nested_deco.tts;
+        }
 
         DecoRuntime {
             deco_stages: self.deco_stages.clone(),
@@ -163,16 +179,6 @@ impl Deco {
             tts_at_5,
             tts_delta_5,
         }
-    }
-
-    fn calc_deco_in_5<T: DecoModel>(&mut self, mut sim_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
-        let dive_state = sim_model.dive_state();
-        sim_model.step(dive_state.depth, 5 * 60, &dive_state.gas);
-
-        sim_model.deco(gas_mixes)
-        // let mut forked_deco = self.fork();
-
-        // forked_deco.calc(sim_model, gas_mixes)
     }
 
     fn next_deco_action(&self, sim_model: &impl DecoModel, gas_mixes: Vec<Gas>) -> (Option<DecoAction>, Option<Gas>) {
@@ -277,8 +283,8 @@ impl Deco {
     fn fork(&self) -> Self {
         Self {
             deco_stages: self.deco_stages.clone(),
-            tts_seconds: self.tts_seconds,
-
+            tts_seconds: self.tts_seconds.clone(),
+            sim: true,
         }
     }
 }
