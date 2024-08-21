@@ -1,5 +1,5 @@
-use crate::{BuehlmannModel, DecoModel, Depth, Gas, Minutes};
-use super::{gas, global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds};
+use crate::{DecoModel, Depth, Gas, Minutes};
+use super::{global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds};
 
 // @todo move to model config
 const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;
@@ -31,17 +31,13 @@ pub struct DecoStage {
 }
 
 #[derive(Clone, Debug)]
+#[derive(Default)]
 pub struct Deco {
     deco_stages: Vec<DecoStage>,
     tts_seconds: Seconds,
     sim: bool,
 }
 
-impl Default for Deco {
-    fn default() -> Self {
-        Self { deco_stages: Vec::new(), tts_seconds: 0, sim: false }
-    }
-}
 
 #[derive(Debug)]
 pub struct DecoRuntime {
@@ -163,7 +159,7 @@ impl Deco {
 
         let tts = (self.tts_seconds as f64 / 60.).ceil() as Minutes;
         let mut tts_at_5 = 0;
-        let mut tts_delta_5 = 0;
+        let tts_delta_5 = 0;
         if !self.sim {
             let mut nested_sim_deco = self.fork();
             let mut nested_sim_model = deco_model.clone();
@@ -283,7 +279,7 @@ impl Deco {
     fn fork(&self) -> Self {
         Self {
             deco_stages: self.deco_stages.clone(),
-            tts_seconds: self.tts_seconds.clone(),
+            tts_seconds: self.tts_seconds,
             sim: true,
         }
     }

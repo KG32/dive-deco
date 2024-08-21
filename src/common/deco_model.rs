@@ -1,5 +1,5 @@
 use crate::common::{Depth, Gas, Seconds, Minutes, AscentRatePerMinute, CNSPercent};
-use super::{ox_tox::OxTox, Deco, DecoRuntime, MbarPressure};
+use super::{ox_tox::OxTox, DecoRuntime, MbarPressure};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
