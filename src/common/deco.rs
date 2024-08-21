@@ -48,10 +48,15 @@ pub struct DecoRuntime {
     // TTS @+5 (TTS in 5 min given current depth and gas mix)
     pub tts_at_5: Minutes,
     // TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
-    pub tts_delta_5: MinutesSigned,
+    pub tts_delta_at_5: MinutesSigned,
 }
 
 impl Deco {
+    pub fn new_sim() -> Self {
+        let deco = Self::default();
+        deco.fork()
+    }
+
     pub fn calc<T: DecoModel + Clone>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
         // run model simulation until no deco stages
         let mut sim_model = deco_model.clone();
@@ -159,21 +164,22 @@ impl Deco {
 
         let tts = (self.tts_seconds as f64 / 60.).ceil() as Minutes;
         let mut tts_at_5 = 0;
-        let tts_delta_5 = 0;
+        let mut tts_delta_at_5: MinutesSigned = 0;
         if !self.sim {
-            let mut nested_sim_deco = self.fork();
+            let mut nested_sim_deco = Deco::new_sim();
             let mut nested_sim_model = deco_model.clone();
             let DiveState { depth: sim_depth, gas: sim_gas, .. } = nested_sim_model.dive_state();
             nested_sim_model.step(sim_depth, 5 * 60, &sim_gas); // tmp
             let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone());
             tts_at_5 = nested_deco.tts;
+            tts_delta_at_5 = (tts_at_5 - tts) as MinutesSigned;
         }
 
         DecoRuntime {
             deco_stages: self.deco_stages.clone(),
             tts,
             tts_at_5,
-            tts_delta_5,
+            tts_delta_at_5,
         }
     }
 
