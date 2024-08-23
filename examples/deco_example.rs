@@ -25,8 +25,8 @@ fn main() {
     model.step(bottom_depth, bottom_time, &air);
 
     // calculate deco runtime providing available gasses
-    let deco = model.deco(available_gas_mixes);
+    let deco_runtime = model.deco(available_gas_mixes);
 
-    println!("{:#?}", deco);
+    println!("{:#?}", deco_runtime);
 
 }

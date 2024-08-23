@@ -1,8 +1,8 @@
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Pressure, Seconds, StepData};
+use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, StepData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::GradientFactors;
+use crate::{DecoRuntime, GradientFactors, Sim};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -11,6 +11,7 @@ pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
     state: BuehlmannState,
+    sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -22,8 +23,8 @@ pub struct BuehlmannState {
     ox_tox: OxTox,
 }
 
-impl BuehlmannState {
-    pub fn initial() -> Self {
+impl Default for BuehlmannState {
+    fn default() -> Self {
         Self {
             depth: 0.,
             time: 0,
@@ -49,11 +50,12 @@ impl DecoModel for BuehlmannModel {
             panic!("Config error [{}]: {}", e.field, e.reason);
         }
         // air as a default init gas
-        let initial_model_state = BuehlmannState::initial();
+        let initial_model_state = BuehlmannState::default();
         let mut model = Self {
             config,
             compartments: vec![],
             state: initial_model_state,
+            sim: false,
         };
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
@@ -122,11 +124,9 @@ impl DecoModel for BuehlmannModel {
         leading_comp.ceiling()
     }
 
-    fn deco(&self, gas_mixes: Vec<Gas>) -> Deco {
+    fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        deco.calc(self.fork(), gas_mixes);
-
-        deco
+        deco.calc(self.fork(), gas_mixes)
     }
 
     fn config(&self) -> BuehlmannConfig {
@@ -148,6 +148,18 @@ impl DecoModel for BuehlmannModel {
     }
 }
 
+impl Sim for BuehlmannModel {
+    fn fork(&self) -> Self {
+        Self {
+            sim: true,
+            ..self.clone()
+        }
+    }
+    fn is_sim(&self) -> bool {
+        self.sim
+    }
+}
+
 impl BuehlmannModel {
     /// set of current gradient factors (GF now, GF surface)
     pub fn supersaturation(&self) -> Supersaturation {
@@ -164,12 +176,6 @@ impl BuehlmannModel {
         }
 
         Supersaturation { gf_99: acc_gf_99, gf_surf: acc_gf_surf }
-    }
-
-    #[deprecated(since="1.2.0", note="use `supersaturation` method instead")]
-    pub fn gfs_current(&self) -> (Pressure, Pressure) {
-        let Supersaturation { gf_99, gf_surf } = self.supersaturation();
-        (gf_99, gf_surf)
     }
 
     fn leading_comp(&self) -> &Compartment {
@@ -206,6 +212,7 @@ impl BuehlmannModel {
 
     fn recalculate(&mut self, step: StepData) {
         self.recalculate_compartments(&step);
+        // todo skip on sim
         self.recalculate_cns(&step);
     }
 
@@ -271,14 +278,6 @@ impl BuehlmannModel {
         let slope_point: f64 = gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth ) * depth;
 
         slope_point as u8
-    }
-
-    fn fork(&self) -> BuehlmannModel {
-        BuehlmannModel {
-            config: self.config,
-            compartments: self.compartments.clone(),
-            state: self.state
-        }
     }
 
     fn validate_depth(&self, depth: Depth) {

@@ -115,18 +115,25 @@ model.step_travel(target_depth, time, &nitrox);
 
 All decompression stages calculated to clear deco obligations and resurface in a most efficient way - a partial deco runtime from current model state to resurfacing.
 
-- `deco() -> Vec<DecoStage>`
+```text
+  .deco(Vec<Gas>) -> DecoRuntime {
+    deco_stages: Vec<DecoStage>,
+    tts: u64,
+    tts_at_5: u64,
+    tts_delta_at_5: i64
+```
 
-###### DecoStage
-
-- stage_type (enum)
-  - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
-  - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
-  - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
-- start_depth - depth at which deco stage started
-- end_depth - depth at which deco stage ended
-- duration - duration of deco stage in seconds
-- tts - TTS (time to surface) is the the fastest a diver can resurface while completing all deco obligations and maintaining max ascent speed. TTS is based on deco stages total duration.
+- `DecoStage`
+  - `stage_type` (enum)
+    - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
+    - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
+    - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
+  - `start_depth` - depth at which deco stage started
+  - `end_depth` - depth at which deco stage ended
+- `duration` - duration of deco stage in seconds
+- `tts` - current time to surface in minutes. The least amount of time possible to surface without violating decompression obligations according to the current model. Includes the duration of all necessary deco stops (assuming switching to most optimal decompression gas) and travel time between them
+- `tts_at_5` (aka @+5) - TTS in 5 minutes assuming constant depth and gas mix
+- `tts_delta_at_5` (aka Δ+5) - absolute change in TTS after 5 mins assuming constant depth and gas mix
 
 ```rust
     let config = BuehlmannConfig::new().gradient_factors(30, 70);
@@ -153,8 +160,111 @@ All decompression stages calculated to clear deco obligations and resurface in a
     model.step(bottom_depth, bottom_time, &air);
 
     // calculate deco runtime providing available gasses
-    let deco = model.deco(available_gas_mixes);
+    let deco_runtime = model.deco(available_gas_mixes);
+
+    println!("{:#?}", deco_runtime);
 ```
+
+<details>
+  <summary>Output</summary>
+    <code>
+    DecoRuntime {
+      deco_stages: [
+          DecoStage {
+              stage_type: Ascent,
+              start_depth: 40.0,
+              end_depth: 22.0,
+              duration: 120,
+              gas: Gas {
+                  o2_pp: 0.21,
+                  n2_pp: 0.79,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: GasSwitch,
+              start_depth: 22.0,
+              end_depth: 22.0,
+              duration: 0,
+              gas: Gas {
+                  o2_pp: 0.5,
+                  n2_pp: 0.5,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: Ascent,
+              start_depth: 22.0,
+              end_depth: 6.000000000000001,
+              duration: 106,
+              gas: Gas {
+                  o2_pp: 0.5,
+                  n2_pp: 0.5,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: GasSwitch,
+              start_depth: 6.000000000000001,
+              end_depth: 6.000000000000001,
+              duration: 0,
+              gas: Gas {
+                  o2_pp: 1.0,
+                  n2_pp: 0.0,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: DecoStop,
+              start_depth: 6.000000000000001,
+              end_depth: 6.000000000000001,
+              duration: 410,
+              gas: Gas {
+                  o2_pp: 1.0,
+                  n2_pp: 0.0,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: Ascent,
+              start_depth: 6.000000000000001,
+              end_depth: 3.0,
+              duration: 20,
+              gas: Gas {
+                  o2_pp: 1.0,
+                  n2_pp: 0.0,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: DecoStop,
+              start_depth: 3.0,
+              end_depth: 3.0,
+              duration: 226,
+              gas: Gas {
+                  o2_pp: 1.0,
+                  n2_pp: 0.0,
+                  he_pp: 0.0,
+              },
+          },
+          DecoStage {
+              stage_type: Ascent,
+              start_depth: 3.0,
+              end_depth: 0.0,
+              duration: 20,
+              gas: Gas {
+                  o2_pp: 1.0,
+                  n2_pp: 0.0,
+                  he_pp: 0.0,
+              },
+          },
+      ],
+      tts: 16,
+      tts_at_5: 20,
+      tts_delta_at_5: 4,
+    }
+    </code>
+</details>
 
 :warning: Current deco stops implementation consideres gas switches based on MOD only - don't use with hypoxic trimix mixes
 

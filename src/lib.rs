@@ -9,12 +9,15 @@ pub use common::{
     Gas,
     Depth,
     Minutes,
+    MinutesSigned,
     Seconds,
     Pressure,
     GradientFactors,
     StepData,
     Deco,
     DecoStage,
-    DecoStageType
+    DecoStageType,
+    DecoRuntime,
+    Sim
 };
 

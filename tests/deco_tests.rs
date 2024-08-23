@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Deco, Gas, DecoStage, DecoStageType};
+use dive_deco::{DecoModel, DecoRuntime, DecoStage, DecoStageType, Gas, MinutesSigned};
 
 pub mod fixtures;
 
@@ -8,9 +8,9 @@ fn test_deco_ascent_no_deco() {
     let mut model = fixtures::model_default();
     model.step(20., 5 * 60, &air);
 
-    let Deco { deco_stages, tts } = model.deco(vec![air]);
+    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]);
     assert_eq!(deco_stages.len(), 1); // single continuous ascent
-    assert_eq!(tts / 60, 2); // tts in minutes
+    assert_eq!(tts, 3); // tts in minutes
 }
 
 #[test]
@@ -19,12 +19,13 @@ fn test_deco_single_gas() {
     let mut model = fixtures::model_default();
     model.step(40., 20 * 60, &air);
 
-    let Deco {
+    let DecoRuntime {
         deco_stages,
-        tts
+        tts,
+        ..
     } = model.deco(vec![air]);
 
-    assert_close_to_percent!(tts as f64, 754., 1.); // 13.(3) min todo round to 14
+    assert_eq!(tts, 13);
     assert_eq!(deco_stages.len(), 5);
 
     let expected_deco_stages =  vec![
@@ -77,9 +78,10 @@ fn test_deco_multi_gas() {
 
     model.step(40.0001, 20 * 60, &air);
 
-    let Deco {
+    let DecoRuntime {
         deco_stages,
-        tts
+        tts,
+        ..
     } = model.deco(vec![air, ean_50]);
 
     let expected_deco_stages =  vec![
@@ -133,10 +135,9 @@ fn test_deco_multi_gas() {
             gas: ean_50
         },
     ];
-    dbg!(&deco_stages);
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_close_to_abs!(tts as f64, 590., 30.);
+    assert_eq!(tts, 10);
 }
 
 #[test]
@@ -147,7 +148,7 @@ fn test_deco_with_deco_mod_at_bottom() {
 
     model.step(30., 30 * 60, &air);
 
-    let Deco { deco_stages, tts } = model.deco(vec![air, ean_36]);
+    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air, ean_36]);
 
     let expected_deco_stages = vec![
         DecoStage {
@@ -179,9 +180,22 @@ fn test_deco_with_deco_mod_at_bottom() {
             gas: ean_36
         },
     ];
-
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_eq!(tts, 468);
+    assert_eq!(tts, 8);
+}
+
+#[test]
+fn test_tts_delta() {
+    let mut model = fixtures::model_gf((30, 70));
+    let air = Gas::air();
+    let ean_50 = Gas::new(0.5, 0.);
+    let gas_mixes = vec![air, ean_50];
+    model.step(40., 20 * 60, &air);
+    let deco_1 = model.deco(gas_mixes.clone());
+    model.step(40., 5 * 60, &air);
+    let deco_2 = model.deco(gas_mixes);
+    assert_eq!(deco_1.tts_at_5, deco_2.tts);
+    assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as MinutesSigned);
 }
 
 fn assert_deco_stages_eq(deco_stages: Vec<DecoStage>, expected_deco_stages: Vec<DecoStage>) {

@@ -116,8 +116,8 @@ mod tests {
         let time = 20 * 60;
         let ean_32 = Gas::new(0.32, 0.);
         let step = StepData {
-            depth: depth,
-            time: time,
+            depth,
+            time,
             gas: &ean_32,
         };
 
