@@ -30,7 +30,7 @@ pub struct DecoStage {
     pub gas: Gas,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Deco {
     deco_stages: Vec<DecoStage>,
     tts_seconds: Seconds,
@@ -48,16 +48,6 @@ pub struct DecoRuntime {
     pub tts_at_5: Minutes,
     // TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
     pub tts_delta_at_5: MinutesSigned,
-}
-
-impl Default for Deco {
-    fn default() -> Self {
-        Self {
-            deco_stages: Vec::new(),
-            tts_seconds: 0,
-            sim: false
-        }
-    }
 }
 
 impl Sim for Deco {
