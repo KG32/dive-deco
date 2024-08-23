@@ -102,7 +102,7 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn ndl(&self) -> Minutes {
-        let mut ndl: Minutes = Minutes::MAX;
+        let mut ndl: Minutes = NDL_CUT_OFF_MINS;
 
         // create a simulation model based on current model's state
         let mut sim_model = self.fork();
