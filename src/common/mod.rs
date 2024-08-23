@@ -1,7 +1,7 @@
 mod deco_model;
 mod gas;
 mod global_types;
-mod step;
+mod record;
 mod deco;
 mod cns_table;
 mod ox_tox;
@@ -21,7 +21,7 @@ pub use global_types::{
     AscentRatePerMinute,
     CNSPercent
 };
-pub use step::StepData;
+pub use record::RecordData;
 pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime};
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use ox_tox::OxTox;

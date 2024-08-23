@@ -1,4 +1,4 @@
-use crate::{common::{Depth, GradientFactor, MbarPressure, PartialPressures, Pressure, StepData, InertGas}, BuehlmannConfig, Gas, Seconds };
+use crate::{common::{Depth, GradientFactor, MbarPressure, PartialPressures, Pressure, RecordData, InertGas}, BuehlmannConfig, Gas, Seconds };
 use super::zhl_values::{ZHLParam, ZHLParams};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -57,8 +57,8 @@ impl Compartment {
     }
 
     // recalculate tissue inert gasses saturation and tolerable pressure
-    pub fn recalculate(&mut self, step: &StepData, max_gf: GradientFactor, surface_pressure: MbarPressure) {
-        let (he_inert_pressure, n2_inert_pressure) = self.compartment_inert_pressure(step, surface_pressure);
+    pub fn recalculate(&mut self, record: &RecordData, max_gf: GradientFactor, surface_pressure: MbarPressure) {
+        let (he_inert_pressure, n2_inert_pressure) = self.compartment_inert_pressure(record, surface_pressure);
 
         self.he_ip = he_inert_pressure;
         self.n2_ip = n2_inert_pressure;
@@ -95,9 +95,9 @@ impl Compartment {
         }
     }
 
-    // tissue inert gasses pressure after step
-    fn compartment_inert_pressure(&self, step: &StepData, surface_pressure: MbarPressure) -> (Pressure, Pressure) { // (he, n2)
-        let StepData { depth, time, gas  } = step;
+    // tissue inert gasses pressure after record
+    fn compartment_inert_pressure(&self, record: &RecordData, surface_pressure: MbarPressure) -> (Pressure, Pressure) { // (he, n2)
+        let RecordData { depth, time, gas  } = record;
         let PartialPressures { n2: n2_pp, he: he_pp, .. } = gas.inspired_partial_pressures(*depth, surface_pressure);
 
         // partial pressure of inert gases in inspired gas (adjusted alveoli water vapor pressure)
@@ -197,8 +197,8 @@ mod tests {
     fn test_recalculation_ongassing() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let step = StepData { depth: 30., time: (10 * 60), gas: &air };
-        comp.recalculate(&step, 100, 1000);
+        let record = RecordData { depth: 30., time: (10 * 60), gas: &air };
+        comp.recalculate(&record, 100, 1000);
         assert_eq!(comp.total_ip, 1.2850179204911072);
     }
 
@@ -213,8 +213,8 @@ mod tests {
     fn test_min_pressure_calculation() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let step = StepData { depth: 30., time: (10 * 60), gas: &air };
-        comp.recalculate(&step, 100, 100);
+        let recprd = RecordData { depth: 30., time: (10 * 60), gas: &air };
+        comp.recalculate(&recprd, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.40957969932131577);
     }

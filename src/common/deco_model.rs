@@ -35,14 +35,14 @@ pub trait DecoModel {
     /// get model dive state
     fn dive_state(&self) -> DiveState;
 
-    /// register step (depth: meters, time: seconds)
-    fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas);
+    /// record (depth: meters, time: seconds)
+    fn record(&mut self, depth: Depth, time: Seconds, gas: &Gas);
 
-    /// register linear ascent / descent step given travel time
-    fn step_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas);
+    /// record linear ascent / descent record given travel time
+    fn record_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas);
 
-    /// register linear ascent / descent step given rate
-    fn step_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas);
+    /// register linear ascent / descent record given rate
+    fn record_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas);
 
     /// current non decompression limit (NDL)
     fn ndl(&self) -> Minutes;

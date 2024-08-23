@@ -12,7 +12,9 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 - GF (gradient factors) ascent profile conservatism
 - current deco runtime / deco stop planner
   - decompression stages as a runtime based on current model state
-  - TTS (time to surface)
+  - TTS (current time to surface including ascent and all decompression stops)
+  - TTS @+5 (TTS after 5 mins given constant depth and breathing mix)
+  - TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
 - NDL (no-decompression limit)
 - decompression ceiling
 - supersaturation
@@ -26,8 +28,8 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Planned features
 
 - extended deco model config [metric/imperial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
-- travel steps optimization (linear ascent / descent steps using Schreiner equation instead of iterative Haldane equation)
-- BuehlmannModel Default trait implementation
+- OTU (Oxygen Toxicity Units)
+- travel records optimization (linear ascent / descent records using Schreiner equation instead of iterative Haldane equation)
 - other deco algorithms (VPM-B)
 - other optimizations
 
@@ -73,38 +75,38 @@ Current config options:
 
 #### Updating model state
 
-##### Step
+##### Record
 
-A DecoModel trait method that represents a single model step as a datapoint.
+A DecoModel trait method that represents a single model record as a datapoint.
 
-- `.step(depth, time, gas)`
+- `.record(depth, time, gas)`
   - depth - current depth in msw
   - time - duration in seconds
-  - gas - breathing mix used for the duration of this step
+  - gas - breathing mix used for the duration of this record
 
 ```rust
 let depth = 20.;
 let time = 1; // 1 second
 let nitrox = Gas::new(0.32, 0.);
 // register 1 second at 20 msw breathing nitrox 32
-model.step(depth, time, &nitrox);
+model.record(depth, time, &nitrox);
 ```
 
-##### Step travel
+##### Record travel
 
 A DecoModel trait method that represents a linear change of depth. It assumes a travel from depth A (current model state depth) to B (target_depth) with rate derived from change of depth and time.
 
-- `.step_travel(target_depth, time, gas)`
+- `.record_travel(target_depth, time, gas)`
   - target_depth - final depth at the end of the travel
   - time - duration of travel in seconds
-  - gas: breathing mix using for the duration of this step
+  - gas: breathing mix using for the duration of this record
 
 ```rust
 let target_depth = 30.;
 let descent_time = 4 * 60; // 4 minutes as seconds
 let nitrox = Gas::new(0.32, 0.);
 // register a 4 minute descent to 30m using nitrox 32
-model.step_travel(target_depth, time, &nitrox);
+model.record_travel(target_depth, time, &nitrox);
 ```
 
 ---
@@ -154,10 +156,10 @@ All decompression stages calculated to clear deco obligations and resurface in a
     let bottom_time = 20 * 60; // 20 min
 
     // descent to 40m at a rate of 9min/min using air
-    model.step_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);
+    model.record_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);
 
     // 20 min bottom time
-    model.step(bottom_depth, bottom_time, &air);
+    model.record(bottom_depth, bottom_time, &air);
 
     // calculate deco runtime providing available gasses
     let deco_runtime = model.deco(available_gas_mixes);
@@ -286,10 +288,10 @@ fn main() {
     let depth = 30.;
     let bottom_time_minutes = 10;
 
-    // a simulated instantaneous drop to 20m with a single step simulating 20 minutes bottom time using air
-    model.step(depth, bottom_time_minutes * 60, &air);
-    // model.step(....)
-    // model.step(....)
+    // a simulated instantaneous drop to 20m with a single record simulating 20 minutes bottom time using air
+    model.record(depth, bottom_time_minutes * 60, &air);
+    // model.record(....)
+    // model.record(....)
 
     // current NDL (no-decompression limit)
     let current_ndl = model.ndl();
@@ -312,11 +314,11 @@ fn main() {
     let nitrox_32 = Gas::new(0.32, 0.);
 
     // ceiling after 20 min at 20 meters using EAN32 - ceiling at 0m
-    model.step(20., 20 * 60, &nitrox_32);
+    model.record(20., 20 * 60, &nitrox_32);
     println!("Ceiling: {}m", model.ceiling()); // Ceiling: 0m
 
     // ceiling after another 42 min at 30 meters using EAN32 - ceiling at 3m
-    model.step(30., 42 * 60, &nitrox_32);
+    model.record(30., 42 * 60, &nitrox_32);
     println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 }
 ```

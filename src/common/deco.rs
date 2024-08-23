@@ -103,7 +103,7 @@ impl Deco {
                     match deco_action {
                         // ascent to min depth (deco stop or surface)
                         DecoAction::AscentToCeil => {
-                            sim_model.step_travel_with_rate(self.deco_stop_depth(ceiling), DEFAULT_ASCENT_RATE, &pre_stage_gas);
+                            sim_model.record_travel_with_rate(self.deco_stop_depth(ceiling), DEFAULT_ASCENT_RATE, &pre_stage_gas);
                             let current_sim_state = sim_model.dive_state();
                             let current_sim_time = current_sim_state.time;
                             deco_stages.push(DecoStage {
@@ -121,7 +121,7 @@ impl Deco {
                             if let Some(next_switch_gas) = next_switch_gas {
                                 // travel to MOD
                                 let switch_gas_mod = next_switch_gas.max_operating_depth(1.6);
-                                sim_model.step_travel_with_rate(switch_gas_mod, DEFAULT_ASCENT_RATE, &pre_stage_gas);
+                                sim_model.record_travel_with_rate(switch_gas_mod, DEFAULT_ASCENT_RATE, &pre_stage_gas);
                                 let DiveState {
                                     depth: post_ascent_depth,
                                     time: post_ascent_time,
@@ -136,7 +136,7 @@ impl Deco {
                                 });
 
                                 // switch gas @todo configurable gas change duration
-                                sim_model.step(sim_model.dive_state().depth, 0, &next_switch_gas);
+                                sim_model.record(sim_model.dive_state().depth, 0, &next_switch_gas);
                                 // @todo configurable oxygen window stop
                                 let post_switch_state = sim_model.dive_state();
                                 deco_stages.push(DecoStage {
@@ -153,7 +153,7 @@ impl Deco {
                         DecoAction::SwitchGas => {
                             let switch_gas = next_switch_gas.unwrap();
                             // @todo configurable gas switch duration
-                            sim_model.step(pre_stage_depth, 0, &switch_gas);
+                            sim_model.record(pre_stage_depth, 0, &switch_gas);
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::GasSwitch,
                                 start_depth: pre_stage_depth,
@@ -165,7 +165,7 @@ impl Deco {
 
                         // decompression stop (a series of 1s segments, merged into one on cleared stop)
                         DecoAction::Stop => {
-                            sim_model.step(pre_stage_depth, 1, &pre_stage_gas);
+                            sim_model.record(pre_stage_depth, 1, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
                             // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
@@ -190,7 +190,7 @@ impl Deco {
             let mut nested_sim_deco = Deco::new_sim();
             let mut nested_sim_model = deco_model.clone();
             let DiveState { depth: sim_depth, gas: sim_gas, .. } = nested_sim_model.dive_state();
-            nested_sim_model.step(sim_depth, 5 * 60, &sim_gas);
+            nested_sim_model.record(sim_depth, 5 * 60, &sim_gas);
             let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone());
             tts_at_5 = nested_deco.tts;
             tts_delta_at_5 = (tts_at_5 - tts) as MinutesSigned;
