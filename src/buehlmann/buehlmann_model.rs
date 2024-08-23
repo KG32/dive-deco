@@ -1,5 +1,5 @@
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, StepData};
+use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, RecordData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::{DecoRuntime, GradientFactors, Sim};
@@ -62,19 +62,19 @@ impl DecoModel for BuehlmannModel {
         model
     }
 
-    /// model step: depth (meters), time (seconds), gas
-    fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas) {
+    /// record data: depth (meters), time (seconds), gas
+    fn record(&mut self, depth: Depth, time: Seconds, gas: &Gas) {
         self.validate_depth(depth);
         self.state.depth = depth;
         self.state.gas = *gas;
         self.state.time += time;
-        let step = StepData { depth, time, gas };
-        self.recalculate(step);
+        let record = RecordData { depth, time, gas };
+        self.recalculate(record);
     }
 
     /// model travel between depths in 1s intervals
     // @todo: Schreiner equation instead of Haldane to avoid imprecise intervals
-    fn step_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas) {
+    fn record_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas) {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
         let mut current_depth = self.state.depth;
@@ -85,8 +85,8 @@ impl DecoModel for BuehlmannModel {
         while i < travel_time as usize {
             self.state.time += 1;
             current_depth += dist_rate;
-            let step = StepData { depth: current_depth, time: 1, gas };
-            self.recalculate(step);
+            let record = RecordData { depth: current_depth, time: 1, gas };
+            self.recalculate(record);
             i += 1;
         }
 
@@ -94,11 +94,11 @@ impl DecoModel for BuehlmannModel {
         self.state.depth = target_depth;
     }
 
-    fn step_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas) {
+    fn record_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas) {
         self.validate_depth(target_depth);
         let distance = (target_depth - self.state.depth).abs();
         let travel_time_seconds = (distance / rate * 60.) as Seconds;
-        self.step_travel(target_depth, travel_time_seconds, gas);
+        self.record_travel(target_depth, travel_time_seconds, gas);
     }
 
     fn ndl(&self) -> Minutes {
@@ -107,9 +107,9 @@ impl DecoModel for BuehlmannModel {
         // create a simulation model based on current model's state
         let mut sim_model = self.fork();
 
-        // iterate simulation model over 1min steps until NDL cut-off or in deco
+        // iterate simulation model over 1min records until NDL cut-off or in deco
         for i in 0..NDL_CUT_OFF_MINS {
-            sim_model.step(self.state.depth, 60, &self.state.gas);
+            sim_model.record(self.state.depth, 60, &self.state.gas);
             if sim_model.in_deco() {
                 ndl = i;
                 break;
@@ -210,29 +210,29 @@ impl BuehlmannModel {
         self.compartments = compartments;
     }
 
-    fn recalculate(&mut self, step: StepData) {
-        self.recalculate_compartments(&step);
+    fn recalculate(&mut self, record: RecordData) {
+        self.recalculate_compartments(&record);
         // todo skip on sim
-        self.recalculate_cns(&step);
+        self.recalculate_cns(&record);
     }
 
-    fn recalculate_compartments(&mut self, step: &StepData) {
+    fn recalculate_compartments(&mut self, record: &RecordData) {
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(step, self.config.gf.1, self.config.surface_pressure);
+            compartment.recalculate(record, self.config.gf.1, self.config.surface_pressure);
         }
-        self.recalculate_leading_compartment_with_gf(step);
+        self.recalculate_leading_compartment_with_gf(record);
     }
 
-    fn recalculate_leading_compartment_with_gf(&mut self, step: &StepData) {
+    fn recalculate_leading_compartment_with_gf(&mut self, record: &RecordData) {
         let BuehlmannConfig { gf, surface_pressure } = self.config;
-        let max_gf = self.max_gf(gf, step.depth);
+        let max_gf = self.max_gf(gf, record.depth);
         let leading = self.leading_comp_mut();
-        let recalc_step = StepData { depth: step.depth,  time: 0, gas: step.gas };
-        leading.recalculate(&recalc_step, max_gf, surface_pressure);
+        let recalc_record = RecordData { depth: record.depth,  time: 0, gas: record.gas };
+        leading.recalculate(&recalc_record, max_gf, surface_pressure);
     }
 
-    fn recalculate_cns(&mut self, step: &StepData) {
-        self.state.ox_tox.recalculate_cns(step, self.config().surface_pressure);
+    fn recalculate_cns(&mut self, record: &RecordData) {
+        self.state.ox_tox.recalculate_cns(record, self.config().surface_pressure);
     }
 
     fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
@@ -250,16 +250,16 @@ impl BuehlmannModel {
                 let sim_gas = sim_model.state.gas;
                 let mut target_depth = sim_model.state.depth;
                 while target_depth > 0. {
-                    let mut sim_step_depth = target_depth - 1.;
-                    if sim_step_depth < 0. {
-                        sim_step_depth = 0.;
+                    let mut sim_record_depth = target_depth - 1.;
+                    if sim_record_depth < 0. {
+                        sim_record_depth = 0.;
                     }
-                    sim_model.step(sim_step_depth, 0, &sim_gas);
+                    sim_model.record(sim_record_depth, 0, &sim_gas);
                     let Supersaturation { gf_99, .. } = sim_model.supersaturation();
                     if gf_99 >= gf_low.into() {
                         break;
                     }
-                    target_depth = sim_step_depth;
+                    target_depth = sim_record_depth;
                 }
                 self.state.gf_low_depth = Some(target_depth);
                 target_depth
@@ -297,8 +297,8 @@ mod tests {
         let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let nx32 = Gas::new(0.32, 0.);
-        model.step(10., 10 * 60, &air);
-        model.step(15., 15 * 60, &nx32);
+        model.record(10., 10 * 60, &air);
+        model.record(15., 15 * 60, &nx32);
         assert_eq!(model.state.depth, 15.);
         assert_eq!(model.state.time, (25 * 60));
         assert_eq!(model.state.gas, nx32);
@@ -311,9 +311,9 @@ mod tests {
         let gf = (50, 100);
         let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
         let air = Gas::air();
-        let step = StepData { depth: 0., time: 0, gas: &air };
-        model.step(step.depth, step.time, step.gas);
-        assert_eq!(model.max_gf(gf, step.depth), 100);
+        let record = RecordData { depth: 0., time: 0, gas: &air };
+        model.record(record.depth, record.time, record.gas);
+        assert_eq!(model.max_gf(gf, record.depth), 100);
     }
 
     #[test]
@@ -322,9 +322,9 @@ mod tests {
 
         let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
         let air = Gas::air();
-        let step = StepData { depth: 40., time: (10 * 60), gas: &air };
-        model.step(step.depth, step.time, step.gas);
-        assert_eq!(model.max_gf(gf, step.depth), 50);
+        let record = RecordData { depth: 40., time: (10 * 60), gas: &air };
+        model.record(record.depth, record.time, record.gas);
+        assert_eq!(model.max_gf(gf, record.depth), 50);
     }
 
     #[test]
@@ -333,9 +333,9 @@ mod tests {
         let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
-        model.step(40., 30 * 60, &air);
-        model.step(21., 5 * 60, &air);
-        model.step(14., 0 * 60, &air);
+        model.record(40., 30 * 60, &air);
+        model.record(21., 5 * 60, &air);
+        model.record(14., 0 * 60, &air);
         assert_eq!(model.max_gf(gf, 14.), 40);
     }
 
@@ -359,7 +359,7 @@ mod tests {
         let model_initial = BuehlmannModel::default();
 
         let mut model_with_surface_interval = BuehlmannModel::default();
-        model_with_surface_interval.step(0., 999999, &Gas::air());
+        model_with_surface_interval.record(0., 999999, &Gas::air());
 
         let initial_gfs = extract_supersaturations(model_initial);
         let surface_interval_gfs = extract_supersaturations(model_with_surface_interval);

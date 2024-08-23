@@ -6,7 +6,7 @@ pub mod fixtures;
 fn test_deco_ascent_no_deco() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
-    model.step(20., 5 * 60, &air);
+    model.record(20., 5 * 60, &air);
 
     let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]);
     assert_eq!(deco_stages.len(), 1); // single continuous ascent
@@ -17,7 +17,7 @@ fn test_deco_ascent_no_deco() {
 fn test_deco_single_gas() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
-    model.step(40., 20 * 60, &air);
+    model.record(40., 20 * 60, &air);
 
     let DecoRuntime {
         deco_stages,
@@ -76,7 +76,7 @@ fn test_deco_multi_gas() {
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
 
-    model.step(40.0001, 20 * 60, &air);
+    model.record(40.0001, 20 * 60, &air);
 
     let DecoRuntime {
         deco_stages,
@@ -146,7 +146,7 @@ fn test_deco_with_deco_mod_at_bottom() {
     let air = Gas::air();
     let ean_36 = Gas::new(0.36, 0.);
 
-    model.step(30., 30 * 60, &air);
+    model.record(30., 30 * 60, &air);
 
     let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air, ean_36]);
 
@@ -190,9 +190,9 @@ fn test_tts_delta() {
     let air = Gas::air();
     let ean_50 = Gas::new(0.5, 0.);
     let gas_mixes = vec![air, ean_50];
-    model.step(40., 20 * 60, &air);
+    model.record(40., 20 * 60, &air);
     let deco_1 = model.deco(gas_mixes.clone());
-    model.step(40., 5 * 60, &air);
+    model.record(40., 5 * 60, &air);
     let deco_2 = model.deco(gas_mixes);
     assert_eq!(deco_1.tts_at_5, deco_2.tts);
     assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as MinutesSigned);

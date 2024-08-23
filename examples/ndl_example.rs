@@ -10,7 +10,7 @@ fn main() {
     let bottom_time_minutes = 10;
 
     // a simulated instantaneous drop to 20m with 20 minutes bottom time using air
-    model.step(depth, bottom_time_minutes * 60, &air);
+    model.record(depth, bottom_time_minutes * 60, &air);
 
     // current NDL (no-decompression limit)
     let current_ndl = model.ndl();

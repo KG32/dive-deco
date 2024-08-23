@@ -1,5 +1,5 @@
 use crate::common::CNS_COEFFICIENTS;
-use crate::{Minutes, Pressure, Seconds, StepData};
+use crate::{Minutes, Pressure, Seconds, RecordData};
 
 use super::{CNSCoeffRow, CNSPercent, MbarPressure};
 
@@ -25,8 +25,8 @@ impl OxTox {
         self.cns
     }
 
-    pub fn recalculate_cns(&mut self, step: &StepData, surface_pressure: MbarPressure) {
-        let StepData { depth, time, gas } = *step;
+    pub fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+        let RecordData { depth, time, gas } = *record;
 
         let pp_o2 = gas
             .inspired_partial_pressures(depth, surface_pressure)
@@ -115,13 +115,13 @@ mod tests {
         let depth = 36.;
         let time = 20 * 60;
         let ean_32 = Gas::new(0.32, 0.);
-        let step = StepData {
+        let record = RecordData {
             depth,
             time,
             gas: &ean_32,
         };
 
-        ox_tox.recalculate_cns(&step, 1013);
+        ox_tox.recalculate_cns(&record, 1013);
         assert_eq!(ox_tox.cns(), 15.018262206843517);
     }
 
@@ -129,13 +129,13 @@ mod tests {
     fn test_cns_half_time_elimination() {
         let mut ox_tox = OxTox::default();
         // CNS ~50%
-        let step = StepData { depth: 30., time: (75 * 60), gas: &Gas::new(0.35, 0.) };
-        ox_tox.recalculate_cns(&step, 1013);
+        let record = RecordData { depth: 30., time: (75 * 60), gas: &Gas::new(0.35, 0.) };
+        ox_tox.recalculate_cns(&record, 1013);
         assert_eq!(ox_tox.cns, 48.31898259550245);
         // 2x 90 mins half time
         let mut i = 0;
         while i < 2 {
-            ox_tox.recalculate_cns(&StepData { depth: 0., time: (90 * 60), gas: &Gas::air() }, 1013);
+            ox_tox.recalculate_cns(&RecordData { depth: 0., time: (90 * 60), gas: &Gas::air() }, 1013);
             i += 1;
         }
         assert_eq!(ox_tox.cns, 12.079745648875612);
@@ -144,12 +144,12 @@ mod tests {
     #[test]
     fn test_cns_above_max_ppo2() {
         let mut ox_tox = OxTox::default();
-        let step = StepData {
+        let record = RecordData {
             depth: 30.,
             time: 400,
             gas: &Gas::new(0.5, 0.),
         };
-        ox_tox.recalculate_cns(&step, 1013);
+        ox_tox.recalculate_cns(&record, 1013);
         assert_eq!(ox_tox.cns(), 100.)
     }
 }
