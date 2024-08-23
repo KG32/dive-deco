@@ -274,7 +274,7 @@ All decompression stages calculated to clear deco obligations and resurface in a
 
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
 
-- `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix
+- `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix. This method has a cut-off at 99 minutes
 
 ```rust
 use dive_deco::{DecoModel, BuehlmannModel, BuehlmannConfig, Gas};

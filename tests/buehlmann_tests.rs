@@ -81,10 +81,10 @@ fn test_ndl_cut_off() {
     let air = Gas::new(0.21, 0.);
 
     model.record(0., 0, &air);
-    assert_eq!(model.ndl(), Minutes::MAX);
+    assert_eq!(model.ndl(), 99);
 
     model.record(10., 10*60, &air);
-    assert_eq!(model.ndl(), Minutes::MAX);
+    assert_eq!(model.ndl(), 99);
 }
 
 #[test]
