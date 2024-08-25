@@ -146,6 +146,20 @@ impl DecoModel for BuehlmannModel {
     fn cns(&self) -> CNSPercent {
         self.state.ox_tox.cns()
     }
+
+    // deprecated
+
+    fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas) {
+        self.record(depth, time, gas)
+    }
+
+    fn step_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas) {
+        self.record_travel(target_depth, time, gas)
+    }
+
+    fn step_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas) {
+        self.record_travel_with_rate(target_depth, rate, gas)
+    }
 }
 
 impl Sim for BuehlmannModel {

@@ -60,4 +60,15 @@ pub trait DecoModel {
     fn in_deco(&self) -> bool {
         self.ceiling() > 0.
     }
+
+
+
+    #[deprecated(since="3.0.0", note="Use record method instead")]
+    fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas);
+
+    #[deprecated(since="3.0.0", note="Use record_travel method instead")]
+    fn step_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas);
+
+    #[deprecated(since="3.0.0", note="Use record_travel_with_rate method instead")]
+    fn step_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas);
 }
