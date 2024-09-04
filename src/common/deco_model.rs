@@ -10,6 +10,7 @@ pub struct ConfigValidationErr<'a> {
 pub trait DecoModelConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr>;
     fn surface_pressure(&self) -> MbarPressure;
+    fn deco_ascent_rate(&self) -> AscentRatePerMinute;
 }
 
 #[derive(Debug)]

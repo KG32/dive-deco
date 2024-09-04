@@ -238,7 +238,7 @@ impl BuehlmannModel {
     }
 
     fn recalculate_leading_compartment_with_gf(&mut self, record: &RecordData) {
-        let BuehlmannConfig { gf, surface_pressure } = self.config;
+        let BuehlmannConfig { gf, surface_pressure, .. } = self.config;
         let max_gf = self.max_gf(gf, record.depth);
         let leading = self.leading_comp_mut();
         let recalc_record = RecordData { depth: record.depth,  time: 0, gas: record.gas };

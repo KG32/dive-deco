@@ -1,8 +1,7 @@
 use crate::{DecoModel, Depth, Gas, Minutes};
-use super::{global_types::MinutesSigned, AscentRatePerMinute, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
+use super::{global_types::MinutesSigned, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
 
 // @todo move to model config
-const DEFAULT_ASCENT_RATE: AscentRatePerMinute = 9.;
 const DEFAULT_CEILING_WINDOW: Depth = 3.;
 const DEFAULT_MAX_END_DEPTH: Depth = 30.;
 
@@ -71,6 +70,7 @@ impl Deco {
     pub fn calc<T: DecoModel + Clone>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
         // run model simulation until no deco stages
         let mut sim_model = deco_model.clone();
+        let ascent_rate = sim_model.config().deco_ascent_rate();
         loop {
             let DiveState {
                 depth: pre_stage_depth,
@@ -93,7 +93,11 @@ impl Deco {
                     match deco_action {
                         // ascent to min depth (deco stop or surface)
                         DecoAction::AscentToCeil => {
-                            sim_model.record_travel_with_rate(self.deco_stop_depth(ceiling), DEFAULT_ASCENT_RATE, &pre_stage_gas);
+                            sim_model.record_travel_with_rate(
+                                self.deco_stop_depth(ceiling),
+                                ascent_rate,
+                                &pre_stage_gas
+                            );
                             let current_sim_state = sim_model.dive_state();
                             let current_sim_time = current_sim_state.time;
                             deco_stages.push(DecoStage {
@@ -111,7 +115,7 @@ impl Deco {
                             if let Some(next_switch_gas) = next_switch_gas {
                                 // travel to MOD
                                 let switch_gas_mod = next_switch_gas.max_operating_depth(1.6);
-                                sim_model.record_travel_with_rate(switch_gas_mod, DEFAULT_ASCENT_RATE, &pre_stage_gas);
+                                sim_model.record_travel_with_rate(switch_gas_mod, ascent_rate, &pre_stage_gas);
                                 let DiveState {
                                     depth: post_ascent_depth,
                                     time: post_ascent_time,
