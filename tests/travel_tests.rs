@@ -49,10 +49,10 @@ fn test_travel_record_with_rate() {
     let bottom_time = 20 * 60;
     let target_depth = 0.;
     let expected_travel_time = 133;
-    let ascent_rate = 9.;
+    let travel_rate = 9.;
     model.record(initial_depth, bottom_time, &air);
 
-    model.record_travel_with_rate(target_depth, ascent_rate, &air);
+    model.record_travel_with_rate(target_depth, travel_rate, &air);
 
     let state = model.dive_state();
     assert_eq!(state.depth, target_depth);

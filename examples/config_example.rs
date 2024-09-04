@@ -10,6 +10,7 @@ fn main() {
     let config_instance = BuehlmannConfig {
         gf: (85, 85),
         surface_pressure: 1013,
+        deco_ascent_rate: 9.
     };
     let model_2 = BuehlmannModel::new(config_instance);
     println!("{:?}", model_2.config());

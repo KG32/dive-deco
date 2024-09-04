@@ -24,6 +24,7 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 - configurable model settings
   - gradient factors
   - surface pressure
+  - deco ascent rate
 
 ### Planned features
 
@@ -61,12 +62,14 @@ Current config options:
 
 - `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`)
 - `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
+- `deco_ascent_rate` - ascent rate in m/s that is assumed to be followed when calculating deco obligations and simulations
 
 ```rust
     // fluid-interface-like built config
     let config = BuehlmannConfig::new()
         .gradient_factors(30, 70)
-        .surface_pressure(1013);
+        .surface_pressure(1013)
+        .deco_ascent_rate(9.);
     let model = BuehlmannModel::new(config);
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
