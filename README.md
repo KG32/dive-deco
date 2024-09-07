@@ -25,6 +25,9 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
   - gradient factors
   - surface pressure
   - deco ascent rate
+  - NDL definition
+    - actual - taking into account off-gassing on ascent
+    - by ceiling - NDL time is determined by ceiling, it counts down to a condition where ceiling isn't equal to the surface
 
 ### Planned features
 
@@ -62,14 +65,14 @@ Current config options:
 
 - `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`)
 - `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
-- `deco_ascent_rate` - ascent rate in m/s that is assumed to be followed when calculating deco obligations and simulations
+- `deco_ascent_rate` - ascent rate in m/s that is assumed to be followed when calculating deco obligations and simulations. Default value: 10 m/min (33 ft/min)
 
 ```rust
     // fluid-interface-like built config
     let config = BuehlmannConfig::new()
         .gradient_factors(30, 70)
         .surface_pressure(1013)
-        .deco_ascent_rate(9.);
+        .deco_ascent_rate(10.);
     let model = BuehlmannModel::new(config);
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
@@ -277,7 +280,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
 
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
 
-- `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix. This method has a cut-off at 99 minutes
+- `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix. This method has a cut-off at 99 minutes.
+NDL controllable by `ndl_type` model config. By default (`Actual`), it takes into account off-gassing during ascent and it's defined as a maximum time at given depth that won't create any decompression obligations (i.e. even on existing ceiling, limit occures when a direct ascent with configured ascent rate doesn't cause any tissue to intersect with its M-Value at a given time).
 
 ```rust
 use dive_deco::{DecoModel, BuehlmannModel, BuehlmannConfig, Gas};
@@ -298,7 +302,8 @@ fn main() {
 
     // current NDL (no-decompression limit)
     let current_ndl = model.ndl();
-    println!("NDL: {} min", current_ndl); // output: NDL: 5 min
+    println!("NDL: {} min", current_ndl); // output: NDL: 9 min
+    // if we used a `ByCeiling` ndl_type config that consideres only ceiling depth, the output would be 5 min
 }
 ```
 

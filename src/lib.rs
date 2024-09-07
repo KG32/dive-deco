@@ -18,6 +18,7 @@ pub use common::{
     DecoStage,
     DecoStageType,
     DecoRuntime,
-    Sim
+    Sim,
+    NDLType,
 };
 

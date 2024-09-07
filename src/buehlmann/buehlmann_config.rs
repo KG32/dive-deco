@@ -1,4 +1,4 @@
-use crate::common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure};
+use crate::common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure, NDLType};
 
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
@@ -10,6 +10,7 @@ pub struct BuehlmannConfig {
     pub gf: GradientFactors,
     pub surface_pressure: MbarPressure,
     pub deco_ascent_rate: AscentRatePerMinute,
+    pub ndl_type: NDLType,
 }
 
 impl BuehlmannConfig {
@@ -31,6 +32,11 @@ impl BuehlmannConfig {
         self.deco_ascent_rate = deco_ascent_rate;
         self
     }
+
+    pub fn ndl_type(mut self, ndl_type: NDLType) -> Self {
+        self.ndl_type = ndl_type;
+        self
+    }
 }
 
 impl Default for BuehlmannConfig {
@@ -38,14 +44,19 @@ impl Default for BuehlmannConfig {
         Self {
             gf: (100, 100),
             surface_pressure: 1013,
-            deco_ascent_rate: 9.,
+            deco_ascent_rate: 10.,
+            ndl_type: NDLType::Actual,
         }
     }
 }
 
 impl DecoModelConfig for BuehlmannConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr> {
-        let Self { gf, surface_pressure, deco_ascent_rate } = self;
+        let Self { gf,
+            surface_pressure,
+            deco_ascent_rate,
+            ..
+        } = self;
 
         self.validate_gradient_factors(gf)?;
         self.validate_surface_pressure(surface_pressure)?;
@@ -61,6 +72,12 @@ impl DecoModelConfig for BuehlmannConfig {
     fn deco_ascent_rate(&self) -> AscentRatePerMinute {
         self.deco_ascent_rate
     }
+
+    fn ndl_type(&self) -> NDLType {
+        self.ndl_type.clone()
+    }
+
+
 }
 
 impl BuehlmannConfig {

@@ -19,7 +19,8 @@ pub use global_types::{
     GradientFactor,
     MbarPressure,
     AscentRatePerMinute,
-    CNSPercent
+    CNSPercent,
+    NDLType,
 };
 pub use record::RecordData;
 pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime};

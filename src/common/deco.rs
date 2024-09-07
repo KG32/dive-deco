@@ -79,8 +79,8 @@ impl Deco {
                 ..
             } = sim_model.dive_state();
             let ceiling = sim_model.ceiling();
-            let next_deco_stage = self.next_deco_action(&sim_model, gas_mixes.clone());
-            let (deco_action, next_switch_gas) = next_deco_stage;
+            let next_deco_action = self.next_deco_action(&sim_model, gas_mixes.clone());
+            let (deco_action, next_switch_gas) = next_deco_action;
             let mut deco_stages: Vec<DecoStage> = vec![];
 
             // handle deco actions
@@ -207,7 +207,8 @@ impl Deco {
             return (None, None);
         }
 
-        if !sim_model.in_deco() {
+        let ceiling = sim_model.ceiling();
+        if !(ceiling > 0.) {
             // no deco obligations - linear ascent
             return (Some(DecoAction::AscentToCeil), None);
         } else {
@@ -223,7 +224,6 @@ impl Deco {
                 }
             }
 
-            let ceiling = sim_model.ceiling();
             let ceiling_padding = current_depth - ceiling;
 
             // within deco window
@@ -268,23 +268,17 @@ impl Deco {
     }
 
     fn register_deco_stage(&mut self, stage: DecoStage) {
-        let push_new_stage = match stage.stage_type {
-            // dedupe iterative deco stops and merge into one
-            DecoStageType::DecoStop => {
-                let mut push_new = true;
-                let last_stage = self.deco_stages.last_mut();
-                if let Some(last_stage) = last_stage {
-                    if last_stage.stage_type == stage.stage_type {
-                        last_stage.duration += stage.duration;
-                        push_new = false;
-                    }
-                }
-                push_new
-            },
-            _ => true
-        };
-
-        if push_new_stage {
+        // dedupe iterative deco stops and merge into one
+        let mut push_new = true;
+        let last_stage = self.deco_stages.last_mut();
+        if let Some(last_stage) = last_stage {
+            if last_stage.stage_type == stage.stage_type {
+                last_stage.duration += stage.duration;
+                last_stage.end_depth = stage.end_depth;
+                push_new = false;
+            }
+        }
+        if push_new {
             self.deco_stages.push(stage);
         }
 
