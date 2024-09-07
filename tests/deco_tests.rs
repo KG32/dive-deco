@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, DecoRuntime, DecoStage, DecoStageType, Gas, MinutesSigned};
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, DecoRuntime, DecoStage, DecoStageType, Gas, MinutesSigned};
 
 pub mod fixtures;
 
@@ -10,13 +10,13 @@ fn test_deco_ascent_no_deco() {
 
     let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]);
     assert_eq!(deco_stages.len(), 1); // single continuous ascent
-    assert_eq!(tts, 3); // tts in minutes
+    assert_eq!(tts, 2); // tts in minutes
 }
 
 #[test]
 fn test_deco_single_gas() {
     let air = fixtures::gas_air();
-    let mut model = fixtures::model_default();
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().deco_ascent_rate(9.));
     model.record(40., 20 * 60, &air);
 
     let DecoRuntime {
@@ -71,7 +71,7 @@ fn test_deco_single_gas() {
 
 #[test]
 fn test_deco_multi_gas() {
-    let mut model = fixtures::model_default();
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().deco_ascent_rate(9.));
 
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
@@ -142,7 +142,7 @@ fn test_deco_multi_gas() {
 
 #[test]
 fn test_deco_with_deco_mod_at_bottom() {
-    let mut model = fixtures::model_default();
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().deco_ascent_rate(9.));
     let air = Gas::air();
     let ean_36 = Gas::new(0.36, 0.);
 

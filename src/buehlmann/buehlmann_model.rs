@@ -126,7 +126,9 @@ impl DecoModel for BuehlmannModel {
 
     fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        deco.calc(self.fork(), gas_mixes)
+        let deco = deco.calc(self.fork(), gas_mixes);
+        deco
+
     }
 
     fn config(&self) -> BuehlmannConfig {

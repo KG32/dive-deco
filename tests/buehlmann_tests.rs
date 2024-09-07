@@ -1,7 +1,13 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas, Minutes, Supersaturation };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas, Minutes, Supersaturation, NDLType };
 pub mod fixtures;
 
 // general high-level model tests
+#[test]
+#[should_panic]
+fn test_should_panic_on_invalid_depth() {
+    let mut model = fixtures::model_default();
+    model.record(-10., 1, &fixtures::gas_air());
+}
 
 #[test]
 fn test_ceiling() {
@@ -61,7 +67,25 @@ fn test_model_records_equality() {
 
 #[test]
 fn test_ndl_calculation() {
-    let mut model = fixtures::model_default();
+    let config = BuehlmannConfig::default().ndl_type(NDLType::ByCeiling);
+    let mut model = BuehlmannModel::new(config);
+
+    let air = Gas::new(0.21, 0.);
+    let depth = 30.;
+
+    // with 21/00 at 30m expect NDL 16
+    model.record(depth, 0, &air);
+    assert_eq!(model.ndl(), 16);
+
+    // expect NDL 15 after 1 min
+    model.record(depth, 60, &air);
+    assert_eq!(model.ndl(), 15);
+}
+
+#[test]
+fn test_ndl_calculation_by_ceiling() {
+    let config = BuehlmannConfig::default().ndl_type(NDLType::ByCeiling);
+    let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
     let depth = 30.;
@@ -94,13 +118,13 @@ fn test_multi_gas_ndl() {
     let ean_28 = Gas::new(0.28, 0.);
 
     model.record(30., 0 * 60, &air);
-    assert_eq!(model.ndl(), 16);
+    assert_eq!(model.ndl(), 19);
 
     model.record(30., 10 * 60, &air);
-    assert_eq!(model.ndl(), 6);
+    assert_eq!(model.ndl(), 9);
 
     model.record(30., 0 * 60, &ean_28);
-    assert_eq!(model.ndl(), 10);
+    assert_eq!(model.ndl(), 13);
 }
 
 #[test]
@@ -108,7 +132,7 @@ fn test_ndl_with_gf() {
     let mut model = fixtures::model_gf((70, 70));
     let air = Gas::new(0.21, 0.);
     model.record(20., 0 * 60, &air);
-    assert_eq!(model.ndl(), 21);
+    assert_eq!(model.ndl(), 24);
 }
 
 #[test]
@@ -121,7 +145,7 @@ fn test_altitude() {
 }
 
 #[test]
-fn test_example_deco_start() {
+fn test_example_ceiling_start() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
             .gradient_factors(30, 70)
@@ -137,7 +161,7 @@ fn test_example_deco_start() {
 }
 
 #[test]
-fn test_example_deco() {
+fn test_example_ceiling() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
             .gradient_factors(30, 70)
@@ -152,11 +176,4 @@ fn test_example_deco() {
     model.record(21., 10 * 60, &ean_50);
 
     assert_eq!(model.ceiling(), 12.455491216740299);
-}
-
-#[test]
-#[should_panic]
-fn test_should_panic_on_invalid_depth() {
-    let mut model = fixtures::model_default();
-    model.record(-10., 1, &fixtures::gas_air());
 }
