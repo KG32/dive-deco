@@ -66,13 +66,17 @@ Current config options:
 - `gradient_factors` - gradient factors settings (`[GFlow], [GFhigh])`default: `(100, 100)`)
 - `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
 - `deco_ascent_rate` - ascent rate in m/s that is assumed to be followed when calculating deco obligations and simulations. Default value: 10 m/min (33 ft/min)
+- `ndl_type` (enum `NDLType`)
+  - `Actual` (default) - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
+  - `ByCeiling` - NDL time is determined by ceiling, it counts down to a condition where ceiling isn't equal to the surface
 
 ```rust
     // fluid-interface-like built config
-    let config = BuehlmannConfig::new()
+    let config = BuehlmannConfig::default()
         .gradient_factors(30, 70)
         .surface_pressure(1013)
-        .deco_ascent_rate(10.);
+        .deco_ascent_rate(10.)
+        .ndl_type(NDLType::Actual);
     let model = BuehlmannModel::new(config);
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
