@@ -14,3 +14,9 @@ pub enum NDLType {
     Actual, // take into consideration off-gassing during ascent
     ByCeiling // treat NDL as a point when ceiling > 0.
 }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CeilingType {
+    Actual,
+    Adaptive
+}

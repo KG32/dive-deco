@@ -1,5 +1,5 @@
 use crate::common::{AscentRatePerMinute, CNSPercent, Depth, Gas, Minutes, Seconds};
-use super::{global_types::NDLType, ox_tox::OxTox, DecoRuntime, MbarPressure};
+use super::{global_types::{CeilingType, NDLType}, ox_tox::OxTox, DecoRuntime, MbarPressure};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
@@ -12,6 +12,8 @@ pub trait DecoModelConfig {
     fn surface_pressure(&self) -> MbarPressure;
     fn deco_ascent_rate(&self) -> AscentRatePerMinute;
     fn ndl_type(&self) -> NDLType;
+    fn ceiling_type(&self) -> CeilingType;
+    fn round_ceiling(&self) -> bool;
 }
 
 #[derive(Debug)]

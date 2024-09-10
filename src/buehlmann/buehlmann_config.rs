@@ -1,4 +1,4 @@
-use crate::common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure, NDLType};
+use crate::{common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure, NDLType}, CeilingType};
 
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
@@ -11,6 +11,8 @@ pub struct BuehlmannConfig {
     pub surface_pressure: MbarPressure,
     pub deco_ascent_rate: AscentRatePerMinute,
     pub ndl_type: NDLType,
+    pub ceiling_type: CeilingType,
+    pub round_ceiling: bool,
 }
 
 impl BuehlmannConfig {
@@ -37,6 +39,16 @@ impl BuehlmannConfig {
         self.ndl_type = ndl_type;
         self
     }
+
+    pub fn ceiling_type(mut self, ceiling_type: CeilingType) -> Self {
+        self.ceiling_type = ceiling_type;
+        self
+    }
+
+    pub fn round_ceiling(mut self, round_ceiling: bool) -> Self {
+        self.round_ceiling = round_ceiling;
+        self
+    }
 }
 
 impl Default for BuehlmannConfig {
@@ -46,13 +58,16 @@ impl Default for BuehlmannConfig {
             surface_pressure: 1013,
             deco_ascent_rate: 10.,
             ndl_type: NDLType::Actual,
+            ceiling_type: CeilingType::Actual,
+            round_ceiling: false,
         }
     }
 }
 
 impl DecoModelConfig for BuehlmannConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr> {
-        let Self { gf,
+        let Self {
+            gf,
             surface_pressure,
             deco_ascent_rate,
             ..
@@ -77,7 +92,13 @@ impl DecoModelConfig for BuehlmannConfig {
         self.ndl_type.clone()
     }
 
+    fn ceiling_type(&self) -> CeilingType {
+        self.ceiling_type.clone()
+    }
 
+    fn round_ceiling(&self) -> bool {
+        self.round_ceiling
+    }
 }
 
 impl BuehlmannConfig {

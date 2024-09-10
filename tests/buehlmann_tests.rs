@@ -177,3 +177,14 @@ fn test_example_ceiling() {
 
     assert_eq!(model.ceiling(), 12.455491216740299);
 }
+
+#[test]
+fn test_adaptive_ceiling() {
+    let mut model = BuehlmannModel::new(
+        BuehlmannConfig::new().ceiling_type(dive_deco::CeilingType::Adaptive)
+    );
+    let air = Gas::air();
+    model.record(40., 20 * 60, &air);
+    let ceiling = model.ceiling();
+    assert_close_to_abs!(ceiling, 4., 0.5);
+}

@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, NDLType };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, NDLType };
 
 fn main() {
     // model with default config (GF 100/100)
@@ -12,6 +12,8 @@ fn main() {
         surface_pressure: 1013,
         deco_ascent_rate: 9.,
         ndl_type: NDLType::Actual,
+        ceiling_type: CeilingType::Actual,
+        round_ceiling: false,
     };
     let model_2 = BuehlmannModel::new(config_instance);
     println!("{:?}", model_2.config());
