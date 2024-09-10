@@ -123,7 +123,6 @@ impl DecoModel for BuehlmannModel {
         let BuehlmannConfig {
             deco_ascent_rate,
             mut ceiling_type,
-            round_ceiling ,
             ..
         } = self.config();
         if self.sim {
@@ -151,7 +150,7 @@ impl DecoModel for BuehlmannModel {
             }
         };
 
-        if round_ceiling {
+        if self.config().round_ceiling() {
             ceiling = ceiling.ceil();
         }
 
@@ -160,8 +159,8 @@ impl DecoModel for BuehlmannModel {
 
     fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        let deco = deco.calc(self.fork(), gas_mixes);
-        deco
+        
+        deco.calc(self.fork(), gas_mixes)
 
     }
 
@@ -359,7 +358,7 @@ mod tests {
     #[test]
     fn test_max_gf_within_ndl() {
         let gf = (50, 100);
-        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData { depth: 0., time: 0, gas: &air };
         model.record(record.depth, record.time, record.gas);
@@ -370,7 +369,7 @@ mod tests {
     fn test_max_gf_below_first_stop() {
         let gf = (50, 100);
 
-        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData { depth: 40., time: (12 * 60), gas: &air };
         model.record(record.depth, record.time, record.gas);
@@ -380,7 +379,7 @@ mod tests {
     #[test]
     fn test_max_gf_during_deco() {
         let gf = (30, 70);
-        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
         model.record(40., 30 * 60, &air);
@@ -393,7 +392,7 @@ mod tests {
     #[test]
     fn test_gf_slope_point() {
         let gf = (30, 85);
-        let model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
         assert_eq!(slope_point, 35);
     }

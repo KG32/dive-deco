@@ -16,7 +16,7 @@ fn test_deco_ascent_no_deco() {
 #[test]
 fn test_deco_single_gas() {
     let air = fixtures::gas_air();
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().deco_ascent_rate(9.));
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
     model.record(40., 20 * 60, &air);
 
     let DecoRuntime {
@@ -71,7 +71,7 @@ fn test_deco_single_gas() {
 
 #[test]
 fn test_deco_multi_gas() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().deco_ascent_rate(9.));
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
 
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
@@ -142,7 +142,7 @@ fn test_deco_multi_gas() {
 
 #[test]
 fn test_deco_with_deco_mod_at_bottom() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().deco_ascent_rate(9.));
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
     let air = Gas::air();
     let ean_36 = Gas::new(0.36, 0.);
 

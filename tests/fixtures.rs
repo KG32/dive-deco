@@ -6,7 +6,7 @@ pub fn model_default() -> BuehlmannModel {
 
 pub fn model_gf(gf: GradientFactors) -> BuehlmannModel {
     let (gf_low, gf_high) = gf;
-    let config_with_gf = BuehlmannConfig::new().gradient_factors(gf_low, gf_high);
+    let config_with_gf = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
     BuehlmannModel::new(config_with_gf)
 }
 

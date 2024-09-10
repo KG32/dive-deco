@@ -19,27 +19,27 @@ impl BuehlmannConfig {
         Self::default()
     }
 
-    pub fn gradient_factors(mut self, gf_low: u8, gf_high: u8) -> Self {
+    pub fn with_gradient_factors(mut self, gf_low: u8, gf_high: u8) -> Self {
         self.gf = (gf_low, gf_high);
         self
     }
 
-    pub fn surface_pressure(mut self, surface_pressure: MbarPressure) -> Self {
+    pub fn with_surface_pressure(mut self, surface_pressure: MbarPressure) -> Self {
         self.surface_pressure = surface_pressure;
         self
     }
 
-    pub fn deco_ascent_rate(mut self, deco_ascent_rate: AscentRatePerMinute) -> Self {
+    pub fn with_deco_ascent_rate(mut self, deco_ascent_rate: AscentRatePerMinute) -> Self {
         self.deco_ascent_rate = deco_ascent_rate;
         self
     }
 
-    pub fn ceiling_type(mut self, ceiling_type: CeilingType) -> Self {
+    pub fn with_ceiling_type(mut self, ceiling_type: CeilingType) -> Self {
         self.ceiling_type = ceiling_type;
         self
     }
 
-    pub fn round_ceiling(mut self, round_ceiling: bool) -> Self {
+    pub fn with_round_ceiling(mut self, round_ceiling: bool) -> Self {
         self.round_ceiling = round_ceiling;
         self
     }
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_variable_gradient_factors() {
-        let config = BuehlmannConfig::new().gradient_factors(30, 70);
+        let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.gf, (30, 70));
     }
@@ -162,21 +162,21 @@ mod tests {
         let invalid_gf_range_cases = vec![(1, 101), (0, 99), (120, 240)];
         for case in invalid_gf_range_cases {
             let (gf_low, gf_high) = case;
-            let config = BuehlmannConfig::new().gradient_factors(gf_low, gf_high);
+            let config = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
             assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: GF_RANGE_ERR_MSG }));
         }
     }
 
     #[test]
     fn test_gf_order() {
-        let config = BuehlmannConfig::new().gradient_factors(90, 80);
+        let config = BuehlmannConfig::new().with_gradient_factors(90, 80);
         assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: GF_ORDER_ERR_MSG }));
     }
 
 
     #[test]
     fn test_surface_pressure_config() {
-        let config = BuehlmannConfig::new().surface_pressure(1032);
+        let config = BuehlmannConfig::new().with_surface_pressure(1032);
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.surface_pressure, 1032);
     }
@@ -185,14 +185,14 @@ mod tests {
     fn test_invalid_surface_pressure_values() {
         let invalid_surface_pressure_cases = vec![0, 100, 2000];
         for invalid_case in invalid_surface_pressure_cases {
-            let config = BuehlmannConfig::new().surface_pressure(invalid_case);
+            let config = BuehlmannConfig::new().with_surface_pressure(invalid_case);
             assert_eq!(config.validate(), Err(ConfigValidationErr { field: "surface_pressure", reason: SURFACE_PRESSURE_ERR_MSG }));
         }
     }
 
     #[test]
     fn test_deco_ascent_rate_config() {
-        let config = BuehlmannConfig::new().deco_ascent_rate(15.5);
+        let config = BuehlmannConfig::new().with_deco_ascent_rate(15.5);
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.deco_ascent_rate, 15.5);
     }
@@ -201,7 +201,7 @@ mod tests {
     fn test_invalid_deco_ascent_rate_values() {
         let invalid_deco_ascent_rate_cases = vec![-3., 0.5, 31.0, 50.5];
         for invalid_case in invalid_deco_ascent_rate_cases {
-            let config = BuehlmannConfig::new().deco_ascent_rate(invalid_case);
+            let config = BuehlmannConfig::new().with_deco_ascent_rate(invalid_case);
             assert_eq!(config.validate(), Err(ConfigValidationErr { field: "deco_ascent_rate", reason: DECO_ASCENT_RATE_ERR_MSG }));
         }
     }

@@ -67,7 +67,7 @@ fn test_model_records_equality() {
 
 #[test]
 fn test_actual_ndl_calculation() {
-    let config = BuehlmannConfig::default().ceiling_type(CeilingType::Actual);
+    let config = BuehlmannConfig::default().with_ceiling_type(CeilingType::Actual);
     let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
@@ -84,7 +84,7 @@ fn test_actual_ndl_calculation() {
 
 #[test]
 fn test_adaptive_ndl_calculation() {
-    let config = BuehlmannConfig::default().ceiling_type(CeilingType::Adaptive);
+    let config = BuehlmannConfig::default().with_ceiling_type(CeilingType::Adaptive);
     let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
@@ -113,7 +113,7 @@ fn test_ndl_cut_off() {
 
 #[test]
 fn test_multi_gas_ndl() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().ceiling_type(CeilingType::Actual));
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_ceiling_type(CeilingType::Actual));
     let air = Gas::new(0.21, 0.);
     let ean_28 = Gas::new(0.28, 0.);
 
@@ -137,7 +137,7 @@ fn test_ndl_with_gf() {
 
 #[test]
 fn test_altitude() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::new().surface_pressure(700));
+    let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_surface_pressure(700));
     let air = Gas::new(0.21, 0.);
     model.record(40., 60 * 60, &air);
     let Supersaturation { gf_surf, ..} = model.supersaturation();
@@ -148,8 +148,8 @@ fn test_altitude() {
 fn test_example_ceiling_start() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
-            .gradient_factors(30, 70)
-            .surface_pressure(1013)
+            .with_gradient_factors(30, 70)
+            .with_surface_pressure(1013)
     );
 
     let air = Gas::air();
@@ -164,8 +164,8 @@ fn test_example_ceiling_start() {
 fn test_example_ceiling() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
-            .gradient_factors(30, 70)
-            .surface_pressure(1013)
+            .with_gradient_factors(30, 70)
+            .with_surface_pressure(1013)
     );
 
     let air = Gas::air();
@@ -181,7 +181,7 @@ fn test_example_ceiling() {
 #[test]
 fn test_adaptive_ceiling() {
     let mut model = BuehlmannModel::new(
-        BuehlmannConfig::new().ceiling_type(dive_deco::CeilingType::Adaptive)
+        BuehlmannConfig::new().with_ceiling_type(dive_deco::CeilingType::Adaptive)
     );
     let air = Gas::air();
     model.record(40., 20 * 60, &air);
