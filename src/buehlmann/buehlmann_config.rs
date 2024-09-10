@@ -10,7 +10,6 @@ pub struct BuehlmannConfig {
     pub gf: GradientFactors,
     pub surface_pressure: MbarPressure,
     pub deco_ascent_rate: AscentRatePerMinute,
-    pub ndl_type: NDLType,
     pub ceiling_type: CeilingType,
     pub round_ceiling: bool,
 }
@@ -35,11 +34,6 @@ impl BuehlmannConfig {
         self
     }
 
-    pub fn ndl_type(mut self, ndl_type: NDLType) -> Self {
-        self.ndl_type = ndl_type;
-        self
-    }
-
     pub fn ceiling_type(mut self, ceiling_type: CeilingType) -> Self {
         self.ceiling_type = ceiling_type;
         self
@@ -57,7 +51,6 @@ impl Default for BuehlmannConfig {
             gf: (100, 100),
             surface_pressure: 1013,
             deco_ascent_rate: 10.,
-            ndl_type: NDLType::Actual,
             ceiling_type: CeilingType::Actual,
             round_ceiling: false,
         }
@@ -86,10 +79,6 @@ impl DecoModelConfig for BuehlmannConfig {
 
     fn deco_ascent_rate(&self) -> AscentRatePerMinute {
         self.deco_ascent_rate
-    }
-
-    fn ndl_type(&self) -> NDLType {
-        self.ndl_type.clone()
     }
 
     fn ceiling_type(&self) -> CeilingType {

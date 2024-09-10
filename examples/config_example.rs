@@ -11,7 +11,6 @@ fn main() {
         gf: (85, 85),
         surface_pressure: 1013,
         deco_ascent_rate: 9.,
-        ndl_type: NDLType::Actual,
         ceiling_type: CeilingType::Actual,
         round_ceiling: false,
     };

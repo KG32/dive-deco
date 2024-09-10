@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas, Minutes, Supersaturation, NDLType };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, Gas, Minutes, NDLType, Supersaturation };
 pub mod fixtures;
 
 // general high-level model tests
@@ -66,8 +66,8 @@ fn test_model_records_equality() {
 }
 
 #[test]
-fn test_ndl_calculation() {
-    let config = BuehlmannConfig::default().ndl_type(NDLType::ByCeiling);
+fn test_actual_ndl_calculation() {
+    let config = BuehlmannConfig::default().ceiling_type(CeilingType::Actual);
     let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
@@ -83,20 +83,20 @@ fn test_ndl_calculation() {
 }
 
 #[test]
-fn test_ndl_calculation_by_ceiling() {
-    let config = BuehlmannConfig::default().ndl_type(NDLType::ByCeiling);
+fn test_adaptive_ndl_calculation() {
+    let config = BuehlmannConfig::default().ceiling_type(CeilingType::Adaptive);
     let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
     let depth = 30.;
 
-    // with 21/00 at 30m expect NDL 16
+    // with 21/00 at 30m expect NDL 19
     model.record(depth, 0, &air);
-    assert_eq!(model.ndl(), 16);
+    assert_eq!(model.ndl(), 19);
 
-    // expect NDL 15 after 1 min
+    // expect NDL 18 after 1 min
     model.record(depth, 60, &air);
-    assert_eq!(model.ndl(), 15);
+    assert_eq!(model.ndl(), 18);
 }
 
 #[test]
@@ -113,18 +113,18 @@ fn test_ndl_cut_off() {
 
 #[test]
 fn test_multi_gas_ndl() {
-    let mut model = fixtures::model_default();
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().ceiling_type(CeilingType::Actual));
     let air = Gas::new(0.21, 0.);
     let ean_28 = Gas::new(0.28, 0.);
 
     model.record(30., 0 * 60, &air);
-    assert_eq!(model.ndl(), 19);
+    assert_eq!(model.ndl(), 16);
 
     model.record(30., 10 * 60, &air);
-    assert_eq!(model.ndl(), 9);
+    assert_eq!(model.ndl(), 6);
 
     model.record(30., 0 * 60, &ean_28);
-    assert_eq!(model.ndl(), 13);
+    assert_eq!(model.ndl(), 10);
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn test_ndl_with_gf() {
     let mut model = fixtures::model_gf((70, 70));
     let air = Gas::new(0.21, 0.);
     model.record(20., 0 * 60, &air);
-    assert_eq!(model.ndl(), 24);
+    assert_eq!(model.ndl(), 21);
 }
 
 #[test]
