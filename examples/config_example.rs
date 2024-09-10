@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, NDLType };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel };
 
 fn main() {
     // model with default config (GF 100/100)

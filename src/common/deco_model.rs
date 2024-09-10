@@ -1,5 +1,7 @@
 use crate::common::{AscentRatePerMinute, CNSPercent, Depth, Gas, Minutes, Seconds};
-use super::{global_types::{CeilingType, NDLType}, ox_tox::OxTox, DecoRuntime, MbarPressure};
+use crate::common::global_types::{CeilingType, MbarPressure};
+use crate::common::deco::DecoRuntime;
+use crate::common::ox_tox::OxTox;
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {

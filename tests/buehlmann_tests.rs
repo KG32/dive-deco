@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, Gas, Minutes, NDLType, Supersaturation };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, Gas, Minutes, Supersaturation };
 pub mod fixtures;
 
 // general high-level model tests

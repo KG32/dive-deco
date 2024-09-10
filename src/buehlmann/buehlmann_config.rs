@@ -1,4 +1,4 @@
-use crate::{common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure, NDLType}, CeilingType};
+use crate::{common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure}, CeilingType};
 
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
@@ -82,7 +82,7 @@ impl DecoModelConfig for BuehlmannConfig {
     }
 
     fn ceiling_type(&self) -> CeilingType {
-        self.ceiling_type.clone()
+        self.ceiling_type
     }
 
     fn round_ceiling(&self) -> bool {
