@@ -148,6 +148,9 @@ mod tests {
         let config = BuehlmannConfig::default();
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.gf, (100, 100));
+        assert_eq!(config.deco_ascent_rate, 10.);
+        assert_eq!(config.ceiling_type, CeilingType::Actual);
+        assert_eq!(config.round_ceiling, false);
     }
 
     #[test]
