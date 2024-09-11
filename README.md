@@ -72,11 +72,11 @@ Current config options:
 
 ```rust
     // fluid-interface-like built config
-    let config = BuehlmannConfig::default()
-        .gradient_factors(30, 70)
-        .surface_pressure(1013)
-        .deco_ascent_rate(10.)
-        .ceiling_type(CeilingType::Actual);
+    let config = BuehlmannConfig::new()
+        .with_gradient_factors(30, 70)
+        .with_surface_pressure(1013)
+        .with_deco_ascent_rate(10.)
+        .with_ceiling_type(CeilingType::Actual);
     let model = BuehlmannModel::new(config);
     println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
@@ -148,7 +148,7 @@ All decompression stages calculated to clear deco obligations and resurface in a
 - `tts_delta_at_5` (aka Δ+5) - absolute change in TTS after 5 mins assuming constant depth and gas mix
 
 ```rust
-    let config = BuehlmannConfig::new().gradient_factors(30, 70);
+    let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
     let mut model = BuehlmannModel::new(config);
 
     // bottom gas
