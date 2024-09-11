@@ -26,8 +26,8 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
   - surface pressure
   - deco ascent rate
   - NDL definition
-    - actual - taking into account off-gassing on ascent
-    - by ceiling - NDL time is determined by ceiling, it counts down to a condition where ceiling isn't equal to the surface
+    - Actual (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
+    - Adaptive - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
 
 ### Planned features
 
@@ -67,7 +67,7 @@ Current config options:
 - `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
 - `deco_ascent_rate` - ascent rate in m/s that is assumed to be followed when calculating deco obligations and simulations. Default value: 10 m/min (33 ft/min)
 - `ceiling_type` (enum `CeilingType`)
-  - `Actual` (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where ceiling isn't equal to the surface
+  - `Actual` (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
   - `Adaptive` - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
 
 ```rust
