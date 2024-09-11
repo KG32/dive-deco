@@ -187,7 +187,7 @@ impl Deco {
             nested_sim_model.record(sim_depth, 5 * 60, &sim_gas);
             let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone());
             tts_at_5 = nested_deco.tts;
-            tts_delta_at_5 = (tts_at_5 - tts) as MinutesSigned;
+            tts_delta_at_5 = tts_at_5 as MinutesSigned - tts as MinutesSigned;
         }
 
         DecoRuntime {
