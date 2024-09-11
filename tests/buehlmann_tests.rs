@@ -188,3 +188,23 @@ fn test_adaptive_ceiling() {
     let ceiling = model.ceiling();
     assert_close_to_abs!(ceiling, 4., 0.5);
 }
+
+#[test]
+fn test_gradual_ascent_with_deco() {
+    let mut model = BuehlmannModel::new(
+        BuehlmannConfig::new()
+            .with_gradient_factors(30, 70)
+            .with_surface_pressure(1013)
+    );
+    let air = Gas::air();
+    let ean50 = Gas::new(0.21, 0.50);
+    model.record(45., 30 * 60, &air);
+    loop {
+        let depth = model.dive_state().depth;
+        if depth <= 0. {
+            break;
+        }
+        model.record_travel_with_rate(depth - 3., 10., &air);
+        model.deco(vec![air, ean50]);
+    }
+}
