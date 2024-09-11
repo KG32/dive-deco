@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, NDLType };
+use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel };
 
 fn main() {
     // model with default config (GF 100/100)
@@ -11,14 +11,15 @@ fn main() {
         gf: (85, 85),
         surface_pressure: 1013,
         deco_ascent_rate: 9.,
-        ndl_type: NDLType::Actual,
+        ceiling_type: CeilingType::Actual,
+        round_ceiling: false,
     };
     let model_2 = BuehlmannModel::new(config_instance);
     println!("{:?}", model_2.config());
 
 
     // model with fluent-interface-like config
-    let config_with_gf = BuehlmannConfig::default().gradient_factors(30, 70);
+    let config_with_gf = BuehlmannConfig::default().with_gradient_factors(30, 70);
     let model_3 = BuehlmannModel::new(config_with_gf);
     println!("{:?}", model_3.config()); // BuehlmannConfig { gf: (30, 70) }
 }

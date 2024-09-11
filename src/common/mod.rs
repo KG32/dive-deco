@@ -21,6 +21,7 @@ pub use global_types::{
     AscentRatePerMinute,
     CNSPercent,
     NDLType,
+    CeilingType,
 };
 pub use record::RecordData;
 pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime};

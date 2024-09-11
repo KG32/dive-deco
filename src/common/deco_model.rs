@@ -1,5 +1,7 @@
 use crate::common::{AscentRatePerMinute, CNSPercent, Depth, Gas, Minutes, Seconds};
-use super::{global_types::NDLType, ox_tox::OxTox, DecoRuntime, MbarPressure};
+use crate::common::global_types::{CeilingType, MbarPressure};
+use crate::common::deco::DecoRuntime;
+use crate::common::ox_tox::OxTox;
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
@@ -11,7 +13,8 @@ pub trait DecoModelConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr>;
     fn surface_pressure(&self) -> MbarPressure;
     fn deco_ascent_rate(&self) -> AscentRatePerMinute;
-    fn ndl_type(&self) -> NDLType;
+    fn ceiling_type(&self) -> CeilingType;
+    fn round_ceiling(&self) -> bool;
 }
 
 #[derive(Debug)]
@@ -60,16 +63,15 @@ pub trait DecoModel {
 
     /// is in deco check
     fn in_deco(&self) -> bool {
-        let ndl_type_config = self.config().ndl_type();
-        match ndl_type_config {
-            NDLType::Actual => {
+        let ceiling_type = self.config().ceiling_type();
+        match ceiling_type {
+            CeilingType::Actual => self.ceiling() > 0.,
+            CeilingType::Adaptive => {
                 let current_gas = self.dive_state().gas;
                 let runtime = self.deco(vec![current_gas]);
                 let deco_stages = runtime.deco_stages;
                 deco_stages.len() > 1
-
             },
-            NDLType::ByCeiling => self.ceiling() > 0.,
         }
     }
 

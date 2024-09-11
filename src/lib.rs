@@ -20,5 +20,6 @@ pub use common::{
     DecoRuntime,
     Sim,
     NDLType,
+    CeilingType,
 };
 

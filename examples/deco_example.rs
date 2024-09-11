@@ -1,7 +1,7 @@
 use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
 
 fn main() {
-    let config = BuehlmannConfig::new().gradient_factors(30, 70);
+    let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
     let mut model = BuehlmannModel::new(config);
 
     // bottom gas

@@ -2,7 +2,7 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, RecordData};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::{DecoRuntime, GradientFactors, Sim};
+use crate::{CeilingType, DecoRuntime, GradientFactors, Sim};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -120,14 +120,47 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn ceiling(&self) -> Depth {
+        let BuehlmannConfig {
+            deco_ascent_rate,
+            mut ceiling_type,
+            ..
+        } = self.config();
+        if self.sim {
+            ceiling_type = CeilingType::Actual;
+        }
         let leading_comp: &Compartment = self.leading_comp();
-        leading_comp.ceiling()
+        let mut ceiling = match ceiling_type {
+            CeilingType::Actual => {
+                leading_comp.ceiling()
+            },
+            CeilingType::Adaptive => {
+                let mut sim_model = self.fork();
+                let sim_gas = sim_model.dive_state().gas;
+                let mut adaptive_ceiling = sim_model.ceiling();
+                loop {
+                    let sim_depth = sim_model.dive_state().depth;
+                    if !(sim_depth > 0.) || (sim_depth <= adaptive_ceiling) {
+                        break;
+                    }
+                    sim_model.record_travel_with_rate(adaptive_ceiling, deco_ascent_rate, &sim_gas);
+                    adaptive_ceiling = sim_model.ceiling();
+                }
+
+                adaptive_ceiling
+            }
+        };
+
+        if self.config().round_ceiling() {
+            ceiling = ceiling.ceil();
+        }
+
+        ceiling
     }
 
     fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        let deco = deco.calc(self.fork(), gas_mixes);
-        deco
+        
+        deco.calc(self.fork(), gas_mixes)
 
     }
 
@@ -325,7 +358,7 @@ mod tests {
     #[test]
     fn test_max_gf_within_ndl() {
         let gf = (50, 100);
-        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData { depth: 0., time: 0, gas: &air };
         model.record(record.depth, record.time, record.gas);
@@ -336,9 +369,9 @@ mod tests {
     fn test_max_gf_below_first_stop() {
         let gf = (50, 100);
 
-        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
-        let record = RecordData { depth: 40., time: (10 * 60), gas: &air };
+        let record = RecordData { depth: 40., time: (12 * 60), gas: &air };
         model.record(record.depth, record.time, record.gas);
         assert_eq!(model.max_gf(gf, record.depth), 50);
     }
@@ -346,7 +379,7 @@ mod tests {
     #[test]
     fn test_max_gf_during_deco() {
         let gf = (30, 70);
-        let mut model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
         model.record(40., 30 * 60, &air);
@@ -359,7 +392,7 @@ mod tests {
     #[test]
     fn test_gf_slope_point() {
         let gf = (30, 85);
-        let model = BuehlmannModel::new(BuehlmannConfig::new().gradient_factors(gf.0, gf.1));
+        let model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let slope_point = model.gf_slope_point(gf, 33.528, 30.48);
         assert_eq!(slope_point, 35);
     }
