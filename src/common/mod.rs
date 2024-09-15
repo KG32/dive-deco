@@ -27,4 +27,4 @@ pub use record::RecordData;
 pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime};
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use ox_tox::OxTox;
-pub use sim::Sim;
+pub use sim::{Sim, SimType};

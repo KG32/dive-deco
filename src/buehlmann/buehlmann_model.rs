@@ -1,5 +1,5 @@
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, RecordData};
+use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds, SimType};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::{CeilingType, DecoRuntime, GradientFactors, Sim};
@@ -12,6 +12,7 @@ pub struct BuehlmannModel {
     compartments: Vec<Compartment>,
     state: BuehlmannState,
     sim: bool,
+    sim_type: Option<SimType>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -56,6 +57,7 @@ impl DecoModel for BuehlmannModel {
             compartments: vec![],
             state: initial_model_state,
             sim: false,
+            sim_type: None,
         };
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
@@ -105,7 +107,7 @@ impl DecoModel for BuehlmannModel {
         let mut ndl: Minutes = NDL_CUT_OFF_MINS;
 
         // create a simulation model based on current model's state
-        let mut sim_model = self.fork();
+        let mut sim_model = self.fork(Some(SimType::Calc));
 
         // iterate simulation model over 1min records until NDL cut-off or in deco
         for i in 0..NDL_CUT_OFF_MINS {
@@ -125,21 +127,27 @@ impl DecoModel for BuehlmannModel {
             mut ceiling_type,
             ..
         } = self.config();
-        if self.sim {
+        if self.sim && self.sim_type.clone().unwrap() == SimType::Calc {
             ceiling_type = CeilingType::Actual;
         }
+        if self.sim_type.clone() == Some(SimType::Recovery) {
+            ceiling_type = CeilingType::Actual;
+        }
+        // if self.sim {
+        //     ceiling_type = CeilingType::Actual;
+        // }
         let leading_comp: &Compartment = self.leading_comp();
         let mut ceiling = match ceiling_type {
             CeilingType::Actual => {
                 leading_comp.ceiling()
             },
             CeilingType::Adaptive => {
-                let mut sim_model = self.fork();
+                let mut sim_model = self.fork(Some(SimType::Calc));
                 let sim_gas = sim_model.dive_state().gas;
                 let mut adaptive_ceiling = sim_model.ceiling();
                 loop {
                     let sim_depth = sim_model.dive_state().depth;
-                    if !(sim_depth > 0.) || (sim_depth <= adaptive_ceiling) {
+                    if (sim_depth > 0.) || (sim_depth <= adaptive_ceiling) {
                         break;
                     }
                     sim_model.record_travel_with_rate(adaptive_ceiling, deco_ascent_rate, &sim_gas);
@@ -159,8 +167,8 @@ impl DecoModel for BuehlmannModel {
 
     fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        
-        deco.calc(self.fork(), gas_mixes)
+
+        deco.calc(self.fork(Some(SimType::Calc)), gas_mixes)
 
     }
 
@@ -198,9 +206,10 @@ impl DecoModel for BuehlmannModel {
 }
 
 impl Sim for BuehlmannModel {
-    fn fork(&self) -> Self {
+    fn fork(&self, sim_type: Option<SimType>) -> Self {
         Self {
             sim: true,
+            sim_type,
             ..self.clone()
         }
     }
@@ -295,7 +304,7 @@ impl BuehlmannModel {
             Some(gf_low_depth) => gf_low_depth,
             None => {
                 // find GF low depth
-                let mut sim_model = self.fork();
+                let mut sim_model = self.fork(Some(SimType::Calc));
                 let sim_gas = sim_model.state.gas;
                 let mut target_depth = sim_model.state.depth;
                 while target_depth > 0. {

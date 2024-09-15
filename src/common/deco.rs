@@ -1,4 +1,4 @@
-use crate::{DecoModel, Depth, Gas, Minutes};
+use crate::{common::SimType, DecoModel, Depth, Gas, Minutes};
 use super::{global_types::MinutesSigned, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
 
 // @todo move to model config
@@ -34,6 +34,7 @@ pub struct Deco {
     deco_stages: Vec<DecoStage>,
     tts_seconds: Seconds,
     sim: bool,
+    sim_type: Option<SimType>,
 }
 
 
@@ -49,10 +50,14 @@ pub struct DecoRuntime {
     pub tts_delta_at_5: MinutesSigned,
 }
 
+#[derive(Debug)]
+struct MissedDecoStopViolation;
+
 impl Sim for Deco {
-    fn fork(&self) -> Self {
+    fn fork(&self, sim_type: Option<SimType>) -> Self {
         Self {
             sim: true,
+            sim_type,
             ..self.clone()
         }
     }
@@ -64,23 +69,33 @@ impl Sim for Deco {
 impl Deco {
     pub fn new_sim() -> Self {
         let deco = Self::default();
-        deco.fork()
+        deco.fork(None)
     }
 
-    pub fn calc<T: DecoModel + Clone>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
+    pub fn calc<T: DecoModel + Clone + Sim>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
         // run model simulation until no deco stages
-        let mut sim_model = deco_model.clone();
+        let mut sim_model: T = deco_model.clone();
         let ascent_rate = sim_model.config().deco_ascent_rate();
         loop {
             let DiveState {
-                depth: pre_stage_depth,
+                depth: mut pre_stage_depth,
                 time: pre_stage_time,
                 gas: pre_stage_gas,
                 ..
             } = sim_model.dive_state();
             let ceiling = sim_model.ceiling();
             let next_deco_action = self.next_deco_action(&sim_model, gas_mixes.clone());
-            let (deco_action, next_switch_gas) = next_deco_action;
+            if let Err(e) = next_deco_action {
+                let mut recovery_model = sim_model.fork(Some(SimType::Recovery));
+                let _ceiling_pre = recovery_model.ceiling();
+                dbg!(_ceiling_pre);
+                recovery_model.record(self.deco_stop_depth(ceiling), 0, &pre_stage_gas);
+                let _ceiling_post = recovery_model.ceiling();
+                dbg!(_ceiling_post);
+                return self.calc(recovery_model, gas_mixes);
+            }
+
+            let (deco_action, next_switch_gas) = next_deco_action.unwrap();
             let mut deco_stages: Vec<DecoStage> = vec![];
 
             // handle deco actions
@@ -198,19 +213,23 @@ impl Deco {
         }
     }
 
-    fn next_deco_action(&self, sim_model: &impl DecoModel, gas_mixes: Vec<Gas>) -> (Option<DecoAction>, Option<Gas>) {
+    fn next_deco_action(
+        &self,
+        sim_model: &impl DecoModel,
+        gas_mixes: Vec<Gas>
+    ) -> Result<(Option<DecoAction>, Option<Gas>), MissedDecoStopViolation> {
         let DiveState { depth: current_depth, gas: current_gas, .. } = sim_model.dive_state();
         let surface_pressure = sim_model.config().surface_pressure();
 
         // end deco simulation - surface
         if current_depth <= 0. {
-            return (None, None);
+            return Ok((None, None));
         }
 
         let ceiling = sim_model.ceiling();
         if !(ceiling > 0.) {
             // no deco obligations - linear ascent
-            return (Some(DecoAction::AscentToCeil), None);
+            return Ok((Some(DecoAction::AscentToCeil), None));
         } else {
             // check next switch gas
             let next_switch_gas = self.next_switch_gas(current_depth, &current_gas, gas_mixes, surface_pressure);
@@ -220,28 +239,31 @@ impl Deco {
                 let gas_mod = switch_gas.max_operating_depth(1.6);
                 let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
                 if (switch_gas != current_gas) && (current_depth <= gas_mod) && (gas_end <= DEFAULT_MAX_END_DEPTH) {
-                    return (Some(DecoAction::SwitchGas), Some(switch_gas));
+                    return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
                 }
             }
 
             let ceiling_padding = current_depth - ceiling;
 
             // within deco window
-            if ceiling_padding <= DEFAULT_CEILING_WINDOW {
-                return (Some(DecoAction::Stop), None);
-            }
-            // below deco window
-            else if ceiling_padding > DEFAULT_CEILING_WINDOW {
-                // ascent to next gas switch depth if next gas' MOD below ceiling
-                if let Some(next_switch_gas) = next_switch_gas {
-                    return (Some(DecoAction::AscentToGasSwitchDepth), Some(next_switch_gas));
+            if ceiling_padding >= 0. {
+                if ceiling_padding <= DEFAULT_CEILING_WINDOW {
+                    return Ok((Some(DecoAction::Stop), None));
                 }
-                return (Some(DecoAction::AscentToCeil), None);
+                // below deco window
+                else if ceiling_padding > DEFAULT_CEILING_WINDOW {
+                    // ascent to next gas switch depth if next gas' MOD below ceiling
+                    if let Some(next_switch_gas) = next_switch_gas {
+                        return Ok((Some(DecoAction::AscentToGasSwitchDepth), Some(next_switch_gas)));
+                    }
+                    return Ok((Some(DecoAction::AscentToCeil), None));
+                }
+            } else {
+                return Err(MissedDecoStopViolation);
             }
-            // @todo panic if deco stop violated?
         }
 
-        (None, None)
+        Ok((None, None))
     }
 
     /// check next deco gas in deco (the one with lowest MOD while more oxygen-rich than current)
