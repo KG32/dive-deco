@@ -130,9 +130,9 @@ impl DecoModel for BuehlmannModel {
         if self.sim && self.sim_type.clone().unwrap() == SimType::Calc {
             ceiling_type = CeilingType::Actual;
         }
-        if self.sim_type.clone() == Some(SimType::Recovery) {
-            ceiling_type = CeilingType::Actual;
-        }
+        // if self.sim_type.clone() == Some(SimType::Recovery) {
+        //     ceiling_type = CeilingType::Actual;
+        // }
         // if self.sim {
         //     ceiling_type = CeilingType::Actual;
         // }
@@ -145,9 +145,17 @@ impl DecoModel for BuehlmannModel {
                 let mut sim_model = self.fork(Some(SimType::Calc));
                 let sim_gas = sim_model.dive_state().gas;
                 let mut adaptive_ceiling = sim_model.ceiling();
+                // below ceiling at start
+                // let mut missed_ceiling = false;
+                // let sim_depth = sim_model.dive_state().depth;
+                // if sim_depth < adaptive_ceiling {
+                //     // missed_ceiling = true;
+                //     // sim_model.record(adaptive_ceiling, 0, &sim_gas);
+
+                // }
                 loop {
                     let sim_depth = sim_model.dive_state().depth;
-                    if (sim_depth > 0.) || (sim_depth <= adaptive_ceiling) {
+                    if (!(sim_depth > 0.)) || (sim_depth <= adaptive_ceiling) {
                         break;
                     }
                     sim_model.record_travel_with_rate(adaptive_ceiling, deco_ascent_rate, &sim_gas);

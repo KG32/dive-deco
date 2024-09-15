@@ -1,4 +1,4 @@
-use crate::{common::SimType, DecoModel, Depth, Gas, Minutes};
+use crate::{common::SimType, BuehlmannModel, DecoModel, Depth, Gas, Minutes};
 use super::{global_types::MinutesSigned, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
 
 // @todo move to model config
@@ -90,6 +90,7 @@ impl Deco {
                 let _ceiling_pre = recovery_model.ceiling();
                 dbg!(_ceiling_pre);
                 recovery_model.record(self.deco_stop_depth(ceiling), 0, &pre_stage_gas);
+
                 let _ceiling_post = recovery_model.ceiling();
                 dbg!(_ceiling_post);
                 return self.calc(recovery_model, gas_mixes);

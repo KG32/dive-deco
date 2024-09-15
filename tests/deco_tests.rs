@@ -2,201 +2,201 @@ use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, DecoRuntime, DecoSta
 
 pub mod fixtures;
 
-// #[test]
-// fn test_deco_ascent_no_deco() {
-//     let air = fixtures::gas_air();
-//     let mut model = fixtures::model_default();
-//     model.record(20., 5 * 60, &air);
+#[test]
+fn test_deco_ascent_no_deco() {
+    let air = fixtures::gas_air();
+    let mut model = fixtures::model_default();
+    model.record(20., 5 * 60, &air);
 
-//     let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]);
-//     assert_eq!(deco_stages.len(), 1); // single continuous ascent
-//     assert_eq!(tts, 2); // tts in minutes
-// }
+    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]);
+    assert_eq!(deco_stages.len(), 1); // single continuous ascent
+    assert_eq!(tts, 2); // tts in minutes
+}
 
-// #[test]
-// fn test_deco_single_gas() {
-//     let air = fixtures::gas_air();
-//     let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
-//     model.record(40., 20 * 60, &air);
+#[test]
+fn test_deco_single_gas() {
+    let air = fixtures::gas_air();
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
+    model.record(40., 20 * 60, &air);
 
-//     let DecoRuntime {
-//         deco_stages,
-//         tts,
-//         ..
-//     } = model.deco(vec![air]);
+    let DecoRuntime {
+        deco_stages,
+        tts,
+        ..
+    } = model.deco(vec![air]);
 
-//     assert_eq!(tts, 13);
-//     assert_eq!(deco_stages.len(), 5);
+    assert_eq!(tts, 13);
+    assert_eq!(deco_stages.len(), 5);
 
-//     let expected_deco_stages =  vec![
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 40.0,
-//             end_depth: 6.0,
-//             duration: 226,
-//             gas: air
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::DecoStop,
-//             start_depth: 6.0,
-//             end_depth: 6.0,
-//             duration: 88,
-//             gas: air
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 6.0,
-//             end_depth: 3.0,
-//             duration: 20,
-//             gas: air
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::DecoStop,
-//             start_depth: 3.0,
-//             end_depth: 3.0,
-//             duration: 400,
-//             gas: air
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 3.0,
-//             end_depth: 0.0,
-//             duration: 20,
-//             gas: air
-//         },
-//     ];
+    let expected_deco_stages =  vec![
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 40.0,
+            end_depth: 6.0,
+            duration: 226,
+            gas: air
+        },
+        DecoStage {
+            stage_type: DecoStageType::DecoStop,
+            start_depth: 6.0,
+            end_depth: 6.0,
+            duration: 88,
+            gas: air
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 6.0,
+            end_depth: 3.0,
+            duration: 20,
+            gas: air
+        },
+        DecoStage {
+            stage_type: DecoStageType::DecoStop,
+            start_depth: 3.0,
+            end_depth: 3.0,
+            duration: 400,
+            gas: air
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 3.0,
+            end_depth: 0.0,
+            duration: 20,
+            gas: air
+        },
+    ];
 
-//     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-// }
+    assert_deco_stages_eq(deco_stages, expected_deco_stages);
+}
 
-// #[test]
-// fn test_deco_multi_gas() {
-//     let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
+#[test]
+fn test_deco_multi_gas() {
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
 
-//     let air = Gas::new(0.21, 0.);
-//     let ean_50 = Gas::new(0.50, 0.);
+    let air = Gas::new(0.21, 0.);
+    let ean_50 = Gas::new(0.50, 0.);
 
-//     model.record(40., 20 * 60, &air);
+    model.record(40., 20 * 60, &air);
 
-//     let DecoRuntime {
-//         deco_stages,
-//         tts,
-//         ..
-//     } = model.deco(vec![air, ean_50]);
+    let DecoRuntime {
+        deco_stages,
+        tts,
+        ..
+    } = model.deco(vec![air, ean_50]);
 
-//     let expected_deco_stages =  vec![
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 40.,
-//             end_depth: 22.,
-//             duration: 120,
-//             gas: air
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::GasSwitch,
-//             start_depth: 22.0,
-//             end_depth: 22.0,
-//             duration: 0,
-//             gas: ean_50
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 22.,
-//             end_depth: 6.,
-//             duration: 106,
-//             gas: ean_50
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::DecoStop,
-//             start_depth: 6.0,
-//             end_depth: 6.0,
-//             duration: 34,
-//             gas: ean_50
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 6.0,
-//             end_depth: 3.0,
-//             duration: 20,
-//             gas: ean_50
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::DecoStop,
-//             start_depth: 3.0,
-//             end_depth: 3.0,
-//             duration: 291,
-//             gas: ean_50
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 3.0,
-//             end_depth: 0.0,
-//             duration: 20,
-//             gas: ean_50
-//         },
-//     ];
+    let expected_deco_stages =  vec![
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 40.,
+            end_depth: 22.,
+            duration: 120,
+            gas: air
+        },
+        DecoStage {
+            stage_type: DecoStageType::GasSwitch,
+            start_depth: 22.0,
+            end_depth: 22.0,
+            duration: 0,
+            gas: ean_50
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 22.,
+            end_depth: 6.,
+            duration: 106,
+            gas: ean_50
+        },
+        DecoStage {
+            stage_type: DecoStageType::DecoStop,
+            start_depth: 6.0,
+            end_depth: 6.0,
+            duration: 34,
+            gas: ean_50
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 6.0,
+            end_depth: 3.0,
+            duration: 20,
+            gas: ean_50
+        },
+        DecoStage {
+            stage_type: DecoStageType::DecoStop,
+            start_depth: 3.0,
+            end_depth: 3.0,
+            duration: 291,
+            gas: ean_50
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 3.0,
+            end_depth: 0.0,
+            duration: 20,
+            gas: ean_50
+        },
+    ];
 
-//     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-//     assert_eq!(tts, 10);
-// }
+    assert_deco_stages_eq(deco_stages, expected_deco_stages);
+    assert_eq!(tts, 10);
+}
 
-// #[test]
-// fn test_deco_with_deco_mod_at_bottom() {
-//     let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
-//     let air = Gas::air();
-//     let ean_36 = Gas::new(0.36, 0.);
+#[test]
+fn test_deco_with_deco_mod_at_bottom() {
+    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
+    let air = Gas::air();
+    let ean_36 = Gas::new(0.36, 0.);
 
-//     model.record(30., 30 * 60, &air);
+    model.record(30., 30 * 60, &air);
 
-//     let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air, ean_36]);
+    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air, ean_36]);
 
-//     let expected_deco_stages = vec![
-//         DecoStage {
-//             stage_type: DecoStageType::GasSwitch,
-//             start_depth: 30.0,
-//             end_depth: 30.0,
-//             duration: 0,
-//             gas: ean_36,
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 30.0,
-//             end_depth: 3.0,
-//             duration: 180,
-//             gas: ean_36,
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::DecoStop,
-//             start_depth: 3.0,
-//             end_depth: 3.0,
-//             duration: 268,
-//             gas: ean_36,
-//         },
-//         DecoStage {
-//             stage_type: DecoStageType::Ascent,
-//             start_depth: 3.0,
-//             end_depth: 0.0,
-//             duration: 20,
-//             gas: ean_36
-//         },
-//     ];
-//     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-//     assert_eq!(tts, 8);
-// }
+    let expected_deco_stages = vec![
+        DecoStage {
+            stage_type: DecoStageType::GasSwitch,
+            start_depth: 30.0,
+            end_depth: 30.0,
+            duration: 0,
+            gas: ean_36,
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 30.0,
+            end_depth: 3.0,
+            duration: 180,
+            gas: ean_36,
+        },
+        DecoStage {
+            stage_type: DecoStageType::DecoStop,
+            start_depth: 3.0,
+            end_depth: 3.0,
+            duration: 268,
+            gas: ean_36,
+        },
+        DecoStage {
+            stage_type: DecoStageType::Ascent,
+            start_depth: 3.0,
+            end_depth: 0.0,
+            duration: 20,
+            gas: ean_36
+        },
+    ];
+    assert_deco_stages_eq(deco_stages, expected_deco_stages);
+    assert_eq!(tts, 8);
+}
 
-// #[test]
-// fn test_tts_delta() {
-//     let mut model = fixtures::model_gf((30, 70));
-//     let air = Gas::air();
-//     let ean_50 = Gas::new(0.5, 0.);
-//     let gas_mixes = vec![air, ean_50];
-//     model.record(40., 20 * 60, &air);
-//     let deco_1 = model.deco(gas_mixes.clone());
-//     model.record(40., 5 * 60, &air);
-//     let deco_2 = model.deco(gas_mixes);
-//     assert_eq!(deco_1.tts_at_5, deco_2.tts);
-//     assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as MinutesSigned);
-// }
+#[test]
+fn test_tts_delta() {
+    let mut model = fixtures::model_gf((30, 70));
+    let air = Gas::air();
+    let ean_50 = Gas::new(0.5, 0.);
+    let gas_mixes = vec![air, ean_50];
+    model.record(40., 20 * 60, &air);
+    let deco_1 = model.deco(gas_mixes.clone());
+    model.record(40., 5 * 60, &air);
+    let deco_2 = model.deco(gas_mixes);
+    assert_eq!(deco_1.tts_at_5, deco_2.tts);
+    assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as MinutesSigned);
+}
 
 #[test]
 fn test_runtime_on_missed_stop() {
@@ -211,12 +211,13 @@ fn test_runtime_on_missed_stop() {
     let available_gas_mixes = vec![air, ean_50];
 
     model.record(40., 30 * 60, &air);
-    dbg!("initial ceiling", model.ceiling());
-    let initial_runtime = model.deco(available_gas_mixes.clone());
+    dbg!("ceiling bottom", model.ceiling());
     let new_depth = model.ceiling() - 4.;
+    dbg!("depth while missed", new_depth);
     model.record_travel_with_rate(new_depth, 10., &air);
+
     let ceiling_after_travel_too_shallow = model.ceiling();
-    dbg!(ceiling_after_travel_too_shallow);
+    dbg!("ceiling after ascent too shallow", ceiling_after_travel_too_shallow);
     let runtime_after_missed_deco = model.deco(available_gas_mixes);
     let missed_deco_stop = runtime_after_missed_deco.deco_stages.first().unwrap();
     assert_eq!(missed_deco_stop.stage_type, DecoStageType::DecoStop);
