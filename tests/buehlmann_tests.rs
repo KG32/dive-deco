@@ -190,7 +190,6 @@ fn test_adaptive_ceiling() {
 }
 
 #[test]
-#[ignore = "broken - missed ceiling?"]
 fn test_gradual_ascent_with_deco() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()

@@ -200,12 +200,6 @@ fn test_tts_delta() {
 
 #[test]
 fn test_runtime_on_missed_stop() {
-    let mut model = BuehlmannModel::new(
-        BuehlmannConfig::default()
-            .with_ceiling_type(dive_deco::CeilingType::Adaptive)
-            .with_gradient_factors(30, 70)
-    );
-
     let air = Gas::air();
     let ean_50 = Gas::new(0.50, 0.);
     let available_gas_mixes = vec![air, ean_50];

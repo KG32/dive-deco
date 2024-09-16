@@ -1,4 +1,6 @@
-use crate::{common::SimType, BuehlmannModel, DecoModel, Depth, Gas, Minutes};
+use std::cmp::Ordering;
+
+use crate::{DecoModel, Depth, Gas, Minutes};
 use super::{global_types::MinutesSigned, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
 
 // @todo move to model config
@@ -34,7 +36,6 @@ pub struct Deco {
     deco_stages: Vec<DecoStage>,
     tts_seconds: Seconds,
     sim: bool,
-    sim_type: Option<SimType>,
 }
 
 
@@ -54,10 +55,9 @@ pub struct DecoRuntime {
 struct MissedDecoStopViolation;
 
 impl Sim for Deco {
-    fn fork(&self, sim_type: Option<SimType>) -> Self {
+    fn fork(&self) -> Self {
         Self {
             sim: true,
-            sim_type,
             ..self.clone()
         }
     }
@@ -69,7 +69,7 @@ impl Sim for Deco {
 impl Deco {
     pub fn new_sim() -> Self {
         let deco = Self::default();
-        deco.fork(None)
+        deco.fork()
     }
 
     pub fn calc<T: DecoModel + Clone + Sim>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
@@ -86,6 +86,7 @@ impl Deco {
             let ceiling = sim_model.ceiling();
 
             // handle missed deco stop
+            // if missed deco stop, override sim model to depth at the expected stop and rerun the calculation
             let next_deco_action = self.next_deco_action(&sim_model, gas_mixes.clone());
             if let Err(e) = next_deco_action {
                 match e {
@@ -95,10 +96,10 @@ impl Deco {
                     }
                 }
             }
-            let (deco_action, next_switch_gas) = next_deco_action.unwrap();
-            let mut deco_stages: Vec<DecoStage> = vec![];
 
             // handle deco actions
+            let mut deco_stages: Vec<DecoStage> = vec![];
+            let (deco_action, next_switch_gas) = next_deco_action.unwrap();
             match deco_action {
                 // deco obligation cleared
                 None => { break; },
@@ -227,39 +228,41 @@ impl Deco {
         }
 
         let ceiling = sim_model.ceiling();
-        if !(ceiling > 0.) {
-            // no deco obligations - linear ascent
-            return Ok((Some(DecoAction::AscentToCeil), None));
-        } else {
-            // check next switch gas
-            let next_switch_gas = self.next_switch_gas(current_depth, &current_gas, gas_mixes, surface_pressure);
-            // check if within mod @todo min operational depth
-            if let Some(switch_gas) = next_switch_gas {
-                //switch gas without ascent if within mod of next deco gas
-                let gas_mod = switch_gas.max_operating_depth(1.6);
-                let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
-                if (switch_gas != current_gas) && (current_depth <= gas_mod) && (gas_end <= DEFAULT_MAX_END_DEPTH) {
-                    return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
+
+        match ceiling.partial_cmp(&0.) {
+            Some(Ordering::Equal | Ordering::Less) => {
+                Ok((Some(DecoAction::AscentToCeil), None))
+            },
+            Some(Ordering::Greater) => {
+                // check if deco violation
+                if current_depth < self.deco_stop_depth(ceiling) {
+                    return Err(MissedDecoStopViolation);
                 }
-            }
 
-            // check if deco violation
-            if current_depth < self.deco_stop_depth(ceiling) {
-                return Err(MissedDecoStopViolation);
-            }
-
-
-            let ceiling_padding = current_depth - ceiling;
-            // within deco window
-            if ceiling_padding <= DEFAULT_CEILING_WINDOW {
-                return Ok((Some(DecoAction::Stop), None));
-            } else {
-                // ascent to next gas switch depth if next gas' MOD below ceiling
-                if let Some(next_switch_gas) = next_switch_gas {
-                    return Ok((Some(DecoAction::AscentToGasSwitchDepth), Some(next_switch_gas)));
+                let next_switch_gas = self.next_switch_gas(current_depth, &current_gas, gas_mixes, surface_pressure);
+                // check if within mod @todo min operational depth
+                if let Some(switch_gas) = next_switch_gas {
+                    //switch gas without ascent if within mod of next deco gas
+                    let gas_mod = switch_gas.max_operating_depth(1.6);
+                    let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
+                    if (switch_gas != current_gas) && (current_depth <= gas_mod) && (gas_end <= DEFAULT_MAX_END_DEPTH) {
+                        return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
+                    }
                 }
-                return Ok((Some(DecoAction::AscentToCeil), None));
-            }
+
+                // check if within or below deco stop window
+                let ceiling_padding = current_depth - ceiling;
+                if ceiling_padding <= DEFAULT_CEILING_WINDOW {
+                    Ok((Some(DecoAction::Stop), None))
+                } else {
+                    // ascent to next gas switch depth if next gas' MOD below ceiling
+                    if let Some(next_switch_gas) = next_switch_gas {
+                        return Ok((Some(DecoAction::AscentToGasSwitchDepth), Some(next_switch_gas)));
+                    }
+                    Ok((Some(DecoAction::AscentToCeil), None))
+                }
+            },
+            None => panic!("Ceiling and depth uncomparable"),
         }
     }
 
