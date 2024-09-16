@@ -1,6 +1,6 @@
 [package]
 name = "dive-deco"
-version = "3.3.0"
+version = "3.4.0"
 edition = "2021"
 license = "MIT"
 description = "A dive decompression models library (Buehlmann ZH-L 16C)"

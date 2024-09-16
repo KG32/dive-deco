@@ -1,4 +1,4 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, DecoRuntime, DecoStage, DecoStageType, Gas, MinutesSigned};
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, DecoRuntime, DecoStage, DecoStageType, Depth, Gas, MinutesSigned};
 
 pub mod fixtures;
 
@@ -76,7 +76,7 @@ fn test_deco_multi_gas() {
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
 
-    model.record(40.0001, 20 * 60, &air);
+    model.record(40., 20 * 60, &air);
 
     let DecoRuntime {
         deco_stages,
@@ -87,7 +87,7 @@ fn test_deco_multi_gas() {
     let expected_deco_stages =  vec![
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: 40.0001,
+            start_depth: 40.,
             end_depth: 22.,
             duration: 120,
             gas: air
@@ -196,6 +196,52 @@ fn test_tts_delta() {
     let deco_2 = model.deco(gas_mixes);
     assert_eq!(deco_1.tts_at_5, deco_2.tts);
     assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as MinutesSigned);
+}
+
+#[test]
+fn test_runtime_on_missed_stop() {
+    let air = Gas::air();
+    let ean_50 = Gas::new(0.50, 0.);
+    let available_gas_mixes = vec![air, ean_50];
+
+    let configs = vec![
+        BuehlmannConfig::default()
+            .with_ceiling_type(dive_deco::CeilingType::Actual)
+            .with_gradient_factors(30, 70),
+        BuehlmannConfig::default()
+            .with_ceiling_type(dive_deco::CeilingType::Adaptive)
+            .with_gradient_factors(30, 70)
+    ];
+
+    for config in configs.into_iter() {
+        let mut model = BuehlmannModel::new(config);
+        model.record(40., 30 * 60, &air);
+        model.record(22., 0, &air);
+        let initial_deco = model.deco(available_gas_mixes.clone());
+        // 21
+        let initial_deco_stop_depth = get_first_deco_stop_depth(initial_deco);
+
+        // between stop and ceiling (18 - 21)
+        model.record(20., 0, &air);
+        let between_deco = model.deco(available_gas_mixes.clone());
+        let between_deco_stop_depth = get_first_deco_stop_depth(between_deco);
+
+        // below
+        model.record(15., 0, &air);
+        let below_deco = model.deco(available_gas_mixes.clone());
+        let below_deco_stop_depth = get_first_deco_stop_depth(below_deco);
+
+        assert_eq!(initial_deco_stop_depth, between_deco_stop_depth, "below deco stop, above ceiling");
+        assert_eq!(initial_deco_stop_depth, below_deco_stop_depth, "below ceiling");
+    }
+}
+
+fn get_first_deco_stop_depth(deco: DecoRuntime) -> Option<Depth> {
+    let first_stop = deco.deco_stages.into_iter().find(|stage| stage.stage_type == DecoStageType::DecoStop);
+    if let Some(stop) = first_stop {
+        return Some(stop.start_depth);
+    }
+    None
 }
 
 fn assert_deco_stages_eq(deco_stages: Vec<DecoStage>, expected_deco_stages: Vec<DecoStage>) {

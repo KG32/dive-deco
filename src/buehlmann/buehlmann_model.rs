@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
+
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, Seconds, RecordData};
+use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::{CeilingType, DecoRuntime, GradientFactors, Sim};
@@ -115,7 +117,6 @@ impl DecoModel for BuehlmannModel {
                 break;
             }
         }
-
         ndl
     }
 
@@ -125,9 +126,10 @@ impl DecoModel for BuehlmannModel {
             mut ceiling_type,
             ..
         } = self.config();
-        if self.sim {
+        if self.sim  {
             ceiling_type = CeilingType::Actual;
         }
+
         let leading_comp: &Compartment = self.leading_comp();
         let mut ceiling = match ceiling_type {
             CeilingType::Actual => {
@@ -136,17 +138,22 @@ impl DecoModel for BuehlmannModel {
             CeilingType::Adaptive => {
                 let mut sim_model = self.fork();
                 let sim_gas = sim_model.dive_state().gas;
-                let mut adaptive_ceiling = sim_model.ceiling();
+                let mut calculated_ceiling = sim_model.ceiling();
                 loop {
                     let sim_depth = sim_model.dive_state().depth;
-                    if !(sim_depth > 0.) || (sim_depth <= adaptive_ceiling) {
+                    let sim_depth_cmp = sim_depth.partial_cmp(&0.);
+                    let sim_depth_at_surface = match sim_depth_cmp {
+                        Some(Ordering::Equal | Ordering::Less) => true,
+                        Some(Ordering::Greater) => false,
+                        None => panic!("Simulation depth incomparable to surface")
+                    };
+                    if sim_depth_at_surface || sim_depth <= calculated_ceiling {
                         break;
                     }
-                    sim_model.record_travel_with_rate(adaptive_ceiling, deco_ascent_rate, &sim_gas);
-                    adaptive_ceiling = sim_model.ceiling();
+                    sim_model.record_travel_with_rate(calculated_ceiling, deco_ascent_rate, &sim_gas);
+                    calculated_ceiling = sim_model.ceiling();
                 }
-
-                adaptive_ceiling
+                calculated_ceiling
             }
         };
 
@@ -159,7 +166,6 @@ impl DecoModel for BuehlmannModel {
 
     fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
         let mut deco = Deco::default();
-        
         deco.calc(self.fork(), gas_mixes)
 
     }
