@@ -205,6 +205,6 @@ fn test_gradual_ascent_with_deco() {
             break;
         }
         model.record_travel_with_rate(depth - 3., 10., &air);
-        model.deco(vec![air, ean50]);
+        model.deco(vec![air, ean50]).unwrap();
     }
 }

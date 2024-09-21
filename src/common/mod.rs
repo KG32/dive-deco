@@ -24,7 +24,7 @@ pub use global_types::{
     CeilingType,
 };
 pub use record::RecordData;
-pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime};
+pub use deco::{Deco, DecoStage, DecoStageType, DecoRuntime, DecoCalculationError};
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use ox_tox::OxTox;
 pub use sim::Sim;

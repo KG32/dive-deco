@@ -1,6 +1,6 @@
 use crate::common::{AscentRatePerMinute, CNSPercent, Depth, Gas, Minutes, Seconds};
 use crate::common::global_types::{CeilingType, MbarPressure};
-use crate::common::deco::DecoRuntime;
+use crate::common::deco::{DecoRuntime, DecoCalculationError};
 use crate::common::ox_tox::OxTox;
 
 #[derive(Debug, PartialEq)]
@@ -56,7 +56,7 @@ pub trait DecoModel {
     fn ceiling(&self) -> Depth;
 
     /// deco stages, TTL
-    fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime;
+    fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>;
 
     /// central nervous system oxygen toxicity
     fn cns(&self) -> CNSPercent;
@@ -68,7 +68,7 @@ pub trait DecoModel {
             CeilingType::Actual => self.ceiling() > 0.,
             CeilingType::Adaptive => {
                 let current_gas = self.dive_state().gas;
-                let runtime = self.deco(vec![current_gas]);
+                let runtime = self.deco(vec![current_gas]).unwrap();
                 let deco_stages = runtime.deco_stages;
                 deco_stages.len() > 1
             },
