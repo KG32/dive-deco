@@ -333,13 +333,13 @@ impl Deco {
         DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
     }
 
-    fn validate_gas_mixes<T: DecoModel>(&self, deco_model: &T, gas_mixes: &Vec<Gas>) -> Result<(), DecoCalculationError> {
-        if gas_mixes.len() == 0 {
+    fn validate_gas_mixes<T: DecoModel>(&self, deco_model: &T, gas_mixes: &[Gas]) -> Result<(), DecoCalculationError> {
+        if gas_mixes.is_empty() {
             return Err(DecoCalculationError::EmptyGasList);
         }
         let current_gas = deco_model.dive_state().gas;
         let current_gas_in_available = gas_mixes.iter().find(|gas_mix| **gas_mix == current_gas);
-        if let None = current_gas_in_available {
+        if current_gas_in_available.is_none() {
             return Err(DecoCalculationError::CurrentGasNotInList);
         }
         Ok(())
