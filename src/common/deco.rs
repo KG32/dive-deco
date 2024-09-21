@@ -403,7 +403,7 @@ mod tests {
     }
 
     #[test]
-    fn should_panic_on_empty_gas_mixes() {
+    fn should_err_on_empty_gas_mixes() {
         let mut deco = Deco::default();
         let deco_model = BuehlmannModel::default();
         let deco_res = deco.calc(deco_model, vec![]);
@@ -411,7 +411,7 @@ mod tests {
     }
 
     #[test]
-    fn should_panic_on_gas_mixes_without_current_mix() {
+    fn should_err_on_gas_mixes_without_current_mix() {
         let mut deco = Deco::default();
         let mut deco_model = BuehlmannModel::default();
         let air = Gas::air();
