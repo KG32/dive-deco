@@ -21,5 +21,6 @@ pub use common::{
     Sim,
     NDLType,
     CeilingType,
+    DecoCalculationError,
 };
 

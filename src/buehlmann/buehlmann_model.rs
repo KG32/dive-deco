@@ -4,7 +4,7 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::{CeilingType, DecoRuntime, GradientFactors, Sim};
+use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim};
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -164,10 +164,9 @@ impl DecoModel for BuehlmannModel {
         ceiling
     }
 
-    fn deco(&self, gas_mixes: Vec<Gas>) -> DecoRuntime {
+    fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError> {
         let mut deco = Deco::default();
         deco.calc(self.fork(), gas_mixes)
-
     }
 
     fn config(&self) -> BuehlmannConfig {

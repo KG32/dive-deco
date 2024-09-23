@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 use crate::{DecoModel, Depth, Gas, Minutes};
 use super::{global_types::MinutesSigned, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
@@ -22,7 +22,7 @@ pub enum DecoStageType {
     GasSwitch
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DecoStage {
     pub stage_type: DecoStageType,
     pub start_depth: Depth,
@@ -39,7 +39,7 @@ pub struct Deco {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DecoRuntime {
     // runtime
     pub deco_stages: Vec<DecoStage>,
@@ -53,6 +53,23 @@ pub struct DecoRuntime {
 
 #[derive(Debug)]
 struct MissedDecoStopViolation;
+
+#[derive(Debug, PartialEq)]
+pub enum DecoCalculationError {
+    EmptyGasList,
+    CurrentGasNotInList,
+}
+
+impl fmt::Display for DecoCalculationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            DecoCalculationError::EmptyGasList =>
+                write!(f, "At least one available gas mix required"),
+            DecoCalculationError::CurrentGasNotInList =>
+                write!(f, "Avaibalbe gas mixes must include current gas mix used by deco model"),
+        }
+    }
+}
 
 impl Sim for Deco {
     fn fork(&self) -> Self {
@@ -72,7 +89,10 @@ impl Deco {
         deco.fork()
     }
 
-    pub fn calc<T: DecoModel + Clone + Sim>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> DecoRuntime {
+    pub fn calc<T: DecoModel + Clone + Sim>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError> {
+        // validate gas mixes
+        Self::validate_gas_mixes(&deco_model, &gas_mixes)?;
+
         // run model simulation until no deco stages
         let mut sim_model: T = deco_model.clone();
         let ascent_rate = sim_model.config().deco_ascent_rate();
@@ -201,17 +221,17 @@ impl Deco {
             let mut nested_sim_model = deco_model.clone();
             let DiveState { depth: sim_depth, gas: sim_gas, .. } = nested_sim_model.dive_state();
             nested_sim_model.record(sim_depth, 5 * 60, &sim_gas);
-            let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone());
+            let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone()).unwrap();
             tts_at_5 = nested_deco.tts;
             tts_delta_at_5 = tts_at_5 as MinutesSigned - tts as MinutesSigned;
         }
 
-        DecoRuntime {
+        Ok(DecoRuntime {
             deco_stages: self.deco_stages.clone(),
             tts,
             tts_at_5,
             tts_delta_at_5,
-        }
+        })
     }
 
     fn next_deco_action(
@@ -312,11 +332,24 @@ impl Deco {
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
         DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
     }
+
+    fn validate_gas_mixes<T: DecoModel>(deco_model: &T, gas_mixes: &[Gas]) -> Result<(), DecoCalculationError> {
+        if gas_mixes.is_empty() {
+            return Err(DecoCalculationError::EmptyGasList);
+        }
+        let current_gas = deco_model.dive_state().gas;
+        let current_gas_in_available = gas_mixes.iter().find(|gas_mix| **gas_mix == current_gas);
+        if current_gas_in_available.is_none() {
+            return Err(DecoCalculationError::CurrentGasNotInList);
+        }
+        Ok(())
+    }
 }
 
 
 #[cfg(test)]
 mod tests {
+    use crate::BuehlmannModel;
     use super::*;
 
     #[test]
@@ -367,5 +400,25 @@ mod tests {
             let res = deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
             assert_eq!(res, expected_switch_gas);
         }
+    }
+
+    #[test]
+    fn should_err_on_empty_gas_mixes() {
+        let mut deco = Deco::default();
+        let deco_model = BuehlmannModel::default();
+        let deco_res = deco.calc(deco_model, vec![]);
+        assert_eq!(deco_res, Err(DecoCalculationError::EmptyGasList));
+    }
+
+    #[test]
+    fn should_err_on_gas_mixes_without_current_mix() {
+        let mut deco = Deco::default();
+        let mut deco_model = BuehlmannModel::default();
+        let air = Gas::air();
+        let ean50 = Gas::new(0.50, 0.);
+        let tmx2135 = Gas::new(0.21, 0.35);
+        deco_model.record_travel_with_rate(40., 10., &air);
+        let deco_res = deco.calc(deco_model, vec![ean50, tmx2135]);
+        assert_eq!(deco_res, Err(DecoCalculationError::CurrentGasNotInList));
     }
 }

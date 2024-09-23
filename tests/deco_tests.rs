@@ -8,7 +8,7 @@ fn test_deco_ascent_no_deco() {
     let mut model = fixtures::model_default();
     model.record(20., 5 * 60, &air);
 
-    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]);
+    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air]).unwrap();
     assert_eq!(deco_stages.len(), 1); // single continuous ascent
     assert_eq!(tts, 2); // tts in minutes
 }
@@ -23,7 +23,7 @@ fn test_deco_single_gas() {
         deco_stages,
         tts,
         ..
-    } = model.deco(vec![air]);
+    } = model.deco(vec![air]).unwrap();
 
     assert_eq!(tts, 13);
     assert_eq!(deco_stages.len(), 5);
@@ -82,7 +82,7 @@ fn test_deco_multi_gas() {
         deco_stages,
         tts,
         ..
-    } = model.deco(vec![air, ean_50]);
+    } = model.deco(vec![air, ean_50]).unwrap();
 
     let expected_deco_stages =  vec![
         DecoStage {
@@ -148,7 +148,7 @@ fn test_deco_with_deco_mod_at_bottom() {
 
     model.record(30., 30 * 60, &air);
 
-    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air, ean_36]);
+    let DecoRuntime { deco_stages, tts, .. } = model.deco(vec![air, ean_36]).unwrap();
 
     let expected_deco_stages = vec![
         DecoStage {
@@ -191,9 +191,9 @@ fn test_tts_delta() {
     let ean_50 = Gas::new(0.5, 0.);
     let gas_mixes = vec![air, ean_50];
     model.record(40., 20 * 60, &air);
-    let deco_1 = model.deco(gas_mixes.clone());
+    let deco_1 = model.deco(gas_mixes.clone()).unwrap();
     model.record(40., 5 * 60, &air);
-    let deco_2 = model.deco(gas_mixes);
+    let deco_2 = model.deco(gas_mixes).unwrap();
     assert_eq!(deco_1.tts_at_5, deco_2.tts);
     assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as MinutesSigned);
 }
@@ -217,18 +217,18 @@ fn test_runtime_on_missed_stop() {
         let mut model = BuehlmannModel::new(config);
         model.record(40., 30 * 60, &air);
         model.record(22., 0, &air);
-        let initial_deco = model.deco(available_gas_mixes.clone());
+        let initial_deco = model.deco(available_gas_mixes.clone()).unwrap();
         // 21
         let initial_deco_stop_depth = get_first_deco_stop_depth(initial_deco);
 
         // between stop and ceiling (18 - 21)
         model.record(20., 0, &air);
-        let between_deco = model.deco(available_gas_mixes.clone());
+        let between_deco = model.deco(available_gas_mixes.clone()).unwrap();
         let between_deco_stop_depth = get_first_deco_stop_depth(between_deco);
 
         // below
         model.record(15., 0, &air);
-        let below_deco = model.deco(available_gas_mixes.clone());
+        let below_deco = model.deco(available_gas_mixes.clone()).unwrap();
         let below_deco_stop_depth = get_first_deco_stop_depth(below_deco);
 
         assert_eq!(initial_deco_stop_depth, between_deco_stop_depth, "below deco stop, above ceiling");

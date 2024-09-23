@@ -128,25 +128,32 @@ model.record_travel(target_depth, time, &nitrox);
 All decompression stages calculated to clear deco obligations and resurface in a most efficient way - a partial deco runtime from current model state to resurfacing.
 
 ```text
-  .deco(Vec<Gas>) -> DecoRuntime {
+  .deco(Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>
+
+  <!-- DecoRuntime {
     deco_stages: Vec<DecoStage>,
     tts: u64,
     tts_at_5: u64,
     tts_delta_at_5: i64
+  } -->
 ```
 
-- `DecoStage`
-  - `stage_type` (enum)
-    - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
-    - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
-    - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
-  - `start_depth` - depth at which deco stage started
-  - `end_depth` - depth at which deco stage ended
-- `duration` - duration of deco stage in seconds
-- `tts` - current time to surface in minutes. The least amount of time possible to surface without violating decompression obligations according to the current model. Includes the duration of all necessary deco stops (assuming switching to most optimal decompression gas) and travel time between them
-- `tts_at_5` (aka @+5) - TTS in 5 minutes assuming constant depth and gas mix
-- `tts_delta_at_5` (aka Δ+5) - absolute change in TTS after 5 mins assuming constant depth and gas mix
-
+- `DecoRuntime`
+  - `deco_stages (DecoStage)`
+    - `stage_type` (enum)
+      - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
+      - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
+      - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
+    - `start_depth` - depth at which deco stage started
+    - `end_depth` - depth at which deco stage ended
+  - `duration` - duration of deco stage in seconds
+  - `tts` - current time to surface in minutes. The least amount of time possible to surface without violating decompression obligations according to the current model. Includes the duration of all necessary deco stops (assuming switching to most optimal decompression gas) and travel time between them
+  - `tts_at_5` (aka @+5) - TTS in 5 minutes assuming constant depth and gas mix
+  - `tts_delta_at_5` (aka Δ+5) - absolute change in TTS after 5 mins assuming constant depth and gas mix
+- `DecoCalculationError`
+  - `EmptyGasList` - occurs when available gasses vector is empty
+  - `CurrentGasNotInList` - occurs when provided available list doesn't include gas currently in use according to deco model's state
+  -
 ```rust
     let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
     let mut model = BuehlmannModel::new(config);
