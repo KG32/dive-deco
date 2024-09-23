@@ -91,7 +91,7 @@ impl Deco {
 
     pub fn calc<T: DecoModel + Clone + Sim>(&mut self, deco_model: T, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError> {
         // validate gas mixes
-        self.validate_gas_mixes(&deco_model, &gas_mixes)?;
+        Self::validate_gas_mixes(&deco_model, &gas_mixes)?;
 
         // run model simulation until no deco stages
         let mut sim_model: T = deco_model.clone();
@@ -333,7 +333,7 @@ impl Deco {
         DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
     }
 
-    fn validate_gas_mixes<T: DecoModel>(&self, deco_model: &T, gas_mixes: &[Gas]) -> Result<(), DecoCalculationError> {
+    fn validate_gas_mixes<T: DecoModel>(deco_model: &T, gas_mixes: &[Gas]) -> Result<(), DecoCalculationError> {
         if gas_mixes.is_empty() {
             return Err(DecoCalculationError::EmptyGasList);
         }
