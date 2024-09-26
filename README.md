@@ -90,7 +90,7 @@ Current config options:
 A DecoModel trait method that represents a single model record as a datapoint.
 
 - `.record(depth, time, gas)`
-  - depth - current depth in msw
+  - depth - current depth in meters
   - time - duration in seconds
   - gas - breathing mix used for the duration of this record
 
@@ -98,7 +98,7 @@ A DecoModel trait method that represents a single model record as a datapoint.
 let depth = 20.;
 let time = 1; // 1 second
 let nitrox = Gas::new(0.32, 0.);
-// register 1 second at 20 msw breathing nitrox 32
+// register 1 second at 20m breathing nitrox 32
 model.record(depth, time, &nitrox);
 ```
 
@@ -322,7 +322,7 @@ fn main() {
 
 Minimum theoretical depth that can be reached at the moment without breaking the decompression obligation. In case of Buehlmann algorithm, a depth restricted by M-value given leading tissue saturation and gradient factors setting.
 
-- `ceiling()` - current decompression ceiling in msw, given current model state and gradient factors settings
+- `ceiling()` - current decompression ceiling in meters, given current model state and gradient factors settings
 
 ```rust
 use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
@@ -351,7 +351,7 @@ Current tissue oversaturation as gradient factors.
   - gf_surf (f64) - Surface GF, current oversaturation relative to surface pressure
 
 ```rust
-  // given model state after 120 seconds at 40 msw breathing air
+  // given model state after 120 seconds at 40 meters breathing air
   // (...)
 
   // on-gassing, gf99: 0%, surfGF: 71%
@@ -369,6 +369,19 @@ Measure (%) of accumulated exposure to elevated oxygen partial pressure in relat
   // given model
   // (...)
   let cns = model.cns(); // 32.5
+```
+
+##### OTU (Oxygen Toxicity Units) / UPTD (unit pulmonary toxic dose)
+
+Pulmonary oxygen toxicity which concerns the effects to the lungs of long-term exposures
+to oxygen at elevated partial pressures presented as units (1 OTU = 100% O2 @ 1bar equivalent).
+
+- `otu()` - OTU
+
+```rust
+  // given model
+  // (...)
+  let cns = model.otu(); // 78.43
 ```
 
 ---

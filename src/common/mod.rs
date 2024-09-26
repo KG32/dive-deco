@@ -19,7 +19,7 @@ pub use global_types::{
     GradientFactor,
     MbarPressure,
     AscentRatePerMinute,
-    CNSPercent,
+    Cns,
     NDLType,
     CeilingType,
 };

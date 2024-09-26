@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::common::{AscentRatePerMinute, CNSPercent, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds};
+use crate::common::{AscentRatePerMinute, Cns, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds};
 use crate::buehlmann::zhl_values::{ZHL_16C_N2_16A_HE_VALUES, ZHLParams};
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim};
@@ -183,7 +183,7 @@ impl DecoModel for BuehlmannModel {
         }
     }
 
-    fn cns(&self) -> CNSPercent {
+    fn cns(&self) -> Cns {
         self.state.ox_tox.cns()
     }
 

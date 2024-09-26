@@ -7,7 +7,8 @@ pub type GradientFactor = u8;
 pub type GradientFactors = (u8, u8);
 pub type MbarPressure = u16;
 pub type AscentRatePerMinute = f64;
-pub type CNSPercent = f64;
+pub type Cns = f64;
+pub type Otu = f64;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NDLType {
