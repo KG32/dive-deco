@@ -1,4 +1,4 @@
-use crate::common::{AscentRatePerMinute, CNSPercent, Depth, Gas, Minutes, Seconds};
+use crate::common::{AscentRatePerMinute, Cns, Depth, Gas, Minutes, Seconds};
 use crate::common::global_types::{CeilingType, MbarPressure};
 use crate::common::deco::{DecoRuntime, DecoCalculationError};
 use crate::common::ox_tox::OxTox;
@@ -59,7 +59,7 @@ pub trait DecoModel {
     fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>;
 
     /// central nervous system oxygen toxicity
-    fn cns(&self) -> CNSPercent;
+    fn cns(&self) -> Cns;
 
     /// is in deco check
     fn in_deco(&self) -> bool {
