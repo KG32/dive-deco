@@ -35,7 +35,12 @@ impl OxTox {
         self.otu
     }
 
-    pub fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+    pub fn recalculate(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+        self.recalculate_cns(record, surface_pressure);
+        self.recalculate_otu(record, surface_pressure);
+    }
+
+    fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         let RecordData { depth, time, gas } = *record;
 
         let pp_o2 = gas
@@ -61,7 +66,7 @@ impl OxTox {
         }
     }
 
-    pub fn recalculate_otu(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+    fn recalculate_otu(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         let RecordData { depth, time, gas } = *record;
         let pp_o2 = gas
             .inspired_partial_pressures(depth, surface_pressure)
@@ -194,13 +199,11 @@ mod tests {
     fn test_otu_segment() {
         let mut ox_tox = OxTox::default();
         let ean32 = Gas::new(0.32, 0.);
-
         let record = RecordData {
             depth: 36.,
             time: 22 * 60,
             gas: &ean32
         };
-
         ox_tox.recalculate_otu(&record, 1013);
         assert_eq!(ox_tox.otu(), 37.75920807052313);
     }

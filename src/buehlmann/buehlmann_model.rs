@@ -187,6 +187,10 @@ impl DecoModel for BuehlmannModel {
         self.state.ox_tox.cns()
     }
 
+    fn otu(&self) -> Cns {
+        self.state.ox_tox.otu()
+    }
+
     // deprecated
 
     fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas) {
@@ -267,7 +271,7 @@ impl BuehlmannModel {
     fn recalculate(&mut self, record: RecordData) {
         self.recalculate_compartments(&record);
         // todo skip on sim
-        self.recalculate_cns(&record);
+        self.recalculate_ox_tox(&record);
     }
 
     fn recalculate_compartments(&mut self, record: &RecordData) {
@@ -285,8 +289,8 @@ impl BuehlmannModel {
         leading.recalculate(&recalc_record, max_gf, surface_pressure);
     }
 
-    fn recalculate_cns(&mut self, record: &RecordData) {
-        self.state.ox_tox.recalculate_cns(record, self.config().surface_pressure);
+    fn recalculate_ox_tox(&mut self, record: &RecordData) {
+        self.state.ox_tox.recalculate(record, self.config().surface_pressure);
     }
 
     fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {

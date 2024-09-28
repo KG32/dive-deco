@@ -20,6 +20,7 @@ pub use global_types::{
     MbarPressure,
     AscentRatePerMinute,
     Cns,
+    Otu,
     NDLType,
     CeilingType,
 };

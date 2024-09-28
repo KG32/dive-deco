@@ -208,3 +208,13 @@ fn test_gradual_ascent_with_deco() {
         model.deco(vec![air, ean50]).unwrap();
     }
 }
+
+
+#[test]
+fn test_cns_otu() {
+    let mut model = BuehlmannModel::default();
+    model.record(40., 10 * 60, &Gas::air());
+    model.record_travel_with_rate(0., 10., &Gas::air());
+    assert_close_to_abs!(model.cns(), 4., 1.);
+    assert_close_to_abs!(model.otu(), 13., 1.);
+}
