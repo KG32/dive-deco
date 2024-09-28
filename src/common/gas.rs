@@ -10,7 +10,7 @@ pub struct Gas {
     he_pp: Pressure,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub struct PartialPressures {
     pub o2: Pressure,
     pub n2: Pressure,
@@ -20,6 +20,12 @@ pub struct PartialPressures {
 pub enum InertGas {
     Helium,
     Nitrogen
+}
+
+impl ToString for Gas {
+    fn to_string(&self) -> String {
+        format!("{}/{}", self.o2_pp * 100., self.he_pp * 100.)
+    }
 }
 
 impl Gas {
@@ -40,6 +46,10 @@ impl Gas {
             he_pp,
             n2_pp: ((1. - (o2_pp + he_pp)) * 100.0).round() / 100.0,
         }
+    }
+
+    pub fn id(&self) -> String {
+        self.to_string()
     }
 
     /// gas partial pressures
@@ -174,5 +184,13 @@ mod tests {
             let calculated_end = tmx.equivalent_narcotic_depth(depth);
             assert_eq!(calculated_end, expected_end);
         }
+    }
+
+    #[test]
+    fn test_id() {
+        let ean32 = Gas::new(0.32, 0.);
+        assert_eq!(ean32.id(), "32/0");
+        let tmx2135 = Gas::new(0.21, 0.35);
+        assert_eq!(tmx2135.id(), "21/35");
     }
 }

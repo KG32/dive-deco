@@ -9,18 +9,20 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Features
 
 - step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas (incl. helium mixes)
+- NDL (no-decompression limit)
 - GF (gradient factors) ascent profile conservatism
 - current deco runtime / deco stop planner
   - decompression stages as a runtime based on current model state
   - TTS (current time to surface including ascent and all decompression stops)
   - TTS @+5 (TTS after 5 mins given constant depth and breathing mix)
   - TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
-- NDL (no-decompression limit)
-- decompression ceiling
+- ceiling
 - supersaturation
   - GF99 (the raw percentage of the Bühlmann supersaturation at the current depth, i.e. super-saturation percent gradient)
   - GFsurf(the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
-- CNS (central nervous system toxicity)
+- oxygen toxicity
+  - CNS (central nervous system toxicity)
+  - OTU (pulmonary oxygen toxicity)
 - configurable model settings
   - gradient factors
   - surface pressure
