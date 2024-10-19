@@ -236,6 +236,10 @@ impl BuehlmannModel {
         Supersaturation { gf_99: acc_gf_99, gf_surf: acc_gf_surf }
     }
 
+    pub fn tissues(&self) -> Vec<Compartment> {
+        self.compartments.clone()
+    }
+
     fn leading_comp(&self) -> &Compartment {
         let mut leading_comp: &Compartment = &self.compartments[0];
         for compartment in &self.compartments[1..] {
@@ -262,7 +266,7 @@ impl BuehlmannModel {
     fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
-            let compartment = Compartment::new(i + 1, comp_values, config);
+            let compartment = Compartment::new(i as u8 + 1, comp_values, config);
             compartments.push(compartment);
         }
         self.compartments = compartments;
@@ -285,8 +289,10 @@ impl BuehlmannModel {
         let BuehlmannConfig { gf, surface_pressure, .. } = self.config;
         let max_gf = self.max_gf(gf, record.depth);
         let leading = self.leading_comp_mut();
-        let recalc_record = RecordData { depth: record.depth,  time: 0, gas: record.gas };
-        leading.recalculate(&recalc_record, max_gf, surface_pressure);
+
+        // recalculate leading tissue with max gf
+        let leading_tissue_recalc_record = RecordData { depth: record.depth,  time: 0, gas: record.gas };
+        leading.recalculate(&leading_tissue_recalc_record, max_gf, surface_pressure);
     }
 
     fn recalculate_ox_tox(&mut self, record: &RecordData) {
