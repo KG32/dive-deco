@@ -305,19 +305,38 @@ impl BuehlmannModel {
     }
 
     fn recalculate_compartments(&mut self, record: &RecordData) {
+        let (gf_low, gf_high) = self.config.gf;
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(record, self.config.gf.1, self.config.surface_pressure);
+            compartment.recalculate(record, gf_high, self.config.surface_pressure);
         }
-        self.recalculate_leading_compartment_with_gf(record);
+
+        // recalc
+        if gf_high != gf_low {
+            let max_gf = self.max_gf(self.config.gf, record.depth);
+            match self.config.recalc_all_tissues_m_values {
+                true => self.recalculate_all_tisues_with_gf(record, max_gf),
+                false => self.recalculate_leading_compartment_with_gf(record, max_gf),
+            }
+        }
     }
 
-    fn recalculate_leading_compartment_with_gf(&mut self, record: &RecordData) {
-        let BuehlmannConfig {
-            gf,
-            surface_pressure,
-            ..
-        } = self.config;
-        let max_gf = self.max_gf(gf, record.depth);
+    fn recalculate_all_tisues_with_gf(&mut self, record: &RecordData, max_gf: GradientFactor) {
+        let recalc_record = RecordData {
+            depth: record.depth,
+            time: 0,
+            gas: record.gas,
+        };
+        for compartment in self.compartments.iter_mut() {
+            compartment.recalculate(&recalc_record, max_gf, self.config.surface_pressure);
+        }
+    }
+
+    fn recalculate_leading_compartment_with_gf(
+        &mut self,
+        record: &RecordData,
+        max_gf: GradientFactor,
+    ) {
+        let surface_pressure = self.config.surface_pressure;
         let leading = self.leading_comp_mut();
 
         // recalculate leading tissue with max gf
@@ -451,7 +470,7 @@ mod tests {
 
         model.record(40., 30 * 60, &air);
         model.record(21., 5 * 60, &air);
-        model.record(14., 0 * 60, &air);
+        model.record(14., 0, &air);
         assert_eq!(model.max_gf(gf, 14.), 40);
     }
 

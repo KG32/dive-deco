@@ -17,6 +17,7 @@ pub struct BuehlmannConfig {
     pub deco_ascent_rate: AscentRatePerMinute,
     pub ceiling_type: CeilingType,
     pub round_ceiling: bool,
+    pub recalc_all_tissues_m_values: bool,
 }
 
 impl BuehlmannConfig {
@@ -48,6 +49,11 @@ impl BuehlmannConfig {
         self.round_ceiling = round_ceiling;
         self
     }
+
+    pub fn with_all_m_values_recalculated(mut self, recalc_all_tissues_m_values: bool) -> Self {
+        self.recalc_all_tissues_m_values = recalc_all_tissues_m_values;
+        self
+    }
 }
 
 impl Default for BuehlmannConfig {
@@ -58,6 +64,7 @@ impl Default for BuehlmannConfig {
             deco_ascent_rate: 10.,
             ceiling_type: CeilingType::Actual,
             round_ceiling: false,
+            recalc_all_tissues_m_values: true,
         }
     }
 }

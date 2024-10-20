@@ -138,13 +138,13 @@ fn test_multi_gas_ndl() {
     let air = Gas::new(0.21, 0.);
     let ean_28 = Gas::new(0.28, 0.);
 
-    model.record(30., 0 * 60, &air);
+    model.record(30., 0, &air);
     assert_eq!(model.ndl(), 16);
 
     model.record(30., 10 * 60, &air);
     assert_eq!(model.ndl(), 6);
 
-    model.record(30., 0 * 60, &ean_28);
+    model.record(30., 0, &ean_28);
     assert_eq!(model.ndl(), 10);
 }
 
@@ -152,7 +152,7 @@ fn test_multi_gas_ndl() {
 fn test_ndl_with_gf() {
     let mut model = fixtures::model_gf((70, 70));
     let air = Gas::new(0.21, 0.);
-    model.record(20., 0 * 60, &air);
+    model.record(20., 0, &air);
     assert_eq!(model.ndl(), 21);
 }
 
