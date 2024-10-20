@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::common::CNS_COEFFICIENTS;
-use crate::{Minutes, Pressure, Seconds, RecordData};
+use crate::{Minutes, Pressure, RecordData, Seconds};
 
 use super::global_types::Otu;
 use super::{CNSCoeffRow, Cns, MbarPressure};
@@ -10,8 +10,7 @@ const CNS_ELIMINATION_HALF_TIME_MINUTES: Minutes = 90;
 const CNS_LIMIT_OVER_MAX_PP02: Seconds = 400;
 const OTU_EQUATION_EXPONENT: f64 = -0.8333;
 
-#[derive(Copy, Clone, Debug)]
-#[derive(PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OxTox {
     cns: Cns,
     otu: Otu,
@@ -19,10 +18,7 @@ pub struct OxTox {
 
 impl Default for OxTox {
     fn default() -> Self {
-        Self {
-            cns: 0.,
-            otu: 0.,
-        }
+        Self { cns: 0., otu: 0. }
     }
 }
 
@@ -43,9 +39,7 @@ impl OxTox {
     fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         let RecordData { depth, time, gas } = *record;
 
-        let pp_o2 = gas
-            .inspired_partial_pressures(depth, surface_pressure)
-            .o2;
+        let pp_o2 = gas.inspired_partial_pressures(depth, surface_pressure).o2;
 
         // attempt to assign CNS coefficients by o2 partial pressure
         let coeffs_for_range = self.assign_cns_coeffs(pp_o2);
@@ -68,13 +62,13 @@ impl OxTox {
 
     fn recalculate_otu(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         let RecordData { depth, time, gas } = *record;
-        let pp_o2 = gas
-            .inspired_partial_pressures(depth, surface_pressure)
-            .o2;
+        let pp_o2 = gas.inspired_partial_pressures(depth, surface_pressure).o2;
 
         let otu_delta = match pp_o2.total_cmp(&0.5) {
             Ordering::Less => 0.,
-            Ordering::Equal | Ordering::Greater => (time as f64 / 60.) * (0.5 / (pp_o2 - 0.5)).powf(OTU_EQUATION_EXPONENT),
+            Ordering::Equal | Ordering::Greater => {
+                (time as f64 / 60.) * (0.5 / (pp_o2 - 0.5)).powf(OTU_EQUATION_EXPONENT)
+            }
         };
         self.otu += otu_delta;
     }
@@ -84,7 +78,8 @@ impl OxTox {
         let mut coeffs_for_range: Option<CNSCoeffRow> = None;
         for row in CNS_COEFFICIENTS.into_iter() {
             let row_range = row.0.clone();
-            let in_range_start_exclusive = (&pp_o2 != row_range.start()) && row_range.contains(&pp_o2);
+            let in_range_start_exclusive =
+                (&pp_o2 != row_range.start()) && row_range.contains(&pp_o2);
             if in_range_start_exclusive {
                 coeffs_for_range = Some(row);
                 break;
@@ -95,11 +90,10 @@ impl OxTox {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::Gas;
     use super::*;
+    use crate::Gas;
 
     #[test]
     fn test_default() {
@@ -124,10 +118,8 @@ mod tests {
         for (pp_o2, is_assignable) in assignable_cases.into_iter() {
             let row = ox_tox.assign_cns_coeffs(pp_o2);
             if is_assignable {
-                assert!(
-                    row.unwrap_or_else(||
-                        panic!("row for ppO2 {} not found", pp_o2)
-                    )
+                assert!(row
+                    .unwrap_or_else(|| panic!("row for ppO2 {} not found", pp_o2))
                     .0
                     .contains(&pp_o2));
             } else {
@@ -158,13 +150,24 @@ mod tests {
     fn test_cns_half_time_elimination() {
         let mut ox_tox = OxTox::default();
         // CNS ~50%
-        let record = RecordData { depth: 30., time: (75 * 60), gas: &Gas::new(0.35, 0.) };
+        let record = RecordData {
+            depth: 30.,
+            time: (75 * 60),
+            gas: &Gas::new(0.35, 0.),
+        };
         ox_tox.recalculate_cns(&record, 1013);
         assert_eq!(ox_tox.cns, 48.31898259550245);
         // 2x 90 mins half time
         let mut i = 0;
         while i < 2 {
-            ox_tox.recalculate_cns(&RecordData { depth: 0., time: (90 * 60), gas: &Gas::air() }, 1013);
+            ox_tox.recalculate_cns(
+                &RecordData {
+                    depth: 0.,
+                    time: (90 * 60),
+                    gas: &Gas::air(),
+                },
+                1013,
+            );
             i += 1;
         }
         assert_eq!(ox_tox.cns, 12.079745648875612);
@@ -202,7 +205,7 @@ mod tests {
         let record = RecordData {
             depth: 36.,
             time: 22 * 60,
-            gas: &ean32
+            gas: &ean32,
         };
         ox_tox.recalculate_otu(&record, 1013);
         assert_eq!(ox_tox.otu(), 37.75920807052313);

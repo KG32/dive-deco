@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Gas};
 
 fn main() {
     let mut model = BuehlmannModel::new(BuehlmannConfig::default());

@@ -1,4 +1,4 @@
-use dive_deco::{ BuehlmannModel, BuehlmannConfig, DecoModel, Gas, GradientFactors };
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Gas, GradientFactors};
 
 pub fn model_default() -> BuehlmannModel {
     BuehlmannModel::default()
@@ -18,7 +18,10 @@ pub fn gas_air() -> Gas {
 macro_rules! assert_close_to_abs {
     ($a:expr, $b:expr, $tolerance:expr) => {
         if ($a - $b).abs() > $tolerance {
-            panic!("{} is not close to {} with tolerance of {}", $a, $b, $tolerance);
+            panic!(
+                "{} is not close to {} with tolerance of {}",
+                $a, $b, $tolerance
+            );
         }
     };
 }
@@ -28,7 +31,10 @@ macro_rules! assert_close_to_percent {
     ($a:expr, $b:expr, $tolerance_percent:expr) => {
         let tolerance = $b * ($tolerance_percent / 100.0);
         if ($a - $b).abs() > tolerance {
-            panic!("{} is not close to {} within {} percent tolerance ({})", $a, $b, $tolerance_percent, tolerance);
+            panic!(
+                "{} is not close to {} within {} percent tolerance ({})",
+                $a, $b, $tolerance_percent, tolerance
+            );
         }
     };
 }

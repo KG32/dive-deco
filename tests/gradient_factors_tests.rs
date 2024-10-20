@@ -1,4 +1,4 @@
-use dive_deco::{ DecoModel, Depth, GradientFactors, Minutes };
+use dive_deco::{DecoModel, Depth, GradientFactors, Minutes};
 pub mod fixtures;
 
 #[test]
@@ -8,7 +8,6 @@ fn test_ndl() {
         // 100/100
         ((100, 100), 21., 40),
         ((100, 100), 15., 90),
-
         // 70/70
         ((70, 70), 21., 19),
         ((70, 70), 15., 47),
