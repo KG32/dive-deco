@@ -1,7 +1,7 @@
-use crate::common::{AscentRatePerMinute, Cns, Otu, Depth, Gas, Minutes, Seconds};
+use crate::common::deco::{DecoCalculationError, DecoRuntime};
 use crate::common::global_types::{CeilingType, MbarPressure};
-use crate::common::deco::{DecoRuntime, DecoCalculationError};
 use crate::common::ox_tox::OxTox;
+use crate::common::{AscentRatePerMinute, Cns, Depth, Gas, Minutes, Otu, Seconds};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr<'a> {
@@ -47,7 +47,12 @@ pub trait DecoModel {
     fn record_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas);
 
     /// register linear ascent / descent record given rate
-    fn record_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas);
+    fn record_travel_with_rate(
+        &mut self,
+        target_depth: Depth,
+        rate: AscentRatePerMinute,
+        gas: &Gas,
+    );
 
     /// current non decompression limit (NDL)
     fn ndl(&self) -> Minutes;
@@ -74,18 +79,16 @@ pub trait DecoModel {
                 let runtime = self.deco(vec![current_gas]).unwrap();
                 let deco_stages = runtime.deco_stages;
                 deco_stages.len() > 1
-            },
+            }
         }
     }
 
-
-
-    #[deprecated(since="3.0.0", note="Use record method instead")]
+    #[deprecated(since = "3.0.0", note = "Use record method instead")]
     fn step(&mut self, depth: Depth, time: Seconds, gas: &Gas);
 
-    #[deprecated(since="3.0.0", note="Use record_travel method instead")]
+    #[deprecated(since = "3.0.0", note = "Use record_travel method instead")]
     fn step_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas);
 
-    #[deprecated(since="3.0.0", note="Use record_travel_with_rate method instead")]
+    #[deprecated(since = "3.0.0", note = "Use record_travel_with_rate method instead")]
     fn step_travel_with_rate(&mut self, target_depth: Depth, rate: AscentRatePerMinute, gas: &Gas);
 }

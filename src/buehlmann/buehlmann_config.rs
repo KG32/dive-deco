@@ -1,4 +1,9 @@
-use crate::{common::{AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure}, CeilingType};
+use crate::{
+    common::{
+        AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure,
+    },
+    CeilingType,
+};
 
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
@@ -98,21 +103,24 @@ impl BuehlmannConfig {
         if !gf_range.contains(gf_low) || !gf_range.contains(gf_high) {
             return Err(ConfigValidationErr {
                 field: "gf",
-                reason: GF_RANGE_ERR_MSG
+                reason: GF_RANGE_ERR_MSG,
             });
         }
 
         if gf_low > gf_high {
             return Err(ConfigValidationErr {
                 field: "gf",
-                reason: GF_ORDER_ERR_MSG
+                reason: GF_ORDER_ERR_MSG,
             });
         }
 
         Ok(())
     }
 
-    fn validate_surface_pressure(&self, surface_pressure: &MbarPressure) -> Result<(), ConfigValidationErr> {
+    fn validate_surface_pressure(
+        &self,
+        surface_pressure: &MbarPressure,
+    ) -> Result<(), ConfigValidationErr> {
         let mbar_pressure_range = 500..=1500;
         if !mbar_pressure_range.contains(surface_pressure) {
             return Err(ConfigValidationErr {
@@ -124,20 +132,21 @@ impl BuehlmannConfig {
         Ok(())
     }
 
-    fn validate_deco_ascent_rate(&self, deco_ascent_rate: &AscentRatePerMinute) -> Result<(), ConfigValidationErr> {
+    fn validate_deco_ascent_rate(
+        &self,
+        deco_ascent_rate: &AscentRatePerMinute,
+    ) -> Result<(), ConfigValidationErr> {
         let ascent_rate_range = 1.0..=30.0;
         if !ascent_rate_range.contains(deco_ascent_rate) {
             return Err(ConfigValidationErr {
                 field: "deco_ascent_rate",
                 reason: DECO_ASCENT_RATE_ERR_MSG,
-            })
+            });
         }
 
         Ok(())
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -166,16 +175,27 @@ mod tests {
         for case in invalid_gf_range_cases {
             let (gf_low, gf_high) = case;
             let config = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
-            assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: GF_RANGE_ERR_MSG }));
+            assert_eq!(
+                config.validate(),
+                Err(ConfigValidationErr {
+                    field: "gf",
+                    reason: GF_RANGE_ERR_MSG
+                })
+            );
         }
     }
 
     #[test]
     fn test_gf_order() {
         let config = BuehlmannConfig::new().with_gradient_factors(90, 80);
-        assert_eq!(config.validate(), Err(ConfigValidationErr { field: "gf", reason: GF_ORDER_ERR_MSG }));
+        assert_eq!(
+            config.validate(),
+            Err(ConfigValidationErr {
+                field: "gf",
+                reason: GF_ORDER_ERR_MSG
+            })
+        );
     }
-
 
     #[test]
     fn test_surface_pressure_config() {
@@ -189,7 +209,13 @@ mod tests {
         let invalid_surface_pressure_cases = vec![0, 100, 2000];
         for invalid_case in invalid_surface_pressure_cases {
             let config = BuehlmannConfig::new().with_surface_pressure(invalid_case);
-            assert_eq!(config.validate(), Err(ConfigValidationErr { field: "surface_pressure", reason: SURFACE_PRESSURE_ERR_MSG }));
+            assert_eq!(
+                config.validate(),
+                Err(ConfigValidationErr {
+                    field: "surface_pressure",
+                    reason: SURFACE_PRESSURE_ERR_MSG
+                })
+            );
         }
     }
 
@@ -205,7 +231,13 @@ mod tests {
         let invalid_deco_ascent_rate_cases = vec![-3., 0.5, 31.0, 50.5];
         for invalid_case in invalid_deco_ascent_rate_cases {
             let config = BuehlmannConfig::new().with_deco_ascent_rate(invalid_case);
-            assert_eq!(config.validate(), Err(ConfigValidationErr { field: "deco_ascent_rate", reason: DECO_ASCENT_RATE_ERR_MSG }));
+            assert_eq!(
+                config.validate(),
+                Err(ConfigValidationErr {
+                    field: "deco_ascent_rate",
+                    reason: DECO_ASCENT_RATE_ERR_MSG
+                })
+            );
         }
     }
 }

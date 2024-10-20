@@ -1,4 +1,4 @@
-use crate::common::{Depth,Seconds,Gas};
+use crate::common::{Depth, Gas, Seconds};
 
 #[derive(Debug)]
 pub struct RecordData<'a> {

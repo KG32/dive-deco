@@ -1,5 +1,10 @@
-use crate::{common::{Depth, GradientFactor, MbarPressure, PartialPressures, Pressure, RecordData, InertGas}, BuehlmannConfig, Gas, Seconds };
 use super::zhl_values::{ZHLParam, ZHLParams};
+use crate::{
+    common::{
+        Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
+    },
+    BuehlmannConfig, Gas, Seconds,
+};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Compartment {
@@ -30,16 +35,10 @@ pub struct Supersaturation {
 }
 
 impl Compartment {
-    pub fn new(
-        no: u8,
-        params: ZHLParams,
-        model_config: BuehlmannConfig,
-    ) -> Self {
+    pub fn new(no: u8, params: ZHLParams, model_config: BuehlmannConfig) -> Self {
         let init_gas = Gas::air();
-        let init_gas_compound_pressures = init_gas.inspired_partial_pressures(
-            0.,
-            model_config.surface_pressure
-        );
+        let init_gas_compound_pressures =
+            init_gas.inspired_partial_pressures(0., model_config.surface_pressure);
         let n2_ip = init_gas_compound_pressures.n2;
         let he_ip = init_gas_compound_pressures.he;
 
@@ -49,7 +48,7 @@ impl Compartment {
             n2_ip,
             he_ip,
             total_ip: he_ip + n2_ip,
-            m_value_raw: 0., // initial, recalculated later
+            m_value_raw: 0.,  // initial, recalculated later
             m_value_calc: 0., // initial, recalculated later
             min_tolerable_amb_pressure: 0.,
             model_config,
@@ -64,10 +63,15 @@ impl Compartment {
         compartment
     }
 
-
     // recalculate tissue inert gasses saturation and tolerable pressure
-    pub fn recalculate(&mut self, record: &RecordData, max_gf: GradientFactor, surface_pressure: MbarPressure) {
-        let (he_inert_pressure, n2_inert_pressure) = self.compartment_inert_pressure(record, surface_pressure);
+    pub fn recalculate(
+        &mut self,
+        record: &RecordData,
+        max_gf: GradientFactor,
+        surface_pressure: MbarPressure,
+    ) {
+        let (he_inert_pressure, n2_inert_pressure) =
+            self.compartment_inert_pressure(record, surface_pressure);
 
         self.he_ip = he_inert_pressure;
         self.n2_ip = n2_inert_pressure;
@@ -82,7 +86,9 @@ impl Compartment {
 
     // tissue ceiling as depth
     pub fn ceiling(&self) -> Depth {
-        let mut ceil = (self.min_tolerable_amb_pressure - (self.model_config.surface_pressure as f64 / 1000.)) * 10.;
+        let mut ceil = (self.min_tolerable_amb_pressure
+            - (self.model_config.surface_pressure as f64 / 1000.))
+            * 10.;
         // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
         if ceil < 0. {
             ceil = 0.;
@@ -100,15 +106,18 @@ impl Compartment {
         let gf_99 = ((self.total_ip - p_amb) / (m_value - p_amb)) * 100.;
         let gf_surf = ((self.total_ip - p_surf) / (m_value_surf - p_surf)) * 100.;
 
-        Supersaturation {
-            gf_99,
-            gf_surf
-        }
+        Supersaturation { gf_99, gf_surf }
     }
 
-    fn m_value(&self, depth: Depth, surface_pressure: MbarPressure, max_gf: GradientFactor) -> Pressure {
+    fn m_value(
+        &self,
+        depth: Depth,
+        surface_pressure: MbarPressure,
+        max_gf: GradientFactor,
+    ) -> Pressure {
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
-        let (_, a_coeff_adjusted, b_coeff_adjusted) = self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
+        let (_, a_coeff_adjusted, b_coeff_adjusted) =
+            self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
         let p_surf = (surface_pressure as f64) / 1000.;
         let p_amb = p_surf + (depth / 10.);
         let m_value = a_coeff_adjusted + (p_amb / b_coeff_adjusted);
@@ -117,9 +126,18 @@ impl Compartment {
     }
 
     // tissue inert gasses pressure after record
-    fn compartment_inert_pressure(&self, record: &RecordData, surface_pressure: MbarPressure) -> (Pressure, Pressure) { // (he, n2)
-        let RecordData { depth, time, gas  } = record;
-        let PartialPressures { n2: n2_pp, he: he_pp, .. } = gas.inspired_partial_pressures(*depth, surface_pressure);
+    fn compartment_inert_pressure(
+        &self,
+        record: &RecordData,
+        surface_pressure: MbarPressure,
+    ) -> (Pressure, Pressure) {
+        // (he, n2)
+        let RecordData { depth, time, gas } = record;
+        let PartialPressures {
+            n2: n2_pp,
+            he: he_pp,
+            ..
+        } = gas.inspired_partial_pressures(*depth, surface_pressure);
 
         // partial pressure of inert gases in inspired gas (adjusted alveoli water vapor pressure)
         let he_inspired_pp = he_pp;
@@ -127,8 +145,18 @@ impl Compartment {
 
         // tissue saturation pressure change for inert gasses
         let (n2_half_time, _, _, he_half_time, ..) = self.params;
-        let he_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Helium, he_inspired_pp, *time, he_half_time);
-        let n2_p_comp_delta = self.compartment_pressure_delta_haldane(InertGas::Nitrogen, n2_inspired, *time, n2_half_time);
+        let he_p_comp_delta = self.compartment_pressure_delta_haldane(
+            InertGas::Helium,
+            he_inspired_pp,
+            *time,
+            he_half_time,
+        );
+        let n2_p_comp_delta = self.compartment_pressure_delta_haldane(
+            InertGas::Nitrogen,
+            n2_inspired,
+            *time,
+            n2_half_time,
+        );
 
         // inert gasses pressures after applying delta P
         let he_final = self.he_ip + he_p_comp_delta;
@@ -138,7 +166,13 @@ impl Compartment {
     }
 
     // compartment pressure change for inert gas (Haldane equation)
-    fn compartment_pressure_delta_haldane(&self, inert_gas: InertGas, gas_inspired_p: Pressure, time: Seconds, half_time: ZHLParam) -> Pressure {
+    fn compartment_pressure_delta_haldane(
+        &self,
+        inert_gas: InertGas,
+        gas_inspired_p: Pressure,
+        time: Seconds,
+        half_time: ZHLParam,
+    ) -> Pressure {
         let inert_gas_load = match inert_gas {
             InertGas::Helium => self.he_ip,
             InertGas::Nitrogen => self.n2_ip,
@@ -151,24 +185,28 @@ impl Compartment {
     // tissue tolerable ambient pressure using GF slope, weighted Buehlmann ZHL params based on tissue inert gasses saturation proportions
     fn min_tolerable_amb_pressure(&self, max_gf: GradientFactor) -> Pressure {
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
-        let (_, a_coefficient_adjusted, b_coefficient_adjusted) = self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
+        let (_, a_coefficient_adjusted, b_coefficient_adjusted) =
+            self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
 
         (self.total_ip - a_coefficient_adjusted) * b_coefficient_adjusted
     }
 
     // weighted ZHL params (half time, a coefficient, b coefficient) based on N2 and He params and inert gasses proportions in tissue
-    fn weighted_zhl_params(&self, he_pp: Pressure, n2_pp: Pressure) -> (ZHLParam, ZHLParam, ZHLParam) {
-        fn weighted_param(he_param: ZHLParam, he_pp: Pressure, n2_param: ZHLParam, n2_pp: Pressure) -> ZHLParam {
+    fn weighted_zhl_params(
+        &self,
+        he_pp: Pressure,
+        n2_pp: Pressure,
+    ) -> (ZHLParam, ZHLParam, ZHLParam) {
+        fn weighted_param(
+            he_param: ZHLParam,
+            he_pp: Pressure,
+            n2_param: ZHLParam,
+            n2_pp: Pressure,
+        ) -> ZHLParam {
             ((he_param * he_pp) + (n2_param * n2_pp)) / (he_pp + n2_pp)
         }
-        let (
-            n2_half_time,
-            n2_a_coeff,
-            n2_b_coeff,
-            he_half_time,
-            he_a_coeff,
-            he_b_coeff,
-        ) = self.params;
+        let (n2_half_time, n2_a_coeff, n2_b_coeff, he_half_time, he_a_coeff, he_b_coeff) =
+            self.params;
         (
             weighted_param(he_half_time, he_pp, n2_half_time, n2_pp),
             weighted_param(he_a_coeff, he_pp, n2_a_coeff, n2_pp),
@@ -177,16 +215,20 @@ impl Compartment {
     }
 
     // adjust zhl params based on max gf
-    fn max_gf_adjusted_zhl_params(&self, params: (ZHLParam, ZHLParam, ZHLParam), max_gf: GradientFactor) -> (ZHLParam, ZHLParam, ZHLParam) {
+    fn max_gf_adjusted_zhl_params(
+        &self,
+        params: (ZHLParam, ZHLParam, ZHLParam),
+        max_gf: GradientFactor,
+    ) -> (ZHLParam, ZHLParam, ZHLParam) {
         let (half_time, a_coeff, b_coeff) = params;
         let max_gf_fraction = max_gf as f64 / 100.;
         let a_coefficient_adjusted = a_coeff * max_gf_fraction;
-        let b_coefficient_adjusted = b_coeff / (max_gf_fraction - (max_gf_fraction * b_coeff) + b_coeff);
+        let b_coefficient_adjusted =
+            b_coeff / (max_gf_fraction - (max_gf_fraction * b_coeff) + b_coeff);
 
         (half_time, a_coefficient_adjusted, b_coefficient_adjusted)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -228,7 +270,11 @@ mod tests {
         let mut comp_1 = comp_1();
         let mut comp_5 = comp_5();
         let air = Gas::new(0.21, 0.);
-        let record = RecordData { depth: 0., time: 1, gas: &air };
+        let record = RecordData {
+            depth: 0.,
+            time: 1,
+            gas: &air,
+        };
         comp_1.recalculate(&record, 100, 1000);
         comp_5.recalculate(&record, 100, 1000);
         assert_eq!(comp_1.m_value_raw, 3.24009801980198);
@@ -240,7 +286,11 @@ mod tests {
         let mut comp_1 = comp_1();
         let mut comp_5 = comp_5();
         let air = Gas::new(0.21, 0.);
-        let record = RecordData { depth: 0., time: 1, gas: &air };
+        let record = RecordData {
+            depth: 0.,
+            time: 1,
+            gas: &air,
+        };
         comp_1.recalculate(&record, 70, 1000);
         comp_5.recalculate(&record, 70, 1000);
         assert_eq!(comp_1.m_value_calc, 2.568068613861386);
@@ -251,7 +301,11 @@ mod tests {
     fn test_recalculation_ongassing() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let record = RecordData { depth: 30., time: (10 * 60), gas: &air };
+        let record = RecordData {
+            depth: 30.,
+            time: (10 * 60),
+            gas: &air,
+        };
         comp.recalculate(&record, 100, 1000);
         assert_eq!(comp.total_ip, 1.2850179204911072);
     }
@@ -260,17 +314,23 @@ mod tests {
     fn test_weighted_params_trimix() {
         let comp = comp_1();
         let weighted_params = comp.weighted_zhl_params(0.5, 1. - (0.18 + 0.5));
-        assert_eq!(weighted_params, (2.481707317073171, 1.5541073170731705, 0.4559146341463414));
+        assert_eq!(
+            weighted_params,
+            (2.481707317073171, 1.5541073170731705, 0.4559146341463414)
+        );
     }
 
     #[test]
     fn test_min_pressure_calculation() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let recprd = RecordData { depth: 30., time: (10 * 60), gas: &air };
+        let recprd = RecordData {
+            depth: 30.,
+            time: (10 * 60),
+            gas: &air,
+        };
         comp.recalculate(&recprd, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.40957969932131577);
     }
-
 }

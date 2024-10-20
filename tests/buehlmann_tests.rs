@@ -1,4 +1,6 @@
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, Gas, Minutes, Supersaturation };
+use dive_deco::{
+    BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, Gas, Minutes, Supersaturation,
+};
 pub mod fixtures;
 
 // general high-level model tests
@@ -25,10 +27,22 @@ fn test_gfs() {
     let air = Gas::new(0.21, 0.);
 
     model.record(50., 20 * 60, &air);
-    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 193.8554997961134 });
+    assert_eq!(
+        model.supersaturation(),
+        Supersaturation {
+            gf_99: 0.,
+            gf_surf: 193.8554997961134
+        }
+    );
 
     model.record(40., 10 * 60, &air);
-    assert_eq!(model.supersaturation(), Supersaturation { gf_99: 0., gf_surf: 208.00431699178796 });
+    assert_eq!(
+        model.supersaturation(),
+        Supersaturation {
+            gf_99: 0.,
+            gf_surf: 208.00431699178796
+        }
+    );
 }
 
 #[test]
@@ -59,8 +73,14 @@ fn test_model_records_equality() {
 
     assert_eq!(model1.ceiling().floor(), model2.ceiling().floor());
 
-    let Supersaturation { gf_99: model1_gf_99, gf_surf: model1_gf_surf} = model1.supersaturation();
-    let Supersaturation { gf_99: model2_gf_99, gf_surf: model2_gf_surf } = model1.supersaturation();
+    let Supersaturation {
+        gf_99: model1_gf_99,
+        gf_surf: model1_gf_surf,
+    } = model1.supersaturation();
+    let Supersaturation {
+        gf_99: model2_gf_99,
+        gf_surf: model2_gf_surf,
+    } = model1.supersaturation();
     assert_eq!(model1_gf_99.floor(), model2_gf_99.floor());
     assert_eq!(model1_gf_surf.floor(), model2_gf_surf.floor());
 }
@@ -107,13 +127,14 @@ fn test_ndl_cut_off() {
     model.record(0., 0, &air);
     assert_eq!(model.ndl(), 99);
 
-    model.record(10., 10*60, &air);
+    model.record(10., 10 * 60, &air);
     assert_eq!(model.ndl(), 99);
 }
 
 #[test]
 fn test_multi_gas_ndl() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_ceiling_type(CeilingType::Actual));
+    let mut model =
+        BuehlmannModel::new(BuehlmannConfig::default().with_ceiling_type(CeilingType::Actual));
     let air = Gas::new(0.21, 0.);
     let ean_28 = Gas::new(0.28, 0.);
 
@@ -140,7 +161,7 @@ fn test_altitude() {
     let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_surface_pressure(700));
     let air = Gas::new(0.21, 0.);
     model.record(40., 60 * 60, &air);
-    let Supersaturation { gf_surf, ..} = model.supersaturation();
+    let Supersaturation { gf_surf, .. } = model.supersaturation();
     assert_eq!(gf_surf, 299.023204474694);
 }
 
@@ -149,7 +170,7 @@ fn test_example_ceiling_start() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
             .with_gradient_factors(30, 70)
-            .with_surface_pressure(1013)
+            .with_surface_pressure(1013),
     );
 
     let air = Gas::air();
@@ -165,7 +186,7 @@ fn test_example_ceiling() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
             .with_gradient_factors(30, 70)
-            .with_surface_pressure(1013)
+            .with_surface_pressure(1013),
     );
 
     let air = Gas::air();
@@ -181,7 +202,7 @@ fn test_example_ceiling() {
 #[test]
 fn test_adaptive_ceiling() {
     let mut model = BuehlmannModel::new(
-        BuehlmannConfig::new().with_ceiling_type(dive_deco::CeilingType::Adaptive)
+        BuehlmannConfig::new().with_ceiling_type(dive_deco::CeilingType::Adaptive),
     );
     let air = Gas::air();
     model.record(40., 20 * 60, &air);
@@ -194,7 +215,7 @@ fn test_gradual_ascent_with_deco() {
     let mut model = BuehlmannModel::new(
         BuehlmannConfig::new()
             .with_gradient_factors(30, 70)
-            .with_surface_pressure(1013)
+            .with_surface_pressure(1013),
     );
     let air = Gas::air();
     let ean50 = Gas::new(0.21, 0.50);
@@ -208,7 +229,6 @@ fn test_gradual_ascent_with_deco() {
         model.deco(vec![air, ean50]).unwrap();
     }
 }
-
 
 #[test]
 fn test_cns_otu() {

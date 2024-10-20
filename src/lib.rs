@@ -1,26 +1,10 @@
-mod common;
 mod buehlmann;
+mod common;
 
-
-pub use buehlmann::{BuehlmannModel, BuehlmannConfig, Supersaturation};
+pub use buehlmann::{BuehlmannConfig, BuehlmannModel, Supersaturation};
 
 pub use common::{
-    DecoModel,
-    Gas,
-    Depth,
-    Minutes,
-    MinutesSigned,
-    Seconds,
-    Pressure,
-    GradientFactors,
-    RecordData,
-    Deco,
-    DecoStage,
-    DecoStageType,
-    DecoRuntime,
+    CeilingType, Deco, DecoCalculationError, DecoModel, DecoRuntime, DecoStage, DecoStageType,
+    Depth, Gas, GradientFactors, Minutes, MinutesSigned, NDLType, Pressure, RecordData, Seconds,
     Sim,
-    NDLType,
-    CeilingType,
-    DecoCalculationError,
 };
-
