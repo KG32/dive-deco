@@ -312,11 +312,11 @@ impl BuehlmannModel {
 
         // recalc
         if gf_high != gf_low {
-        let max_gf = self.max_gf(self.config.gf, record.depth);
-        match self.config.recalc_all_tissues_m_values {
-            true => self.recalculate_all_tisues_with_gf(record, max_gf),
-            false => self.recalculate_leading_compartment_with_gf(record, max_gf),
-        }
+            let max_gf = self.max_gf(self.config.gf, record.depth);
+            match self.config.recalc_all_tissues_m_values {
+                true => self.recalculate_all_tisues_with_gf(record, max_gf),
+                false => self.recalculate_leading_compartment_with_gf(record, max_gf),
+            }
         }
     }
 
