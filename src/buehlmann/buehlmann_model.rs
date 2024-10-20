@@ -470,7 +470,7 @@ mod tests {
 
         model.record(40., 30 * 60, &air);
         model.record(21., 5 * 60, &air);
-        model.record(14., 0 * 60, &air);
+        model.record(14., 0, &air);
         assert_eq!(model.max_gf(gf, 14.), 40);
     }
 
