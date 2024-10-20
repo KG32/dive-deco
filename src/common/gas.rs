@@ -22,9 +22,9 @@ pub enum InertGas {
     Nitrogen,
 }
 
-impl ToString for Gas {
-    fn to_string(&self) -> String {
-        format!("{}/{}", self.o2_pp * 100., self.he_pp * 100.)
+impl std::fmt::Display for Gas {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.o2_pp * 100., self.he_pp * 100.)
     }
 }
 

@@ -120,9 +120,8 @@ impl Compartment {
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
         let p_surf = (surface_pressure as f64) / 1000.;
         let p_amb = p_surf + (depth / 10.);
-        let m_value = a_coeff_adjusted + (p_amb / b_coeff_adjusted);
 
-        m_value
+        a_coeff_adjusted + (p_amb / b_coeff_adjusted)
     }
 
     // tissue inert gasses pressure after record
