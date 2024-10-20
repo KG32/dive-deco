@@ -305,16 +305,19 @@ impl BuehlmannModel {
     }
 
     fn recalculate_compartments(&mut self, record: &RecordData) {
+        let (gf_low, gf_high) = self.config.gf;
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(record, self.config.gf.1, self.config.surface_pressure);
+            compartment.recalculate(record, gf_high, self.config.surface_pressure);
         }
 
         // recalc
+        if gf_high != gf_low {
         let max_gf = self.max_gf(self.config.gf, record.depth);
-        match self.config.m_values_recalc_all_tissues {
+        match self.config.recalc_all_tissues_m_values {
             true => self.recalculate_all_tisues_with_gf(record, max_gf),
             false => self.recalculate_leading_compartment_with_gf(record, max_gf),
-        };
+        }
+        }
     }
 
     fn recalculate_all_tisues_with_gf(&mut self, record: &RecordData, max_gf: GradientFactor) {

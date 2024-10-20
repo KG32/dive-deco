@@ -13,7 +13,7 @@ fn main() {
         deco_ascent_rate: 9.,
         ceiling_type: CeilingType::Actual,
         round_ceiling: false,
-        m_values_recalc_all_tissues: true,
+        recalc_all_tissues_m_values: true,
     };
     let model_2 = BuehlmannModel::new(config_instance);
     println!("{:?}", model_2.config());

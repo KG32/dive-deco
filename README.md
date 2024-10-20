@@ -71,6 +71,7 @@ Current config options:
 - `ceiling_type` (enum `CeilingType`)
   - `Actual` (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
   - `Adaptive` - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
+- `recalc_all_tissues_m_values` - recalculate all tissues considering gradient factors (default: true). If set to false, only leading tissue is recalculated with max gf
 
 ```rust
     // fluid-interface-like built config
