@@ -18,7 +18,18 @@ jobs:
     - name: Enforce formatting
       run: cargo fmt --check
 
-  build:
+  clippy:
+    name: Clippy check
+    env:
+      RUSTFLAGS: "-Dwarnings"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features
+
+  build_and_test:
+    name: Build and test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
