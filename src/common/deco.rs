@@ -303,10 +303,12 @@ impl Deco {
                 } else {
                     // ascent to next gas switch depth if next gas' MOD below ceiling
                     if let Some(next_switch_gas) = next_switch_gas {
-                        return Ok((
-                            Some(DecoAction::AscentToGasSwitchDepth),
-                            Some(next_switch_gas),
-                        ));
+                        if next_switch_gas.max_operating_depth(1.6) >= ceiling {
+                            return Ok((
+                                Some(DecoAction::AscentToGasSwitchDepth),
+                                Some(next_switch_gas),
+                            ));
+                        }
                     }
                     Ok((Some(DecoAction::AscentToCeil), None))
                 }

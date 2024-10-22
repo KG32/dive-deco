@@ -174,7 +174,6 @@ fn test_example_ceiling_start() {
     );
 
     let air = Gas::air();
-    // let ean_50 = Gas::new(0.50, 0.);
 
     // instant drop to 40m on air for 10min
     model.record(40., 10 * 60, &air);
@@ -218,7 +217,7 @@ fn test_gradual_ascent_with_deco() {
             .with_surface_pressure(1013),
     );
     let air = Gas::air();
-    let ean50 = Gas::new(0.21, 0.50);
+    let ean_50 = Gas::new(0.50, 0.);
     model.record(45., 30 * 60, &air);
     loop {
         let depth = model.dive_state().depth;
@@ -226,7 +225,7 @@ fn test_gradual_ascent_with_deco() {
             break;
         }
         model.record_travel_with_rate(depth - 3., 10., &air);
-        model.deco(vec![air, ean50]).unwrap();
+        model.deco(vec![air, ean_50]).unwrap();
     }
 }
 

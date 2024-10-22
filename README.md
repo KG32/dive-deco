@@ -34,7 +34,6 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Planned features
 
 - extended deco model config [metric/imperial units, water density and more] (currently metric and density assumed to be 1.03kg/l as salt water)
-- OTU (Oxygen Toxicity Units)
 - travel records optimization (linear ascent / descent records using Schreiner equation instead of iterative Haldane equation)
 - other deco algorithms (VPM-B)
 - other optimizations
