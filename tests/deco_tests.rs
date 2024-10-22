@@ -1,6 +1,6 @@
 use dive_deco::{
-    BuehlmannConfig, BuehlmannModel, DecoModel, DecoRuntime, DecoStage, DecoStageType, Depth, Gas,
-    MinutesSigned,
+    BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, DecoRuntime, DecoStage, DecoStageType,
+    Depth, Gas, MinutesSigned,
 };
 
 pub mod fixtures;
@@ -246,6 +246,39 @@ fn test_runtime_on_missed_stop() {
             "below ceiling"
         );
     }
+}
+
+#[test]
+fn test_deco_runtime_integrity() {
+    let config = BuehlmannConfig::new()
+        .with_gradient_factors(30, 70)
+        .with_ceiling_type(CeilingType::Adaptive);
+    let mut model = BuehlmannModel::new(config);
+    let air = Gas::air();
+    let ean_50 = Gas::new(0.50, 0.);
+    let oxygen = Gas::new(1., 0.);
+    model.record(40., 20 * 60, &air);
+
+    let deco_runtime = model.deco(vec![air, ean_50, oxygen]).unwrap();
+    let deco_stages = deco_runtime.deco_stages;
+
+    deco_stages.iter().reduce(|a, b| {
+        // validate depth order
+        assert!(
+            b.start_depth == a.end_depth,
+            "next stage start depth ({:?}@{}m) should equal previous stage end depth ({:?}@{}m)",
+            b.stage_type,
+            b.start_depth,
+            a.stage_type,
+            a.end_depth
+        );
+        // validate gas switch MOD
+        if a.stage_type == DecoStageType::GasSwitch {
+            let gas_switch_target_mod = a.gas.max_operating_depth(1.6);
+            assert!(a.start_depth <= gas_switch_target_mod);
+        }
+        b
+    });
 }
 
 fn get_first_deco_stop_depth(deco: DecoRuntime) -> Option<Depth> {
