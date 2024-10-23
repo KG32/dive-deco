@@ -24,7 +24,7 @@ pub enum InertGas {
 
 impl std::fmt::Display for Gas {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{}", self.o2_pp * 100., self.he_pp * 100.)
+        write!(f, "{:.0}/{:.0}", self.o2_pp * 100., self.he_pp * 100.)
     }
 }
 
