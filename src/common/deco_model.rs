@@ -4,9 +4,18 @@ use crate::common::ox_tox::OxTox;
 use crate::common::{AscentRatePerMinute, Cns, Depth, Gas, Minutes, Otu, Seconds};
 
 #[derive(Debug, PartialEq)]
-pub struct ConfigValidationErr<'a> {
-    pub field: &'a str,
-    pub reason: &'a str,
+pub struct ConfigValidationErr {
+    pub field: String,
+    pub reason: String,
+}
+
+impl ConfigValidationErr {
+    pub fn new(field: &str, reason: &str) -> Self {
+        Self {
+            field: field.to_string(),
+            reason: reason.to_string(),
+        }
+    }
 }
 
 pub trait DecoModelConfig {
