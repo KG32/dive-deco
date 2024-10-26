@@ -1,13 +1,12 @@
-use std::cmp::Ordering;
-
 use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::buehlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{
-    AscentRatePerMinute, Cns, Deco, DecoModel, DecoModelConfig, Depth, DiveState, Gas,
-    GradientFactor, Minutes, OxTox, RecordData, Seconds,
+    AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
+    DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim};
+use std::cmp::Ordering;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
 
@@ -264,6 +263,15 @@ impl BuehlmannModel {
         self.compartments.clone()
     }
 
+    pub fn update_config(
+        &mut self,
+        new_config: BuehlmannConfig,
+    ) -> Result<(), ConfigValidationErr> {
+        new_config.validate()?;
+        self.config = new_config;
+        Ok(())
+    }
+
     fn leading_comp(&self) -> &Compartment {
         let mut leading_comp: &Compartment = &self.compartments[0];
         for compartment in &self.compartments[1..] {
@@ -502,5 +510,32 @@ mod tests {
         let surface_interval_gfs = extract_supersaturations(model_with_surface_interval);
 
         assert_eq!(initial_gfs, surface_interval_gfs);
+    }
+
+    #[test]
+    fn test_updating_config() {
+        let mut model = BuehlmannModel::default();
+        let initial_config = model.config();
+        let new_config = BuehlmannConfig::new()
+            .with_gradient_factors(30, 70)
+            .with_round_ceiling(true)
+            .with_ceiling_type(CeilingType::Adaptive)
+            .with_round_ceiling(true);
+        assert_ne!(initial_config, new_config, "given configs aren't identical");
+
+        model.update_config(new_config).unwrap();
+        let updated_config = model.config();
+        assert_eq!(updated_config, new_config, "new config saved");
+
+        let invalid_config = new_config.with_gradient_factors(0, 150);
+        let update_res = model.update_config(invalid_config);
+        assert_eq!(
+            update_res,
+            Err(ConfigValidationErr {
+                field: "gf".to_string(),
+                reason: "GF values have to be in 1-100 range".to_string(),
+            }),
+            "invalid config update results in Err"
+        );
     }
 }

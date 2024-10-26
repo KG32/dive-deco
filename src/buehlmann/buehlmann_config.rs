@@ -108,17 +108,11 @@ impl BuehlmannConfig {
         let gf_range = 1..=100;
 
         if !gf_range.contains(gf_low) || !gf_range.contains(gf_high) {
-            return Err(ConfigValidationErr {
-                field: "gf",
-                reason: GF_RANGE_ERR_MSG,
-            });
+            return Err(ConfigValidationErr::new("gf", GF_RANGE_ERR_MSG));
         }
 
         if gf_low > gf_high {
-            return Err(ConfigValidationErr {
-                field: "gf",
-                reason: GF_ORDER_ERR_MSG,
-            });
+            return Err(ConfigValidationErr::new("gf", GF_ORDER_ERR_MSG));
         }
 
         Ok(())
@@ -130,10 +124,10 @@ impl BuehlmannConfig {
     ) -> Result<(), ConfigValidationErr> {
         let mbar_pressure_range = 500..=1500;
         if !mbar_pressure_range.contains(surface_pressure) {
-            return Err(ConfigValidationErr {
-                field: "surface_pressure",
-                reason: SURFACE_PRESSURE_ERR_MSG,
-            });
+            return Err(ConfigValidationErr::new(
+                "surface_pressure",
+                SURFACE_PRESSURE_ERR_MSG,
+            ));
         }
 
         Ok(())
@@ -145,10 +139,10 @@ impl BuehlmannConfig {
     ) -> Result<(), ConfigValidationErr> {
         let ascent_rate_range = 1.0..=30.0;
         if !ascent_rate_range.contains(deco_ascent_rate) {
-            return Err(ConfigValidationErr {
-                field: "deco_ascent_rate",
-                reason: DECO_ASCENT_RATE_ERR_MSG,
-            });
+            return Err(ConfigValidationErr::new(
+                "deco_ascent_rate",
+                DECO_ASCENT_RATE_ERR_MSG,
+            ));
         }
 
         Ok(())
@@ -184,10 +178,7 @@ mod tests {
             let config = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
             assert_eq!(
                 config.validate(),
-                Err(ConfigValidationErr {
-                    field: "gf",
-                    reason: GF_RANGE_ERR_MSG
-                })
+                Err(ConfigValidationErr::new("gf", GF_RANGE_ERR_MSG))
             );
         }
     }
@@ -197,10 +188,7 @@ mod tests {
         let config = BuehlmannConfig::new().with_gradient_factors(90, 80);
         assert_eq!(
             config.validate(),
-            Err(ConfigValidationErr {
-                field: "gf",
-                reason: GF_ORDER_ERR_MSG
-            })
+            Err(ConfigValidationErr::new("gf", GF_ORDER_ERR_MSG))
         );
     }
 
@@ -218,10 +206,10 @@ mod tests {
             let config = BuehlmannConfig::new().with_surface_pressure(invalid_case);
             assert_eq!(
                 config.validate(),
-                Err(ConfigValidationErr {
-                    field: "surface_pressure",
-                    reason: SURFACE_PRESSURE_ERR_MSG
-                })
+                Err(ConfigValidationErr::new(
+                    "surface_pressure",
+                    SURFACE_PRESSURE_ERR_MSG
+                ))
             );
         }
     }
@@ -240,10 +228,10 @@ mod tests {
             let config = BuehlmannConfig::new().with_deco_ascent_rate(invalid_case);
             assert_eq!(
                 config.validate(),
-                Err(ConfigValidationErr {
-                    field: "deco_ascent_rate",
-                    reason: DECO_ASCENT_RATE_ERR_MSG
-                })
+                Err(ConfigValidationErr::new(
+                    "deco_ascent_rate",
+                    DECO_ASCENT_RATE_ERR_MSG
+                ))
             );
         }
     }
