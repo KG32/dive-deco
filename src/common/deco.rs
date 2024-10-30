@@ -38,7 +38,7 @@ pub struct Deco {
     sim: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct DecoRuntime {
     // runtime
     pub deco_stages: Vec<DecoStage>,
@@ -53,7 +53,7 @@ pub struct DecoRuntime {
 #[derive(Debug)]
 struct MissedDecoStopViolation;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum DecoCalculationError {
     EmptyGasList,
     CurrentGasNotInList,
