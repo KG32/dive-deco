@@ -5,4 +5,4 @@ mod zhl_values;
 
 pub use buehlmann_config::BuehlmannConfig;
 pub use buehlmann_model::BuehlmannModel;
-pub use compartment::Supersaturation;
+pub use compartment::{Compartment, Supersaturation};
