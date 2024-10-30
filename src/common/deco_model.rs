@@ -26,7 +26,7 @@ pub trait DecoModelConfig {
     fn round_ceiling(&self) -> bool;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DiveState {
     pub depth: Depth,
     pub time: Seconds,

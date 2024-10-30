@@ -28,7 +28,7 @@ pub struct Compartment {
     model_config: BuehlmannConfig,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Supersaturation {
     pub gf_99: f64,
     pub gf_surf: f64,
