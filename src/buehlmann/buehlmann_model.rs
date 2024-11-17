@@ -117,6 +117,10 @@ impl DecoModel for BuehlmannModel {
     fn ndl(&self) -> Minutes {
         let mut ndl: Minutes = NDL_CUT_OFF_MINS;
 
+        if self.in_deco() {
+            return 0;
+        }
+
         // create a simulation model based on current model's state
         let mut sim_model = self.fork();
 
@@ -537,5 +541,19 @@ mod tests {
             }),
             "invalid config update results in Err"
         );
+    }
+
+    #[test]
+    fn test_ndl_0_if_in_deco() {
+        let mut model = BuehlmannModel::new(
+            BuehlmannConfig::default()
+                .with_gradient_factors(30, 70)
+                .with_ceiling_type(CeilingType::Actual),
+        );
+        let air = Gas::air();
+        model.record(40., 6 * 60, &air);
+        model.record(9., 0, &air);
+        let ndl = model.ndl();
+        assert_eq!(ndl, 0);
     }
 }
