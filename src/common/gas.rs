@@ -103,8 +103,6 @@ impl Gas {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::INFINITY;
-
     use super::*;
 
     #[test]
@@ -190,7 +188,7 @@ mod tests {
             (0.21, 0., 1.4, 56.66666666666666),
             (0.50, 0., 1.6, 22.),
             (0.21, 0.35, 1.4, 56.66666666666666),
-            (0., 0., 1.4, INFINITY),
+            (0., 0., 1.4, f64::INFINITY),
         ];
         for (pp_o2, pe_he, max_pp_o2, expected_mod) in test_cases {
             let gas = Gas::new(pp_o2, pe_he);
