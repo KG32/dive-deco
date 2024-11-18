@@ -312,8 +312,9 @@ impl BuehlmannModel {
 
     fn recalculate(&mut self, record: RecordData) {
         self.recalculate_compartments(&record);
-        // todo skip on sim
-        self.recalculate_ox_tox(&record);
+        if !self.is_sim() {
+            self.recalculate_ox_tox(&record);
+        }
     }
 
     fn recalculate_compartments(&mut self, record: &RecordData) {
@@ -325,7 +326,10 @@ impl BuehlmannModel {
         // recalc
         if gf_high != gf_low {
             let max_gf = self.max_gf(self.config.gf, record.depth);
-            match self.config.recalc_all_tissues_m_values {
+
+            let should_recalc_all_tissues =
+                !self.is_sim() && self.config.recalc_all_tissues_m_values;
+            match should_recalc_all_tissues {
                 true => self.recalculate_all_tisues_with_gf(record, max_gf),
                 false => self.recalculate_leading_compartment_with_gf(record, max_gf),
             }
