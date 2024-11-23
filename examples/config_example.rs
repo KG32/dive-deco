@@ -14,6 +14,7 @@ fn main() {
         ceiling_type: CeilingType::Actual,
         round_ceiling: false,
         recalc_all_tissues_m_values: true,
+        units: dive_deco::Units::Metric,
     };
     let model_2 = BuehlmannModel::new(config_instance);
     println!("{:?}", model_2.config());

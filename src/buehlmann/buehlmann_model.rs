@@ -3,9 +3,9 @@ use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::buehlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{
     AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
-    DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds,
+    DepthUnit, DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds, Unit,
 };
-use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim};
+use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Units};
 use std::cmp::Ordering;
 
 const NDL_CUT_OFF_MINS: Minutes = 99;
@@ -67,7 +67,8 @@ impl DecoModel for BuehlmannModel {
     }
 
     /// record data: depth (meters), time (seconds), gas
-    fn record(&mut self, depth: Depth, time: Seconds, gas: &Gas) {
+    fn record(&mut self, input_depth: Depth, time: Seconds, gas: &Gas) {
+        let depth = DepthUnit::from_units(input_depth, Units::Metric).metric();
         self.validate_depth(depth);
         self.state.depth = depth;
         self.state.gas = *gas;

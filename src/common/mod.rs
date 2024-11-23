@@ -6,6 +6,7 @@ mod global_types;
 mod ox_tox;
 mod record;
 mod sim;
+mod units;
 
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use deco::{Deco, DecoCalculationError, DecoRuntime, DecoStage, DecoStageType};
@@ -18,3 +19,4 @@ pub use global_types::{
 pub use ox_tox::OxTox;
 pub use record::RecordData;
 pub use sim::Sim;
+pub use units::{DepthUnit, Unit, Units};
