@@ -293,7 +293,7 @@ impl Deco {
                     let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
                     if (switch_gas != current_gas)
                         && (current_depth <= gas_mod)
-                        && (gas_end <= Depth::from_metric(DEFAULT_MAX_END_DEPTH))
+                        && (gas_end <= Depth::m(DEFAULT_MAX_END_DEPTH))
                     {
                         return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
                     }
@@ -301,7 +301,7 @@ impl Deco {
 
                 // check if within or below deco stop window
                 let ceiling_padding = current_depth - ceiling;
-                if ceiling_padding <= Depth::from_metric(DEFAULT_CEILING_WINDOW) {
+                if ceiling_padding <= Depth::m(DEFAULT_CEILING_WINDOW) {
                     Ok((Some(DecoAction::Stop), None))
                 } else {
                     // ascent to next gas switch depth if next gas' MOD below ceiling
@@ -372,9 +372,7 @@ impl Deco {
     // round ceiling up to the bottom of deco window
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
         // @todo
-        Depth::from_metric(
-            DEFAULT_CEILING_WINDOW * (ceiling.metric() / DEFAULT_CEILING_WINDOW).ceil(),
-        )
+        Depth::m(DEFAULT_CEILING_WINDOW * (ceiling.meters() / DEFAULT_CEILING_WINDOW).ceil())
     }
 
     fn validate_gas_mixes<T: DecoModel>(
@@ -411,8 +409,8 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
-            let res = deco.deco_stop_depth(Depth::from_metric(input_depth));
-            assert_eq!(res, Depth::from_metric(expected_depth));
+            let res = deco.deco_stop_depth(Depth::m(input_depth));
+            assert_eq!(res, Depth::m(expected_depth));
         }
     }
 
@@ -445,7 +443,7 @@ mod tests {
         for case in test_cases.into_iter() {
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
             let res = deco.next_switch_gas(
-                Depth::from_metric(current_depth),
+                Depth::m(current_depth),
                 &current_gas,
                 available_gas_mixes,
                 1000,
@@ -469,7 +467,7 @@ mod tests {
         let air = Gas::air();
         let ean50 = Gas::new(0.50, 0.);
         let tmx2135 = Gas::new(0.21, 0.35);
-        deco_model.record_travel_with_rate(Depth::from_metric(40.), 10., &air);
+        deco_model.record_travel_with_rate(Depth::m(40.), 10., &air);
         let deco_res = deco.calc(deco_model, vec![ean50, tmx2135]);
         assert_eq!(deco_res, Err(DecoCalculationError::CurrentGasNotInList));
     }

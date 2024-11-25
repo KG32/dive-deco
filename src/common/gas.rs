@@ -60,7 +60,7 @@ impl Gas {
         depth: Depth,
         surface_pressure: MbarPressure,
     ) -> PartialPressures {
-        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth.metric() / 10.);
+        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth.meters() / 10.);
         self.gas_pressures_compound(gas_pressure)
     }
 
@@ -70,7 +70,7 @@ impl Gas {
         depth: Depth,
         surface_pressure: MbarPressure,
     ) -> PartialPressures {
-        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth.metric() / 10.))
+        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth.meters() / 10.))
             - ALVEOLI_WATER_VAPOR_PRESSURE;
         self.gas_pressures_compound(gas_pressure)
     }
@@ -85,14 +85,13 @@ impl Gas {
 
     /// MOD
     pub fn max_operating_depth(&self, pp_o2_limit: Pressure) -> Depth {
-        Depth::from_metric(10. * ((pp_o2_limit / self.o2_pp) - 1.))
+        Depth::m(10. * ((pp_o2_limit / self.o2_pp) - 1.))
     }
 
     /// END
     pub fn equivalent_narcotic_depth(&self, depth: Depth) -> Depth {
         // @todo refactor
-        let mut end = (depth + Depth::from_metric(10.)) * Depth::from_metric(1. - self.he_pp)
-            - Depth::from_metric(10.);
+        let mut end = (depth + Depth::m(10.)) * Depth::m(1. - self.he_pp) - Depth::m(10.);
         if end < Depth::zero() {
             end = Depth::zero();
         }
@@ -146,7 +145,7 @@ mod tests {
     #[test]
     fn test_partial_pressures_air() {
         let air = Gas::new(0.21, 0.);
-        let partial_pressures = air.partial_pressures(Depth::from_metric(10.), 1000);
+        let partial_pressures = air.partial_pressures(Depth::m(10.), 1000);
         assert_eq!(
             partial_pressures,
             PartialPressures {
@@ -160,7 +159,7 @@ mod tests {
     #[test]
     fn partial_pressures_tmx() {
         let tmx = Gas::new(0.21, 0.35);
-        let partial_pressures = tmx.partial_pressures(Depth::from_metric(10.), 1000);
+        let partial_pressures = tmx.partial_pressures(Depth::m(10.), 1000);
         assert_eq!(
             partial_pressures,
             PartialPressures {
@@ -174,8 +173,7 @@ mod tests {
     #[test]
     fn test_inspired_partial_pressures() {
         let air = Gas::new(0.21, 0.);
-        let inspired_partial_pressures =
-            air.inspired_partial_pressures(Depth::from_metric(10.), 1000);
+        let inspired_partial_pressures = air.inspired_partial_pressures(Depth::m(10.), 1000);
         assert_eq!(
             inspired_partial_pressures,
             PartialPressures {
@@ -198,7 +196,7 @@ mod tests {
         for (pp_o2, pe_he, max_pp_o2, expected_mod) in test_cases {
             let gas = Gas::new(pp_o2, pe_he);
             let calculated_mod = gas.max_operating_depth(max_pp_o2);
-            assert_eq!(calculated_mod, Depth::from_metric(expected_mod));
+            assert_eq!(calculated_mod, Depth::m(expected_mod));
         }
     }
 
@@ -212,8 +210,8 @@ mod tests {
         ];
         for (depth, o2_pp, he_pp, expected_end) in test_cases {
             let tmx = Gas::new(o2_pp, he_pp);
-            let calculated_end = tmx.equivalent_narcotic_depth(Depth::from_metric(depth));
-            assert_eq!(calculated_end, Depth::from_metric(expected_end));
+            let calculated_end = tmx.equivalent_narcotic_depth(Depth::m(depth));
+            assert_eq!(calculated_end, Depth::m(expected_end));
         }
     }
 

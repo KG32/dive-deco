@@ -133,7 +133,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
 
         // static depth segment
-        let depth = Depth::from_metric(36.);
+        let depth = Depth::m(36.);
         let time = 20 * 60;
         let ean_32 = Gas::new(0.32, 0.);
         let record = RecordData {
@@ -151,7 +151,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         // CNS ~50%
         let record = RecordData {
-            depth: Depth::from_metric(30.),
+            depth: Depth::m(30.),
             time: (75 * 60),
             gas: &Gas::new(0.35, 0.),
         };
@@ -177,7 +177,7 @@ mod tests {
     fn test_cns_above_max_ppo2() {
         let mut ox_tox = OxTox::default();
         let record = RecordData {
-            depth: Depth::from_metric(30.),
+            depth: Depth::m(30.),
             time: 400,
             gas: &Gas::new(0.5, 0.),
         };
@@ -203,7 +203,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         let ean32 = Gas::new(0.32, 0.);
         let record = RecordData {
-            depth: Depth::from_metric(36.),
+            depth: Depth::m(36.),
             time: 22 * 60,
             gas: &ean32,
         };

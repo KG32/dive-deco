@@ -95,13 +95,13 @@ impl Compartment {
             ceil = 0.;
         }
 
-        Depth::from_metric(ceil)
+        Depth::m(ceil)
     }
 
     // tissue supersaturation (gf99, surface gf)
     pub fn supersaturation(&self, surface_pressure: MbarPressure, depth: Depth) -> Supersaturation {
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth.metric() / 10.);
+        let p_amb = p_surf + (depth.meters() / 10.);
         let m_value = self.m_value_raw;
         let m_value_surf = self.m_value(Depth::zero(), surface_pressure, 100);
         let gf_99 = ((self.total_ip - p_amb) / (m_value - p_amb)) * 100.;
@@ -120,7 +120,7 @@ impl Compartment {
         let (_, a_coeff_adjusted, b_coeff_adjusted) =
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth.metric() / 10.);
+        let p_amb = p_surf + (depth.meters() / 10.);
 
         a_coeff_adjusted + (p_amb / b_coeff_adjusted)
     }
@@ -302,7 +302,7 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: Depth::from_metric(30.),
+            depth: Depth::m(30.),
             time: (10 * 60),
             gas: &air,
         };
@@ -325,7 +325,7 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let recprd = RecordData {
-            depth: Depth::from_metric(30.),
+            depth: Depth::m(30.),
             time: (10 * 60),
             gas: &air,
         };

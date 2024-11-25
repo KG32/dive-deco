@@ -85,7 +85,7 @@ impl DecoModel for BuehlmannModel {
         let distance = target_depth - current_depth;
         let travel_time = time as f64;
         // @todo
-        let dist_rate = Depth::from_metric(distance.metric() / travel_time);
+        let dist_rate = Depth::m(distance.meters() / travel_time);
         let mut i = 0;
         while i < travel_time as usize {
             self.state.time += 1;
@@ -111,8 +111,8 @@ impl DecoModel for BuehlmannModel {
         gas: &Gas,
     ) {
         self.validate_depth(target_depth);
-        // let distance = Depth::from_metric((target_depth - self.state.depth).metric().abs());
-        let distance = (target_depth - self.state.depth).metric().abs();
+        // let distance = Depth::m((target_depth - self.state.depth).meters().abs());
+        let distance = (target_depth - self.state.depth).meters().abs();
 
         let travel_time_seconds = (distance / rate * 60.) as Seconds;
         // @todo
@@ -182,7 +182,7 @@ impl DecoModel for BuehlmannModel {
 
         if self.config().round_ceiling() {
             // @todo impl ceil
-            ceiling = Depth::from_metric(ceiling.metric().ceil());
+            ceiling = Depth::m(ceiling.meters().ceil());
         }
 
         ceiling
@@ -378,7 +378,7 @@ impl BuehlmannModel {
                 let sim_gas = sim_model.state.gas;
                 let mut target_depth = sim_model.state.depth;
                 while target_depth > Depth::zero() {
-                    let mut sim_record_depth = target_depth - Depth::from_metric(1.);
+                    let mut sim_record_depth = target_depth - Depth::m(1.);
                     if sim_record_depth < Depth::zero() {
                         sim_record_depth = Depth::zero();
                     }
@@ -409,7 +409,7 @@ impl BuehlmannModel {
     ) -> GradientFactor {
         let (gf_low, gf_high) = gf;
         let slope_point: f64 =
-            gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth.metric()) * depth.metric();
+            gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth.meters()) * depth.meters();
 
         slope_point as u8
     }
@@ -430,9 +430,9 @@ mod tests {
         let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let nx32 = Gas::new(0.32, 0.);
-        model.record(Depth::from_metric(10.), 10 * 60, &air);
-        model.record(Depth::from_metric(15.), 15 * 60, &nx32);
-        assert_eq!(model.state.depth.metric(), 15.);
+        model.record(Depth::m(10.), 10 * 60, &air);
+        model.record(Depth::m(15.), 15 * 60, &nx32);
+        assert_eq!(model.state.depth.meters(), 15.);
         assert_eq!(model.state.time, (25 * 60));
         assert_eq!(model.state.gas, nx32);
         assert_eq!(model.state.gf_low_depth, None);
@@ -446,7 +446,7 @@ mod tests {
             BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData {
-            depth: Depth::from_metric(0.),
+            depth: Depth::m(0.),
             time: 0,
             gas: &air,
         };
@@ -462,7 +462,7 @@ mod tests {
             BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData {
-            depth: Depth::from_metric(40.),
+            depth: Depth::m(40.),
             time: (12 * 60),
             gas: &air,
         };
@@ -477,18 +477,17 @@ mod tests {
             BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
-        model.record(Depth::from_metric(40.), 30 * 60, &air);
-        model.record(Depth::from_metric(21.), 5 * 60, &air);
-        model.record(Depth::from_metric(14.), 0, &air);
-        assert_eq!(model.max_gf(gf, Depth::from_metric(14.)), 40);
+        model.record(Depth::m(40.), 30 * 60, &air);
+        model.record(Depth::m(21.), 5 * 60, &air);
+        model.record(Depth::m(14.), 0, &air);
+        assert_eq!(model.max_gf(gf, Depth::m(14.)), 40);
     }
 
     #[test]
     fn test_gf_slope_point() {
         let gf = (30, 85);
         let model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
-        let slope_point =
-            model.gf_slope_point(gf, Depth::from_metric(33.528), Depth::from_metric(30.48));
+        let slope_point = model.gf_slope_point(gf, Depth::m(33.528), Depth::m(30.48));
         assert_eq!(slope_point, 35);
     }
 
@@ -549,8 +548,8 @@ mod tests {
                 .with_ceiling_type(CeilingType::Actual),
         );
         let air = Gas::air();
-        model.record(Depth::from_metric(40.), 6 * 60, &air);
-        model.record(Depth::from_metric(9.), 0, &air);
+        model.record(Depth::m(40.), 6 * 60, &air);
+        model.record(Depth::m(9.), 0, &air);
         let ndl = model.ndl();
         assert_eq!(ndl, 0);
     }

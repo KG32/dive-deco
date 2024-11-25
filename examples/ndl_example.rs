@@ -6,7 +6,7 @@ fn main() {
     let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
-    let depth = Depth::from_metric(30.);
+    let depth = Depth::m(30.);
     let bottom_time_minutes = 10;
 
     // a simulated instantaneous drop to 20m with 20 minutes bottom time using air

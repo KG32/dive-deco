@@ -17,7 +17,7 @@ fn test_ndl() {
     for test_case in test_cases {
         let (gradient_factors, test_depth, expected_ndl) = test_case;
         let mut model = fixtures::model_gf(gradient_factors);
-        model.record(Depth::from_metric(test_depth), 0, &air);
+        model.record(Depth::m(test_depth), 0, &air);
         assert_eq!(model.ndl(), expected_ndl);
     }
 }
@@ -30,9 +30,9 @@ fn test_gf_low_ceiling() {
 
     let air = fixtures::gas_air();
 
-    model.record(Depth::from_metric(40.), 10 * 60, &air);
+    model.record(Depth::m(40.), 10 * 60, &air);
 
     let ceiling = model.ceiling();
 
-    assert_close_to_abs!(ceiling.metric(), 8., 0.5);
+    assert_close_to_abs!(ceiling.meters(), 8., 0.5);
 }

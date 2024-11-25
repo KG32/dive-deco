@@ -9,7 +9,7 @@ pub mod fixtures;
 fn test_deco_ascent_no_deco() {
     let air = fixtures::gas_air();
     let mut model = fixtures::model_default();
-    model.record(Depth::from_metric(20.), 5 * 60, &air);
+    model.record(Depth::m(20.), 5 * 60, &air);
 
     let DecoRuntime {
         deco_stages, tts, ..
@@ -22,7 +22,7 @@ fn test_deco_ascent_no_deco() {
 fn test_deco_single_gas() {
     let air = fixtures::gas_air();
     let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
-    model.record(Depth::from_metric(40.), 20 * 60, &air);
+    model.record(Depth::m(40.), 20 * 60, &air);
 
     let DecoRuntime {
         deco_stages, tts, ..
@@ -34,36 +34,36 @@ fn test_deco_single_gas() {
     let expected_deco_stages = vec![
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(40.0),
-            end_depth: Depth::from_metric(6.0),
+            start_depth: Depth::m(40.0),
+            end_depth: Depth::m(6.0),
             duration: 226,
             gas: air,
         },
         DecoStage {
             stage_type: DecoStageType::DecoStop,
-            start_depth: Depth::from_metric(6.0),
-            end_depth: Depth::from_metric(6.0),
+            start_depth: Depth::m(6.0),
+            end_depth: Depth::m(6.0),
             duration: 88,
             gas: air,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(6.0),
-            end_depth: Depth::from_metric(3.0),
+            start_depth: Depth::m(6.0),
+            end_depth: Depth::m(3.0),
             duration: 20,
             gas: air,
         },
         DecoStage {
             stage_type: DecoStageType::DecoStop,
-            start_depth: Depth::from_metric(3.0),
-            end_depth: Depth::from_metric(3.0),
+            start_depth: Depth::m(3.0),
+            end_depth: Depth::m(3.0),
             duration: 400,
             gas: air,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(3.0),
-            end_depth: Depth::from_metric(0.0),
+            start_depth: Depth::m(3.0),
+            end_depth: Depth::m(0.0),
             duration: 20,
             gas: air,
         },
@@ -79,7 +79,7 @@ fn test_deco_multi_gas() {
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
 
-    model.record(Depth::from_metric(40.), 20 * 60, &air);
+    model.record(Depth::m(40.), 20 * 60, &air);
 
     let DecoRuntime {
         deco_stages, tts, ..
@@ -88,50 +88,50 @@ fn test_deco_multi_gas() {
     let expected_deco_stages = vec![
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(40.),
-            end_depth: Depth::from_metric(22.),
+            start_depth: Depth::m(40.),
+            end_depth: Depth::m(22.),
             duration: 120,
             gas: air,
         },
         DecoStage {
             stage_type: DecoStageType::GasSwitch,
-            start_depth: Depth::from_metric(22.0),
-            end_depth: Depth::from_metric(22.0),
+            start_depth: Depth::m(22.0),
+            end_depth: Depth::m(22.0),
             duration: 0,
             gas: ean_50,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(22.),
-            end_depth: Depth::from_metric(6.),
+            start_depth: Depth::m(22.),
+            end_depth: Depth::m(6.),
             duration: 106,
             gas: ean_50,
         },
         DecoStage {
             stage_type: DecoStageType::DecoStop,
-            start_depth: Depth::from_metric(6.0),
-            end_depth: Depth::from_metric(6.0),
+            start_depth: Depth::m(6.0),
+            end_depth: Depth::m(6.0),
             duration: 34,
             gas: ean_50,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(6.0),
-            end_depth: Depth::from_metric(3.0),
+            start_depth: Depth::m(6.0),
+            end_depth: Depth::m(3.0),
             duration: 20,
             gas: ean_50,
         },
         DecoStage {
             stage_type: DecoStageType::DecoStop,
-            start_depth: Depth::from_metric(3.0),
-            end_depth: Depth::from_metric(3.0),
+            start_depth: Depth::m(3.0),
+            end_depth: Depth::m(3.0),
             duration: 291,
             gas: ean_50,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(3.0),
-            end_depth: Depth::from_metric(0.0),
+            start_depth: Depth::m(3.0),
+            end_depth: Depth::m(0.0),
             duration: 20,
             gas: ean_50,
         },
@@ -147,7 +147,7 @@ fn test_deco_with_deco_mod_at_bottom() {
     let air = Gas::air();
     let ean_36 = Gas::new(0.36, 0.);
 
-    model.record(Depth::from_metric(30.), 30 * 60, &air);
+    model.record(Depth::m(30.), 30 * 60, &air);
 
     let DecoRuntime {
         deco_stages, tts, ..
@@ -156,29 +156,29 @@ fn test_deco_with_deco_mod_at_bottom() {
     let expected_deco_stages = vec![
         DecoStage {
             stage_type: DecoStageType::GasSwitch,
-            start_depth: Depth::from_metric(30.0),
-            end_depth: Depth::from_metric(30.0),
+            start_depth: Depth::m(30.0),
+            end_depth: Depth::m(30.0),
             duration: 0,
             gas: ean_36,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(30.0),
-            end_depth: Depth::from_metric(3.0),
+            start_depth: Depth::m(30.0),
+            end_depth: Depth::m(3.0),
             duration: 180,
             gas: ean_36,
         },
         DecoStage {
             stage_type: DecoStageType::DecoStop,
-            start_depth: Depth::from_metric(3.0),
-            end_depth: Depth::from_metric(3.0),
+            start_depth: Depth::m(3.0),
+            end_depth: Depth::m(3.0),
             duration: 268,
             gas: ean_36,
         },
         DecoStage {
             stage_type: DecoStageType::Ascent,
-            start_depth: Depth::from_metric(3.0),
-            end_depth: Depth::from_metric(0.0),
+            start_depth: Depth::m(3.0),
+            end_depth: Depth::m(0.0),
             duration: 20,
             gas: ean_36,
         },
@@ -193,9 +193,9 @@ fn test_tts_delta() {
     let air = Gas::air();
     let ean_50 = Gas::new(0.5, 0.);
     let gas_mixes = vec![air, ean_50];
-    model.record(Depth::from_metric(40.), 20 * 60, &air);
+    model.record(Depth::m(40.), 20 * 60, &air);
     let deco_1 = model.deco(gas_mixes.clone()).unwrap();
-    model.record(Depth::from_metric(40.), 5 * 60, &air);
+    model.record(Depth::m(40.), 5 * 60, &air);
     let deco_2 = model.deco(gas_mixes).unwrap();
     assert_eq!(deco_1.tts_at_5, deco_2.tts);
     assert_eq!(
@@ -221,19 +221,19 @@ fn test_runtime_on_missed_stop() {
 
     for config in configs.into_iter() {
         let mut model = BuehlmannModel::new(config);
-        model.record(Depth::from_metric(40.), 30 * 60, &air);
-        model.record(Depth::from_metric(22.), 0, &air);
+        model.record(Depth::m(40.), 30 * 60, &air);
+        model.record(Depth::m(22.), 0, &air);
         let initial_deco = model.deco(available_gas_mixes.clone()).unwrap();
         // 21
         let initial_deco_stop_depth = get_first_deco_stop_depth(initial_deco);
 
         // between stop and ceiling (18 - 21)
-        model.record(Depth::from_metric(20.), 0, &air);
+        model.record(Depth::m(20.), 0, &air);
         let between_deco = model.deco(available_gas_mixes.clone()).unwrap();
         let between_deco_stop_depth = get_first_deco_stop_depth(between_deco);
 
         // below
-        model.record(Depth::from_metric(15.), 0, &air);
+        model.record(Depth::m(15.), 0, &air);
         let below_deco = model.deco(available_gas_mixes.clone()).unwrap();
         let below_deco_stop_depth = get_first_deco_stop_depth(below_deco);
 
@@ -257,7 +257,7 @@ fn test_deco_runtime_integrity() {
     let air = Gas::air();
     let ean_50 = Gas::new(0.50, 0.);
     let oxygen = Gas::new(1., 0.);
-    model.record(Depth::from_metric(40.), 20 * 60, &air);
+    model.record(Depth::m(40.), 20 * 60, &air);
 
     let deco_runtime = model.deco(vec![air, ean_50, oxygen]).unwrap();
     let deco_stages = deco_runtime.deco_stages;
