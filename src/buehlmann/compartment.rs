@@ -1,7 +1,7 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
+        Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData, Unit,
     },
     BuehlmannConfig, Gas, Seconds,
 };
@@ -38,7 +38,7 @@ impl Compartment {
     pub fn new(no: u8, params: ZHLParams, model_config: BuehlmannConfig) -> Self {
         let init_gas = Gas::air();
         let init_gas_compound_pressures =
-            init_gas.inspired_partial_pressures(0., model_config.surface_pressure);
+            init_gas.inspired_partial_pressures(Depth::zero(), model_config.surface_pressure);
         let n2_ip = init_gas_compound_pressures.n2;
         let he_ip = init_gas_compound_pressures.he;
 
@@ -56,7 +56,8 @@ impl Compartment {
 
         // calculate initial minimal tolerable ambient pressure
         let (_, gf_high) = model_config.gf;
-        compartment.m_value_raw = compartment.m_value(0., model_config.surface_pressure, 100);
+        compartment.m_value_raw =
+            compartment.m_value(Depth::zero(), model_config.surface_pressure, 100);
         compartment.m_value_calc = compartment.m_value_raw;
         compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high);
 
@@ -94,15 +95,15 @@ impl Compartment {
             ceil = 0.;
         }
 
-        ceil
+        Depth::from_metric(ceil)
     }
 
     // tissue supersaturation (gf99, surface gf)
     pub fn supersaturation(&self, surface_pressure: MbarPressure, depth: Depth) -> Supersaturation {
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth / 10.);
+        let p_amb = p_surf + (depth.metric() / 10.);
         let m_value = self.m_value_raw;
-        let m_value_surf = self.m_value(0., surface_pressure, 100);
+        let m_value_surf = self.m_value(Depth::zero(), surface_pressure, 100);
         let gf_99 = ((self.total_ip - p_amb) / (m_value - p_amb)) * 100.;
         let gf_surf = ((self.total_ip - p_surf) / (m_value_surf - p_surf)) * 100.;
 
@@ -119,7 +120,7 @@ impl Compartment {
         let (_, a_coeff_adjusted, b_coeff_adjusted) =
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth / 10.);
+        let p_amb = p_surf + (depth.metric() / 10.);
 
         a_coeff_adjusted + (p_amb / b_coeff_adjusted)
     }
@@ -270,7 +271,7 @@ mod tests {
         let mut comp_5 = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: 0.,
+            depth: Depth::zero(),
             time: 1,
             gas: &air,
         };
@@ -286,7 +287,7 @@ mod tests {
         let mut comp_5 = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: 0.,
+            depth: Depth::zero(),
             time: 1,
             gas: &air,
         };
@@ -301,7 +302,7 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: 30.,
+            depth: Depth::from_metric(30.),
             time: (10 * 60),
             gas: &air,
         };
@@ -324,7 +325,7 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let recprd = RecordData {
-            depth: 30.,
+            depth: Depth::from_metric(30.),
             time: (10 * 60),
             gas: &air,
         };

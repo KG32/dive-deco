@@ -13,10 +13,10 @@ pub use deco::{Deco, DecoCalculationError, DecoRuntime, DecoStage, DecoStageType
 pub use deco_model::{ConfigValidationErr, DecoModel, DecoModelConfig, DiveState};
 pub use gas::{Gas, InertGas, PartialPressures};
 pub use global_types::{
-    AscentRatePerMinute, CeilingType, Cns, Depth, GradientFactor, GradientFactors, MbarPressure,
+    AscentRatePerMinute, CeilingType, Cns, DepthType, GradientFactor, GradientFactors, MbarPressure,
     Minutes, MinutesSigned, NDLType, Otu, Pressure, Seconds,
 };
 pub use ox_tox::OxTox;
 pub use record::RecordData;
 pub use sim::Sim;
-pub use units::{DepthUnit, Unit, Units};
+pub use units::{Depth, Unit, Units};

@@ -4,7 +4,7 @@ use crate::common::CNS_COEFFICIENTS;
 use crate::{Minutes, Pressure, RecordData, Seconds};
 
 use super::global_types::Otu;
-use super::{CNSCoeffRow, Cns, MbarPressure};
+use super::{CNSCoeffRow, Cns, Depth, DepthType, MbarPressure};
 
 const CNS_ELIMINATION_HALF_TIME_MINUTES: Minutes = 90;
 const CNS_LIMIT_OVER_MAX_PP02: Seconds = 400;
@@ -50,7 +50,7 @@ impl OxTox {
             self.cns += ((time as f64) / (t_lim * 60.)) * 100.;
         } else {
             // PO2 out of cns table range
-            if (depth == 0.) && (pp_o2 <= 0.5) {
+            if (depth == Depth::zero()) && (pp_o2 <= 0.5) {
                 // eliminate CNS with half time
                 self.cns /= 2_f64.powf((time / (CNS_ELIMINATION_HALF_TIME_MINUTES * 60)) as f64);
             } else if pp_o2 > 1.6 {
@@ -93,7 +93,7 @@ impl OxTox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Gas;
+    use crate::{common::Unit, Gas};
 
     #[test]
     fn test_default() {
@@ -133,7 +133,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
 
         // static depth segment
-        let depth = 36.;
+        let depth = Depth::from_metric(36.);
         let time = 20 * 60;
         let ean_32 = Gas::new(0.32, 0.);
         let record = RecordData {
@@ -151,7 +151,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         // CNS ~50%
         let record = RecordData {
-            depth: 30.,
+            depth: Depth::from_metric(30.),
             time: (75 * 60),
             gas: &Gas::new(0.35, 0.),
         };
@@ -162,7 +162,7 @@ mod tests {
         while i < 2 {
             ox_tox.recalculate_cns(
                 &RecordData {
-                    depth: 0.,
+                    depth: Depth::zero(),
                     time: (90 * 60),
                     gas: &Gas::air(),
                 },
@@ -177,7 +177,7 @@ mod tests {
     fn test_cns_above_max_ppo2() {
         let mut ox_tox = OxTox::default();
         let record = RecordData {
-            depth: 30.,
+            depth: Depth::from_metric(30.),
             time: 400,
             gas: &Gas::new(0.5, 0.),
         };
@@ -189,7 +189,7 @@ mod tests {
     fn test_otu_surface() {
         let mut ox_tox = OxTox::default();
         let record = RecordData {
-            depth: 0.,
+            depth: Depth::zero(),
             time: 60 * 60,
             gas: &Gas::air(),
         };
@@ -203,7 +203,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         let ean32 = Gas::new(0.32, 0.);
         let record = RecordData {
-            depth: 36.,
+            depth: Depth::from_metric(36.),
             time: 22 * 60,
             gas: &ean32,
         };
