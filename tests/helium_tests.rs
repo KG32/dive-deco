@@ -7,7 +7,7 @@ fn test_tmx_gf_surf() {
 
     let tmx = Gas::new(0.21, 0.35);
 
-    model.record(Depth::m(30.), 300 * 60, &tmx);
+    model.record(Depth::from_meters(30.), 300 * 60, &tmx);
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
@@ -20,7 +20,7 @@ fn test_tmx_ndl() {
 
     let tmx = Gas::new(0.21, 0.35);
 
-    model.record(Depth::m(20.), 0, &tmx);
+    model.record(Depth::from_meters(20.), 0, &tmx);
 
     assert_eq!(model.ndl(), 17);
 }
@@ -30,7 +30,7 @@ fn test_tmx_ndl() {
 fn test_heliox_gf_surf() {
     let mut model = fixtures::model_gf((100, 100));
     let tmx = Gas::new(0.21, 0.79);
-    model.record(Depth::m(30.), 40 * 60, &tmx);
+    model.record(Depth::from_meters(30.), 40 * 60, &tmx);
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 

@@ -11,7 +11,7 @@ fn main() {
     let oxygen = Gas::new(1., 0.);
     let available_gas_mixes = vec![air, ean_50, oxygen];
 
-    let bottom_depth = Depth::m(40.);
+    let bottom_depth = Depth::from_meters(40.);
     let bottom_time = 20 * 60; // 20 min
 
     // descent to 40m at a rate of 9min/min using air

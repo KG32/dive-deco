@@ -95,7 +95,7 @@ impl Compartment {
             ceil = 0.;
         }
 
-        Depth::m(ceil)
+        Depth::from_meters(ceil)
     }
 
     // tissue supersaturation (gf99, surface gf)
@@ -302,7 +302,7 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: Depth::m(30.),
+            depth: Depth::from_meters(30.),
             time: (10 * 60),
             gas: &air,
         };
@@ -325,7 +325,7 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let recprd = RecordData {
-            depth: Depth::m(30.),
+            depth: Depth::from_meters(30.),
             time: (10 * 60),
             gas: &air,
         };

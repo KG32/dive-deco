@@ -84,8 +84,8 @@ impl AddAssign for Depth {
 impl Unit for Depth {
     fn from_units(val: DepthType, units: Units) -> Self {
         match units {
-            Units::Metric => Self::m(val),
-            Units::Imperial => Self::ft(val),
+            Units::Metric => Self::from_meters(val),
+            Units::Imperial => Self::from_feet(val),
         }
     }
     fn to_units(&self, units: Units) -> DepthType {
@@ -100,10 +100,10 @@ impl Depth {
     pub fn zero() -> Self {
         Self { m: 0. }
     }
-    pub fn m(val: DepthType) -> Self {
+    pub fn from_meters(val: DepthType) -> Self {
         Self { m: val }
     }
-    pub fn ft(val: DepthType) -> Self {
+    pub fn from_feet(val: DepthType) -> Self {
         Self {
             m: Self::ft_to_m(val),
         }
@@ -118,7 +118,7 @@ impl Depth {
         m * 3.28084
     }
     fn ft_to_m(ft: DepthType) -> DepthType {
-        ft / 3.28084
+        ft * 0.3048
     }
 }
 
@@ -128,23 +128,23 @@ mod tests {
 
     #[test]
     fn m_to_ft() {
-        let depth = Depth::m(1.);
+        let depth = Depth::from_meters(1.);
         let ft = depth.feet();
         assert_eq!(ft, 3.28084);
     }
 
     #[test]
     fn ft_to_m() {
-        let depth = Depth::ft(100.);
+        let depth = Depth::from_feet(100.);
         let m = depth.meters();
-        assert_eq!(m, 30.47999902464003);
+        assert_eq!(m, 30.48);
     }
 
     #[test]
     fn depth_conversion_factors() {
-        let depth = Depth::m(1.);
+        let depth = Depth::from_meters(1.);
         let ft = depth.feet();
-        let new_depth = Depth::ft(ft);
+        let new_depth = Depth::from_feet(ft);
         let m = new_depth.meters();
         assert_eq!(with_precision(m, 5), 1.);
     }
@@ -157,7 +157,7 @@ mod tests {
 
         let depth_ft = Depth::from_units(1., Units::Imperial);
         assert_eq!(with_precision(depth_ft.feet(), 5), 1.);
-        assert_eq!(depth_ft.meters(), 0.3047999902464003);
+        assert_eq!(depth_ft.meters(), 0.3048);
     }
 
     fn with_precision(x: f64, precision: u32) -> f64 {

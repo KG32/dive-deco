@@ -4,7 +4,7 @@ pub mod fixtures;
 #[test]
 fn travel_descent() {
     let mut model = fixtures::model_default();
-    let target_depth = Depth::m(40.);
+    let target_depth = Depth::from_meters(40.);
     let descent_time = 10 * 60;
     model.record_travel(target_depth, descent_time, &fixtures::gas_air());
     let dive_state = model.dive_state();
@@ -18,11 +18,11 @@ fn travel_descent() {
 fn travel_ascent() {
     let mut model = fixtures::model_gf((30, 70));
     let air = fixtures::gas_air();
-    let initial_depth = Depth::m(40.);
+    let initial_depth = Depth::from_meters(40.);
     let bottom_time = 20 * 60;
     model.record(initial_depth, bottom_time, &air);
 
-    let target_depth = Depth::m(15.);
+    let target_depth = Depth::from_meters(15.);
     let ascent_time = 3 * 30;
     model.record_travel(target_depth, ascent_time, &air);
 
@@ -38,14 +38,14 @@ fn travel_ascent() {
 #[should_panic]
 fn travel_invalid_target_depth() {
     let mut model = fixtures::model_gf((30, 70));
-    model.record_travel(Depth::m(-10.), 1, &fixtures::gas_air());
+    model.record_travel(Depth::from_meters(-10.), 1, &fixtures::gas_air());
 }
 
 #[test]
 fn test_travel_record_with_rate() {
     let mut model = fixtures::model_default();
     let air = fixtures::gas_air();
-    let initial_depth = Depth::m(20.);
+    let initial_depth = Depth::from_meters(20.);
     let bottom_time = 20 * 60;
     let target_depth = Depth::zero();
     let expected_travel_time = 133;
