@@ -85,6 +85,56 @@ Current config options:
 
 ---
 
+#### Common
+
+##### Depth
+
+A VO representing depth, both constructed from and represented as meters or feet.
+
+- `from_meters(val: f64) -> Depth`
+- `from_feet(val: f64) -> Depth`
+- `as_meters() -> f64`
+- `as_feet() -> f64`
+
+```rust
+    let depth_1 = Depth::from_meters(10.);
+    println!("{}m", depth_1.as_meters()); // 10m
+    println!("{}ft", depth_1.as_feet()); // 32.80ft
+
+    let depth_2 = Depth::from_feet(100.);
+    println!("{}m", depth_2.as_meters()); // 30.48m
+    println!("{}ft", depth_2.as_feet()); // 100ft
+
+    let depths_sum = depth_1 + depth_2;
+    println!(
+        "{}m + {}ft = {}m / {}ft",
+        depth_1.as_meters(),
+        depth_2.as_feet(),
+        depths_sum.as_meters(),
+        depths_sum.as_feet()
+    ); // 10m + 100ft = 40.48m / 132.80ft
+```
+
+##### Gas
+
+Breathing gas used in the model.
+
+- `new(o2, he)`
+  - o2 - oxygen partial pressure
+  - he - helium partial pressure
+- `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
+- `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
+- `maximum_operating_depth(pp_o2_limit)` - maximum operating depth considering o2 partial, with maximum o2 partial pressure as parameter
+- `equivalent_narcotic_depth(depth)` - equivalent depth at which given gas has the same narcotic potential as air. Assumes o2 - n2 1:1 narcotic ratio.
+
+```rust
+let mix = Gas::new(0.21, 0.);
+mix.partial_pressures(10.); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
+mix.inspired_partial_pressures(10.); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
+```
+
+---
+
 #### Updating model state
 
 ##### Record
@@ -97,7 +147,7 @@ A DecoModel trait method that represents a single model record as a datapoint.
   - gas - breathing mix used for the duration of this record
 
 ```rust
-let depth = 20.;
+let depth = Depth::from_meters(20.);
 let time = 1; // 1 second
 let nitrox = Gas::new(0.32, 0.);
 // register 1 second at 20m breathing nitrox 32
@@ -114,7 +164,7 @@ A DecoModel trait method that represents a linear change of depth. It assumes a 
   - gas: breathing mix using for the duration of this record
 
 ```rust
-let target_depth = 30.;
+let target_depth = Depth::from_meters(30.);
 let descent_time = 4 * 60; // 4 minutes as seconds
 let nitrox = Gas::new(0.32, 0.);
 // register a 4 minute descent to 30m using nitrox 32
@@ -155,7 +205,7 @@ All decompression stages calculated to clear deco obligations and resurface in a
 - `DecoCalculationError`
   - `EmptyGasList` - occurs when available gasses vector is empty
   - `CurrentGasNotInList` - occurs when provided available list doesn't include gas currently in use according to deco model's state
-  -
+
 ```rust
     let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
     let mut model = BuehlmannModel::new(config);
@@ -171,7 +221,7 @@ All decompression stages calculated to clear deco obligations and resurface in a
         oxygen,
     ];
 
-    let bottom_depth = 40.;
+    let bottom_depth = Depth::from_meters(40.);
     let bottom_time = 20 * 60; // 20 min
 
     // descent to 40m at a rate of 9min/min using air
@@ -193,8 +243,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
       deco_stages: [
           DecoStage {
               stage_type: Ascent,
-              start_depth: 40.0,
-              end_depth: 22.0,
+              start_depth: Depth { m: 40.0 },
+              end_depth: Depth { m: 22.0 },
               duration: 120,
               gas: Gas {
                   o2_pp: 0.21,
@@ -204,8 +254,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: GasSwitch,
-              start_depth: 22.0,
-              end_depth: 22.0,
+              start_depth: Depth { m: 22.0 },
+              end_depth: Depth { m: 22.0 },
               duration: 0,
               gas: Gas {
                   o2_pp: 0.5,
@@ -215,8 +265,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: Ascent,
-              start_depth: 22.0,
-              end_depth: 6.000000000000001,
+              start_depth: Depth { m: 22.0 },
+              end_depth: Depth { m: 6.000000000000001 },
               duration: 106,
               gas: Gas {
                   o2_pp: 0.5,
@@ -226,8 +276,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: GasSwitch,
-              start_depth: 6.000000000000001,
-              end_depth: 6.000000000000001,
+              start_depth: Depth { m: 6.000000000000001 },
+              end_depth: Depth { m: 6.000000000000001 },
               duration: 0,
               gas: Gas {
                   o2_pp: 1.0,
@@ -237,8 +287,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: DecoStop,
-              start_depth: 6.000000000000001,
-              end_depth: 6.000000000000001,
+              start_depth: Depth { m: 6.000000000000001 },
+              end_depth: Depth { m: 6.000000000000001 },
               duration: 410,
               gas: Gas {
                   o2_pp: 1.0,
@@ -248,8 +298,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: Ascent,
-              start_depth: 6.000000000000001,
-              end_depth: 3.0,
+              start_depth: Depth { m: 6.000000000000001 },
+              end_depth: Depth { m: 3.0 },
               duration: 20,
               gas: Gas {
                   o2_pp: 1.0,
@@ -259,8 +309,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: DecoStop,
-              start_depth: 3.0,
-              end_depth: 3.0,
+              start_depth: Depth { m: 3.0 },
+              end_depth: Depth { m: 3.0 },
               duration: 226,
               gas: Gas {
                   o2_pp: 1.0,
@@ -270,8 +320,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
           },
           DecoStage {
               stage_type: Ascent,
-              start_depth: 3.0,
-              end_depth: 0.0,
+              start_depth: Depth { m: 3.0 },
+              end_depth: Depth { m: 0.0 },
               duration: 20,
               gas: Gas {
                   o2_pp: 1.0,
@@ -305,7 +355,7 @@ fn main() {
     let mut model = BuehlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
-    let depth = 30.;
+    let depth = Depth::from_meters(30.);
     let bottom_time_minutes = 10;
 
     // a simulated instantaneous drop to 20m with a single record simulating 20 minutes bottom time using air
@@ -335,11 +385,11 @@ fn main() {
     let nitrox_32 = Gas::new(0.32, 0.);
 
     // ceiling after 20 min at 20 meters using EAN32 - ceiling at 0m
-    model.record(20., 20 * 60, &nitrox_32);
+    model.record(Depth::from_meters(20.), 20 * 60, &nitrox_32);
     println!("Ceiling: {}m", model.ceiling()); // Ceiling: 0m
 
     // ceiling after another 42 min at 30 meters using EAN32 - ceiling at 3m
-    model.record(30., 42 * 60, &nitrox_32);
+    model.record(Depth::from_meters(30.), 42 * 60, &nitrox_32);
     println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 }
 ```
@@ -384,28 +434,6 @@ to oxygen at elevated partial pressures presented as units (1 OTU = 100% O2 @ 1b
   // given model
   // (...)
   let cns = model.otu(); // 78.43
-```
-
----
-
-#### Common
-
-##### Gas
-
-Breathing gas used in the model.
-
-- `new(o2, he)`
-  - o2 - oxygen partial pressure
-  - he - helium partial pressure
-- `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
-- `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
-- `maximum_operating_depth(pp_o2_limit)` - maximum operating depth considering o2 partial, with maximum o2 partial pressure as parameter
-- `equivalent_narcotic_depth(depth)` - equivalent depth at which given gas has the same narcotic potential as air. Assumes o2 - n2 1:1 narcotic ratio.
-
-```rust
-let mix = Gas::new(0.21, 0.);
-mix.partial_pressures(10.); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
-mix.inspired_partial_pressures(10.); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
 ```
 
 ---
