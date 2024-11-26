@@ -34,5 +34,5 @@ fn test_gf_low_ceiling() {
 
     let ceiling = model.ceiling();
 
-    assert_close_to_abs!(ceiling.meters(), 8., 0.5);
+    assert_close_to_abs!(ceiling.as_meters(), 8., 0.5);
 }

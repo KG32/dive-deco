@@ -371,9 +371,8 @@ impl Deco {
 
     // round ceiling up to the bottom of deco window
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
-        // @todo
         Depth::from_meters(
-            DEFAULT_CEILING_WINDOW * (ceiling.meters() / DEFAULT_CEILING_WINDOW).ceil(),
+            DEFAULT_CEILING_WINDOW * (ceiling.as_meters() / DEFAULT_CEILING_WINDOW).ceil(),
         )
     }
 

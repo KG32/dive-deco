@@ -27,7 +27,7 @@ impl Default for Depth {
 
 impl fmt::Display for Depth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, r"{}m \ {}ft", self.meters(), self.feet())
+        write!(f, r"{}m \ {}ft", self.as_meters(), self.as_feet())
     }
 }
 
@@ -59,7 +59,7 @@ impl Sub<Self> for Depth {
     }
 }
 
-impl Mul for Depth {
+impl Mul<Self> for Depth {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -67,11 +67,27 @@ impl Mul for Depth {
     }
 }
 
-impl Div for Depth {
+impl Mul<f64> for Depth {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self { m: self.m * rhs }
+    }
+}
+
+impl Div<Self> for Depth {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        Self { m: self.m - rhs.m }
+        Self { m: self.m / rhs.m }
+    }
+}
+
+impl Div<f64> for Depth {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Self { m: self.m / rhs }
     }
 }
 
@@ -90,8 +106,8 @@ impl Unit for Depth {
     }
     fn to_units(&self, units: Units) -> DepthType {
         match units {
-            Units::Metric => self.meters(),
-            Units::Imperial => self.feet(),
+            Units::Metric => self.as_meters(),
+            Units::Imperial => self.as_feet(),
         }
     }
 }
@@ -108,10 +124,10 @@ impl Depth {
             m: Self::ft_to_m(val),
         }
     }
-    pub fn meters(&self) -> DepthType {
+    pub fn as_meters(&self) -> DepthType {
         self.m
     }
-    pub fn feet(&self) -> DepthType {
+    pub fn as_feet(&self) -> DepthType {
         Self::m_to_ft(self.m)
     }
     fn m_to_ft(m: DepthType) -> DepthType {
@@ -129,35 +145,35 @@ mod tests {
     #[test]
     fn m_to_ft() {
         let depth = Depth::from_meters(1.);
-        let ft = depth.feet();
+        let ft = depth.as_feet();
         assert_eq!(ft, 3.28084);
     }
 
     #[test]
     fn ft_to_m() {
         let depth = Depth::from_feet(100.);
-        let m = depth.meters();
+        let m = depth.as_meters();
         assert_eq!(m, 30.48);
     }
 
     #[test]
     fn depth_conversion_factors() {
         let depth = Depth::from_meters(1.);
-        let ft = depth.feet();
+        let ft = depth.as_feet();
         let new_depth = Depth::from_feet(ft);
-        let m = new_depth.meters();
+        let m = new_depth.as_meters();
         assert_eq!(with_precision(m, 5), 1.);
     }
 
     #[test]
     fn from_units_constructor() {
         let depth_m = Depth::from_units(1., Units::Metric);
-        assert_eq!(depth_m.meters(), 1.);
-        assert_eq!(depth_m.feet(), 3.28084);
+        assert_eq!(depth_m.as_meters(), 1.);
+        assert_eq!(depth_m.as_feet(), 3.28084);
 
         let depth_ft = Depth::from_units(1., Units::Imperial);
-        assert_eq!(with_precision(depth_ft.feet(), 5), 1.);
-        assert_eq!(depth_ft.meters(), 0.3048);
+        assert_eq!(with_precision(depth_ft.as_feet(), 5), 1.);
+        assert_eq!(depth_ft.as_meters(), 0.3048);
     }
 
     fn with_precision(x: f64, precision: u32) -> f64 {

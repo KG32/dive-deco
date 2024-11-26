@@ -60,7 +60,7 @@ impl Gas {
         depth: Depth,
         surface_pressure: MbarPressure,
     ) -> PartialPressures {
-        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth.meters() / 10.);
+        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth.as_meters() / 10.);
         self.gas_pressures_compound(gas_pressure)
     }
 
@@ -70,7 +70,7 @@ impl Gas {
         depth: Depth,
         surface_pressure: MbarPressure,
     ) -> PartialPressures {
-        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth.meters() / 10.))
+        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth.as_meters() / 10.))
             - ALVEOLI_WATER_VAPOR_PRESSURE;
         self.gas_pressures_compound(gas_pressure)
     }

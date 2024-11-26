@@ -20,8 +20,8 @@ fn test_ceiling() {
     model.record(Depth::from_meters(30.), 30 * 60, &air);
     let calculated_ceiling = model.ceiling();
     assert_close_to_percent!(
-        calculated_ceiling.meters(),
-        Depth::from_meters(7.802523739933558).meters(),
+        calculated_ceiling.as_meters(),
+        Depth::from_meters(7.802523739933558).as_meters(),
         0.5
     );
 }
@@ -77,8 +77,8 @@ fn test_model_records_equality() {
     }
 
     assert_eq!(
-        model1.ceiling().meters().floor(),
-        model2.ceiling().meters().floor()
+        model1.ceiling().as_meters().floor(),
+        model2.ceiling().as_meters().floor()
     );
 
     let Supersaturation {
@@ -185,7 +185,7 @@ fn test_example_ceiling_start() {
 
     // instant drop to 40m on air for 10min
     model.record(Depth::from_meters(40.), 10 * 60, &air);
-    assert_eq!(model.ceiling().meters(), 12.85312294790554);
+    assert_eq!(model.ceiling().as_meters(), 12.85312294790554);
 }
 
 #[test]
@@ -202,7 +202,7 @@ fn test_example_ceiling() {
     model.record(Depth::from_meters(40.), 40 * 60, &air);
     model.record(Depth::from_meters(30.), 3 * 60, &air);
     model.record(Depth::from_meters(21.), 10 * 60, &ean_50);
-    assert_eq!(model.ceiling().meters(), 12.455491216740299);
+    assert_eq!(model.ceiling().as_meters(), 12.455491216740299);
 }
 
 #[test]
@@ -219,8 +219,8 @@ fn test_example_ceiling_feet() {
     model.record(Depth::from_feet(131.234), 40 * 60, &air);
     model.record(Depth::from_feet(98.4252), 3 * 60, &air);
     model.record(Depth::from_feet(68.8976), 10 * 60, &ean_50);
-    assert_eq!(model.ceiling().feet(), 40.864609154666);
-    assert_eq!(model.ceiling().meters(), 12.455532471765158);
+    assert_eq!(model.ceiling().as_feet(), 40.864609154666);
+    assert_eq!(model.ceiling().as_meters(), 12.455532471765158);
 }
 
 #[test]
@@ -231,7 +231,7 @@ fn test_adaptive_ceiling() {
     let air = Gas::air();
     model.record(Depth::from_meters(40.), 20 * 60, &air);
     let ceiling = model.ceiling();
-    assert_close_to_abs!(ceiling.meters(), 4., 0.5);
+    assert_close_to_abs!(ceiling.as_meters(), 4., 0.5);
 }
 
 #[test]

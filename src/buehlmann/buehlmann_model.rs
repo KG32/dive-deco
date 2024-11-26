@@ -84,8 +84,7 @@ impl DecoModel for BuehlmannModel {
         let mut current_depth = self.state.depth;
         let distance = target_depth - current_depth;
         let travel_time = time as f64;
-        // @todo
-        let dist_rate = Depth::from_meters(distance.meters() / travel_time);
+        let dist_rate = distance / travel_time;
         let mut i = 0;
         while i < travel_time as usize {
             self.state.time += 1;
@@ -112,7 +111,7 @@ impl DecoModel for BuehlmannModel {
     ) {
         self.validate_depth(target_depth);
         // let distance = Depth::m((target_depth - self.state.depth).meters().abs());
-        let distance = (target_depth - self.state.depth).meters().abs();
+        let distance = (target_depth - self.state.depth).as_meters().abs();
 
         let travel_time_seconds = (distance / rate * 60.) as Seconds;
         // @todo
@@ -181,8 +180,7 @@ impl DecoModel for BuehlmannModel {
         };
 
         if self.config().round_ceiling() {
-            // @todo impl ceil
-            ceiling = Depth::from_meters(ceiling.meters().ceil());
+            ceiling = Depth::from_meters(ceiling.as_meters().ceil());
         }
 
         ceiling
@@ -408,8 +406,8 @@ impl BuehlmannModel {
         depth: Depth,
     ) -> GradientFactor {
         let (gf_low, gf_high) = gf;
-        let slope_point: f64 =
-            gf_high as f64 - (((gf_high - gf_low) as f64) / gf_low_depth.meters()) * depth.meters();
+        let slope_point: f64 = gf_high as f64
+            - (((gf_high - gf_low) as f64) / gf_low_depth.as_meters()) * depth.as_meters();
 
         slope_point as u8
     }
@@ -432,7 +430,7 @@ mod tests {
         let nx32 = Gas::new(0.32, 0.);
         model.record(Depth::from_meters(10.), 10 * 60, &air);
         model.record(Depth::from_meters(15.), 15 * 60, &nx32);
-        assert_eq!(model.state.depth.meters(), 15.);
+        assert_eq!(model.state.depth.as_meters(), 15.);
         assert_eq!(model.state.time, (25 * 60));
         assert_eq!(model.state.gas, nx32);
         assert_eq!(model.state.gf_low_depth, None);
@@ -487,7 +485,8 @@ mod tests {
     fn test_gf_slope_point() {
         let gf = (30, 85);
         let model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
-        let slope_point = model.gf_slope_point(gf, Depth::from_meters(33.528), Depth::from_meters(30.48));
+        let slope_point =
+            model.gf_slope_point(gf, Depth::from_meters(33.528), Depth::from_meters(30.48));
         assert_eq!(slope_point, 35);
     }
 
