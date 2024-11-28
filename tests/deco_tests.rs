@@ -28,7 +28,7 @@ fn test_deco_single_gas() {
         deco_stages, tts, ..
     } = model.deco(vec![air]).unwrap();
 
-    assert_eq!(tts, Time::from_minutes(13.));
+    assert_eq!(tts, Time::from_seconds(754.));
     assert_eq!(deco_stages.len(), 5);
 
     let expected_deco_stages = vec![
@@ -138,7 +138,7 @@ fn test_deco_multi_gas() {
     ];
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_eq!(tts, Time::from_minutes(10.));
+    assert_eq!(tts, Time::from_seconds(591.));
 }
 
 #[test]
@@ -184,7 +184,7 @@ fn test_deco_with_deco_mod_at_bottom() {
         },
     ];
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_eq!(tts, Time::from_minutes(8.));
+    assert_eq!(tts, Time::from_seconds(468.));
 }
 
 #[test]

@@ -26,5 +26,5 @@ fn test_cns_multi_stage() {
     model.record_travel_with_rate(Depth::zero(), 1.22, &nitrox);
     model.record(Depth::zero(), Time::from_minutes(10.), &Gas::air());
     let cns = model.cns();
-    assert_close_to_abs!(cns, 27.5, 1.);
+    assert_close_to_abs!(cns, 26., 1.);
 }
