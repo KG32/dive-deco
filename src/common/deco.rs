@@ -1,10 +1,9 @@
 use std::{cmp::Ordering, fmt};
 
 use super::{
-    global_types::MinutesSigned, DecoModelConfig, Depth, DiveState, MbarPressure, Seconds, Sim,
-    Time,
+    global_types::MinutesSigned, DecoModelConfig, Depth, DiveState, MbarPressure, Sim, Time,
 };
-use crate::{DecoModel, DepthType, Gas, Minutes};
+use crate::{DecoModel, DepthType, Gas};
 
 // @todo move to model config
 const DEFAULT_CEILING_WINDOW: DepthType = 3.;

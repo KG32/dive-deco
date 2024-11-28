@@ -1,6 +1,6 @@
 use dive_deco::{
     BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, DecoRuntime, DecoStage, DecoStageType,
-    Depth, DepthType, Gas, MinutesSigned, Time, Unit,
+    Depth, Gas, MinutesSigned, Time,
 };
 
 pub mod fixtures;

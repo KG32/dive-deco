@@ -103,10 +103,6 @@ impl DecoModelConfig for BuehlmannConfig {
     fn round_ceiling(&self) -> bool {
         self.round_ceiling
     }
-
-    fn units(&self) -> Units {
-        self.units
-    }
 }
 
 impl BuehlmannConfig {

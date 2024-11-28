@@ -1,7 +1,7 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData, Unit,
+        Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
     },
     BuehlmannConfig, Gas, Seconds,
 };

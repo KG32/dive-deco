@@ -1,4 +1,4 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time, Unit};
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {
     // initialize a Buehlmann ZHL-16C deco model with default config (GF 100/100)

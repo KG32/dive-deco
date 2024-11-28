@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Depth, Supersaturation, Time, Unit};
+use dive_deco::{DecoModel, Depth, Supersaturation, Time};
 pub mod fixtures;
 
 #[test]

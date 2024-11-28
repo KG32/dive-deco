@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Depth, DepthType, GradientFactors, Minutes, Time, Unit};
+use dive_deco::{DecoModel, Depth, DepthType, GradientFactors, Time};
 pub mod fixtures;
 
 #[test]

@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Depth, Gas, Time, Unit};
+use dive_deco::{DecoModel, Depth, Gas, Time};
 
 pub mod fixtures;
 

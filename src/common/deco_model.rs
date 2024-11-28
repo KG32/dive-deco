@@ -3,7 +3,7 @@ use crate::common::global_types::{CeilingType, MbarPressure};
 use crate::common::ox_tox::OxTox;
 use crate::common::{AscentRatePerMinute, Cns, Gas, Minutes, Otu, Seconds};
 
-use super::{Depth, Units};
+use super::Depth;
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr {
@@ -26,7 +26,6 @@ pub trait DecoModelConfig {
     fn deco_ascent_rate(&self) -> AscentRatePerMinute;
     fn ceiling_type(&self) -> CeilingType;
     fn round_ceiling(&self) -> bool;
-    fn units(&self) -> Units;
 }
 
 #[derive(Debug, Clone)]

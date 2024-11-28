@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time, Unit};
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
 
 pub fn buehlmann_ndl_benchmark(c: &mut Criterion) {
     c.bench_function("Buehlmann NDL", |b| {

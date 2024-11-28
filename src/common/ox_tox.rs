@@ -1,10 +1,10 @@
 use std::cmp::Ordering;
 
 use crate::common::CNS_COEFFICIENTS;
-use crate::{Minutes, Pressure, RecordData, Seconds};
+use crate::{Pressure, RecordData};
 
 use super::global_types::Otu;
-use super::{CNSCoeffRow, Cns, Depth, DepthType, MbarPressure};
+use super::{CNSCoeffRow, Cns, Depth, MbarPressure};
 
 const CNS_ELIMINATION_HALF_TIME_MINUTES: f64 = 90.;
 const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f64 = 400.;
@@ -52,11 +52,10 @@ impl OxTox {
             // PO2 out of cns table range
             if (depth == Depth::zero()) && (pp_o2 <= 0.5) {
                 // eliminate CNS with half time
-                self.cns /=
-                    2_f64.powf((time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES)) as f64);
+                self.cns /= 2_f64.powf(time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES));
             } else if pp_o2 > 1.6 {
                 // increase CNS by a constant when ppO2 higher than 1.6
-                self.cns += (time.as_seconds() / CNS_LIMIT_OVER_MAX_PP02_SECONDS as f64) * 100.;
+                self.cns += (time.as_seconds() / CNS_LIMIT_OVER_MAX_PP02_SECONDS) * 100.;
             }
         }
     }
@@ -94,7 +93,7 @@ impl OxTox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{common::Unit, Gas, Time};
+    use crate::{Gas, Time};
 
     #[test]
     fn test_default() {
