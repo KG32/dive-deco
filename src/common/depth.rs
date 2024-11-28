@@ -12,6 +12,7 @@ pub enum Units {
 pub trait Unit<T = f64>: Sized {
     fn from_units(val: T, units: Units) -> Self;
     fn to_units(&self, units: Units) -> T;
+    fn base_unit(&self) -> T;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -109,6 +110,9 @@ impl Unit for Depth {
             Units::Metric => self.as_meters(),
             Units::Imperial => self.as_feet(),
         }
+    }
+    fn base_unit(&self) -> f64 {
+        self.m
     }
 }
 

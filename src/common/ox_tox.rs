@@ -6,8 +6,8 @@ use crate::{Minutes, Pressure, RecordData, Seconds};
 use super::global_types::Otu;
 use super::{CNSCoeffRow, Cns, Depth, DepthType, MbarPressure};
 
-const CNS_ELIMINATION_HALF_TIME_MINUTES: Minutes = 90;
-const CNS_LIMIT_OVER_MAX_PP02: Seconds = 400;
+const CNS_ELIMINATION_HALF_TIME_MINUTES: f64 = 90.;
+const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f64 = 400.;
 const OTU_EQUATION_EXPONENT: f64 = -0.8333;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -47,15 +47,16 @@ impl OxTox {
         if let Some((.., slope, intercept)) = coeffs_for_range {
             // time limit for given P02
             let t_lim = ((slope as f64) * pp_o2) + (intercept as f64);
-            self.cns += ((time as f64) / (t_lim * 60.)) * 100.;
+            self.cns += (time.as_seconds() / (t_lim * 60.)) * 100.;
         } else {
             // PO2 out of cns table range
             if (depth == Depth::zero()) && (pp_o2 <= 0.5) {
                 // eliminate CNS with half time
-                self.cns /= 2_f64.powf((time / (CNS_ELIMINATION_HALF_TIME_MINUTES * 60)) as f64);
+                self.cns /=
+                    2_f64.powf((time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES)) as f64);
             } else if pp_o2 > 1.6 {
                 // increase CNS by a constant when ppO2 higher than 1.6
-                self.cns += ((time as f64) / CNS_LIMIT_OVER_MAX_PP02 as f64) * 100.;
+                self.cns += (time.as_seconds() / CNS_LIMIT_OVER_MAX_PP02_SECONDS as f64) * 100.;
             }
         }
     }
@@ -67,7 +68,7 @@ impl OxTox {
         let otu_delta = match pp_o2.total_cmp(&0.5) {
             Ordering::Less => 0.,
             Ordering::Equal | Ordering::Greater => {
-                (time as f64 / 60.) * (0.5 / (pp_o2 - 0.5)).powf(OTU_EQUATION_EXPONENT)
+                time.as_minutes() * (0.5 / (pp_o2 - 0.5)).powf(OTU_EQUATION_EXPONENT)
             }
         };
         self.otu += otu_delta;
@@ -93,7 +94,7 @@ impl OxTox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{common::Unit, Gas};
+    use crate::{common::Unit, Gas, Time};
 
     #[test]
     fn test_default() {
@@ -134,7 +135,7 @@ mod tests {
 
         // static depth segment
         let depth = Depth::from_meters(36.);
-        let time = 20 * 60;
+        let time = Time::from_minutes(20.);
         let ean_32 = Gas::new(0.32, 0.);
         let record = RecordData {
             depth,
@@ -152,7 +153,7 @@ mod tests {
         // CNS ~50%
         let record = RecordData {
             depth: Depth::from_meters(30.),
-            time: (75 * 60),
+            time: Time::from_minutes(75.),
             gas: &Gas::new(0.35, 0.),
         };
         ox_tox.recalculate_cns(&record, 1013);
@@ -163,7 +164,7 @@ mod tests {
             ox_tox.recalculate_cns(
                 &RecordData {
                     depth: Depth::zero(),
-                    time: (90 * 60),
+                    time: Time::from_minutes(90.),
                     gas: &Gas::air(),
                 },
                 1013,
@@ -178,7 +179,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         let record = RecordData {
             depth: Depth::from_meters(30.),
-            time: 400,
+            time: Time::from_seconds(400.),
             gas: &Gas::new(0.5, 0.),
         };
         ox_tox.recalculate_cns(&record, 1013);
@@ -190,7 +191,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         let record = RecordData {
             depth: Depth::zero(),
-            time: 60 * 60,
+            time: Time::from_minutes(60.),
             gas: &Gas::air(),
         };
 
@@ -204,7 +205,7 @@ mod tests {
         let ean32 = Gas::new(0.32, 0.);
         let record = RecordData {
             depth: Depth::from_meters(36.),
-            time: 22 * 60,
+            time: Time::from_minutes(22.),
             gas: &ean32,
         };
         ox_tox.recalculate_otu(&record, 1013);

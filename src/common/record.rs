@@ -1,4 +1,4 @@
-use crate::common::{DepthType, Gas, Seconds};
+use crate::common::{Gas, Seconds};
 
 use super::Depth;
 

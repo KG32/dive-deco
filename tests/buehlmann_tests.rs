@@ -1,6 +1,6 @@
 use dive_deco::{
     BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, Depth, Gas, Minutes, Supersaturation,
-    Unit,
+    Time, Unit,
 };
 pub mod fixtures;
 
@@ -9,15 +9,19 @@ pub mod fixtures;
 #[should_panic]
 fn test_should_panic_on_invalid_depth() {
     let mut model = fixtures::model_default();
-    model.record(Depth::from_meters(-10.), 1, &fixtures::gas_air());
+    model.record(
+        Depth::from_meters(-10.),
+        Time::from_seconds(1.),
+        &fixtures::gas_air(),
+    );
 }
 
 #[test]
 fn test_ceiling() {
     let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
-    model.record(Depth::from_meters(40.), 30 * 60, &air);
-    model.record(Depth::from_meters(30.), 30 * 60, &air);
+    model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
+    model.record(Depth::from_meters(30.), Time::from_minutes(30.), &air);
     let calculated_ceiling = model.ceiling();
     assert_close_to_percent!(
         calculated_ceiling.as_meters(),
@@ -31,7 +35,7 @@ fn test_gfs() {
     let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
 
-    model.record(Depth::from_meters(50.), 20 * 60, &air);
+    model.record(Depth::from_meters(50.), Time::from_minutes(20.), &air);
     assert_eq!(
         model.supersaturation(),
         Supersaturation {
@@ -40,7 +44,7 @@ fn test_gfs() {
         }
     );
 
-    model.record(Depth::from_meters(40.), 10 * 60, &air);
+    model.record(Depth::from_meters(40.), Time::from_minutes(10.), &air);
     assert_eq!(
         model.supersaturation(),
         Supersaturation {
@@ -54,7 +58,7 @@ fn test_gfs() {
 fn test_initial_gfs() {
     let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
-    model.record(Depth::from_meters(0.), 0, &air);
+    model.record(Depth::from_meters(0.), Time::zero(), &air);
     let Supersaturation { gf_99, gf_surf } = model.supersaturation();
     assert_eq!(gf_99, 0.);
     assert_eq!(gf_surf, 0.);
@@ -67,13 +71,13 @@ fn test_model_records_equality() {
 
     let air = Gas::new(0.21, 0.);
     let test_depth = Depth::from_meters(50.);
-    let test_time_minutes: Minutes = 100;
+    let test_time = Time::from_minutes(100.);
 
-    model1.record(test_depth, test_time_minutes * 60, &air);
+    model1.record(test_depth, test_time, &air);
 
     // record every second
-    for _i in 1..=(test_time_minutes * 60) {
-        model2.record(test_depth, 1, &air);
+    for _i in 1..=test_time.as_seconds() as i32 {
+        model2.record(test_depth, Time::from_seconds(1.), &air);
     }
 
     assert_eq!(
@@ -102,12 +106,12 @@ fn test_actual_ndl_calculation() {
     let depth = Depth::from_meters(30.);
 
     // with 21/00 at 30m expect NDL 16
-    model.record(depth, 0, &air);
-    assert_eq!(model.ndl(), 16);
+    model.record(depth, Time::zero(), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(16.));
 
     // expect NDL 15 after 1 min
-    model.record(depth, 60, &air);
-    assert_eq!(model.ndl(), 15);
+    model.record(depth, Time::from_minutes(1.), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(15.));
 }
 
 #[test]
@@ -119,12 +123,12 @@ fn test_adaptive_ndl_calculation() {
     let depth = Depth::from_meters(30.);
 
     // with 21/00 at 30m expect NDL 19
-    model.record(depth, 0, &air);
-    assert_eq!(model.ndl(), 19);
+    model.record(depth, Time::zero(), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(19.));
 
     // expect NDL 18 after 1 min
-    model.record(depth, 60, &air);
-    assert_eq!(model.ndl(), 18);
+    model.record(depth, Time::from_minutes(1.), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(18.));
 }
 
 #[test]
@@ -132,11 +136,11 @@ fn test_ndl_cut_off() {
     let mut model = fixtures::model_default();
     let air = Gas::new(0.21, 0.);
 
-    model.record(Depth::from_meters(0.), 0, &air);
-    assert_eq!(model.ndl(), 99);
+    model.record(Depth::from_meters(0.), Time::zero(), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(99.));
 
-    model.record(Depth::from_meters(10.), 10 * 60, &air);
-    assert_eq!(model.ndl(), 99);
+    model.record(Depth::from_meters(10.), Time::from_minutes(10.), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(99.));
 }
 
 #[test]
@@ -146,29 +150,29 @@ fn test_multi_gas_ndl() {
     let air = Gas::new(0.21, 0.);
     let ean_28 = Gas::new(0.28, 0.);
 
-    model.record(Depth::from_meters(30.), 0, &air);
-    assert_eq!(model.ndl(), 16);
+    model.record(Depth::from_meters(30.), Time::zero(), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(16.));
 
-    model.record(Depth::from_meters(30.), 10 * 60, &air);
-    assert_eq!(model.ndl(), 6);
+    model.record(Depth::from_meters(30.), Time::from_minutes(10.), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(6.));
 
-    model.record(Depth::from_meters(30.), 0, &ean_28);
-    assert_eq!(model.ndl(), 10);
+    model.record(Depth::from_meters(30.), Time::zero(), &ean_28);
+    assert_eq!(model.ndl(), Time::from_minutes(10.));
 }
 
 #[test]
 fn test_ndl_with_gf() {
     let mut model = fixtures::model_gf((70, 70));
     let air = Gas::new(0.21, 0.);
-    model.record(Depth::from_meters(20.), 0, &air);
-    assert_eq!(model.ndl(), 21);
+    model.record(Depth::from_meters(20.), Time::zero(), &air);
+    assert_eq!(model.ndl(), Time::from_minutes(21.));
 }
 
 #[test]
 fn test_altitude() {
     let mut model = BuehlmannModel::new(BuehlmannConfig::new().with_surface_pressure(700));
     let air = Gas::new(0.21, 0.);
-    model.record(Depth::from_meters(40.), 60 * 60, &air);
+    model.record(Depth::from_meters(40.), Time::from_minutes(60.), &air);
     let Supersaturation { gf_surf, .. } = model.supersaturation();
     assert_eq!(gf_surf, 299.023204474694);
 }
@@ -184,7 +188,7 @@ fn test_example_ceiling_start() {
     let air = Gas::air();
 
     // instant drop to 40m on air for 10min
-    model.record(Depth::from_meters(40.), 10 * 60, &air);
+    model.record(Depth::from_meters(40.), Time::from_minutes(10.), &air);
     assert_eq!(model.ceiling().as_meters(), 12.85312294790554);
 }
 
@@ -199,9 +203,9 @@ fn test_example_ceiling() {
     let air = Gas::air();
     let ean_50 = Gas::new(0.50, 0.);
 
-    model.record(Depth::from_meters(40.), 40 * 60, &air);
-    model.record(Depth::from_meters(30.), 3 * 60, &air);
-    model.record(Depth::from_meters(21.), 10 * 60, &ean_50);
+    model.record(Depth::from_meters(40.), Time::from_minutes(40.), &air);
+    model.record(Depth::from_meters(30.), Time::from_minutes(3.), &air);
+    model.record(Depth::from_meters(21.), Time::from_minutes(10.), &ean_50);
     assert_eq!(model.ceiling().as_meters(), 12.455491216740299);
 }
 
@@ -216,9 +220,9 @@ fn test_example_ceiling_feet() {
     let air = Gas::air();
     let ean_50 = Gas::new(0.50, 0.);
 
-    model.record(Depth::from_feet(131.234), 40 * 60, &air);
-    model.record(Depth::from_feet(98.4252), 3 * 60, &air);
-    model.record(Depth::from_feet(68.8976), 10 * 60, &ean_50);
+    model.record(Depth::from_feet(131.234), Time::from_minutes(40.), &air);
+    model.record(Depth::from_feet(98.4252), Time::from_minutes(3.), &air);
+    model.record(Depth::from_feet(68.8976), Time::from_minutes(10.), &ean_50);
     assert_eq!(model.ceiling().as_feet(), 40.864609154666);
     assert_eq!(model.ceiling().as_meters(), 12.455532471765158);
 }
@@ -229,7 +233,7 @@ fn test_adaptive_ceiling() {
         BuehlmannConfig::new().with_ceiling_type(dive_deco::CeilingType::Adaptive),
     );
     let air = Gas::air();
-    model.record(Depth::from_meters(40.), 20 * 60, &air);
+    model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
     let ceiling = model.ceiling();
     assert_close_to_abs!(ceiling.as_meters(), 4., 0.5);
 }
@@ -243,7 +247,7 @@ fn test_gradual_ascent_with_deco() {
     );
     let air = Gas::air();
     let ean_50 = Gas::new(0.50, 0.);
-    model.record(Depth::from_meters(45.), 30 * 60, &air);
+    model.record(Depth::from_meters(45.), Time::from_minutes(30.), &air);
     loop {
         let depth = model.dive_state().depth;
         if depth <= Depth::zero() {
@@ -257,7 +261,11 @@ fn test_gradual_ascent_with_deco() {
 #[test]
 fn test_cns_otu() {
     let mut model = BuehlmannModel::default();
-    model.record(Depth::from_meters(40.), 10 * 60, &Gas::air());
+    model.record(
+        Depth::from_meters(40.),
+        Time::from_minutes(10.),
+        &Gas::air(),
+    );
     model.record_travel_with_rate(Depth::from_meters(0.), 10., &Gas::air());
     assert_close_to_abs!(model.otu(), 13., 1.);
 }

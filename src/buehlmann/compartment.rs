@@ -179,7 +179,7 @@ impl Compartment {
         };
 
         // (Pi - Po)(1 - e^(-0.693t/half-time))
-        (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time as f64 / 60.) / half_time)))
+        (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time.as_minutes()) / half_time)))
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buehlmann ZHL params based on tissue inert gasses saturation proportions
@@ -233,7 +233,7 @@ impl Compartment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::Gas;
+    use crate::{common::Gas, Time};
 
     fn comp_1() -> Compartment {
         let comp_1_params = (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245);
@@ -272,7 +272,7 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
             depth: Depth::zero(),
-            time: 1,
+            time: Time::from_seconds(1.),
             gas: &air,
         };
         comp_1.recalculate(&record, 100, 1000);
@@ -288,7 +288,7 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
             depth: Depth::zero(),
-            time: 1,
+            time: Time::from_seconds(1.),
             gas: &air,
         };
         comp_1.recalculate(&record, 70, 1000);
@@ -303,7 +303,7 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
             depth: Depth::from_meters(30.),
-            time: (10 * 60),
+            time: Time::from_minutes(10.),
             gas: &air,
         };
         comp.recalculate(&record, 100, 1000);
@@ -326,7 +326,7 @@ mod tests {
         let air = Gas::new(0.21, 0.);
         let recprd = RecordData {
             depth: Depth::from_meters(30.),
-            time: (10 * 60),
+            time: Time::from_minutes(10.),
             gas: &air,
         };
         comp.recalculate(&recprd, 100, 100);

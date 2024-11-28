@@ -1,11 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Unit};
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time, Unit};
 
 pub fn buehlmann_ndl_benchmark(c: &mut Criterion) {
     c.bench_function("Buehlmann NDL", |b| {
         b.iter(|| {
             let mut model = BuehlmannModel::default();
-            model.record(Depth::from_meters(20.), 5, &Gas::air());
+            model.record(Depth::from_meters(20.), Time::from_seconds(5.), &Gas::air());
             model.ndl();
         })
     });
@@ -15,7 +15,7 @@ pub fn buehlmann_deco_benchmark(c: &mut Criterion) {
     let mut model = BuehlmannModel::default();
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
-    model.record(Depth::from_meters(40.0001), 20 * 60, &air);
+    model.record(Depth::from_meters(40.0001), Time::from_minutes(20.), &air);
     c.bench_function("Buehlmann deco", |b| {
         b.iter(|| model.deco(vec![air, ean_50]))
     });
@@ -34,10 +34,10 @@ pub fn buehlmann_deco_adaptive_recalc(c: &mut Criterion) {
 
     c.bench_function("Record and deco", |b| {
         b.iter(|| {
-            model.record(Depth::from_meters(40.), 1, &air);
+            model.record(Depth::from_meters(40.), Time::from_seconds(1.), &air);
             model.deco(available_gasses.clone()).unwrap();
-            model.record(Depth::from_meters(40.), 1, &air);
-            model.record(Depth::from_meters(40.), 1, &air);
+            model.record(Depth::from_meters(40.), Time::from_seconds(1.), &air);
+            model.record(Depth::from_meters(40.), Time::from_seconds(1.), &air);
             model.deco(available_gasses.clone()).unwrap();
         });
     });
@@ -58,12 +58,12 @@ pub fn buehlmann_full(c: &mut Criterion) {
 
     c.bench_function("Buehlmann full", |b| {
         b.iter(|| {
-            model.record(Depth::from_meters(40.), 20 * 60, &air);
+            model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
             model.deco(available_gasses.clone()).unwrap();
-            model.record(Depth::from_meters(40.), 5 * 60, &air);
+            model.record(Depth::from_meters(40.), Time::from_minutes(5.), &air);
             model.record_travel_with_rate(Depth::from_meters(35.), 10., &air);
             model.record_travel_with_rate(Depth::from_meters(21.), 10., &air);
-            model.record(Depth::from_meters(21.), 60, &ean50);
+            model.record(Depth::from_meters(21.), Time::from_seconds(60.), &ean50);
             model.supersaturation();
             model.ceiling();
             model.deco(available_gasses.clone()).unwrap();

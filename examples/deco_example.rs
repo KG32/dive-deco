@@ -1,4 +1,4 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Unit};
+use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {
     let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
@@ -12,7 +12,7 @@ fn main() {
     let available_gas_mixes = vec![air, ean_50, oxygen];
 
     let bottom_depth = Depth::from_meters(40.);
-    let bottom_time = 20 * 60; // 20 min
+    let bottom_time = Time::from_minutes(20.);
 
     // descent to 40m at a rate of 9min/min using air
     model.record_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);

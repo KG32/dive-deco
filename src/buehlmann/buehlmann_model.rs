@@ -5,10 +5,10 @@ use crate::common::{
     AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
     DiveState, Gas, GradientFactor, Minutes, OxTox, RecordData, Seconds, Unit,
 };
-use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim};
+use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use std::cmp::Ordering;
 
-const NDL_CUT_OFF_MINS: Minutes = 99;
+const NDL_CUT_OFF_MINS: u8 = 99;
 
 #[derive(Clone, Debug)]
 pub struct BuehlmannModel {
@@ -21,7 +21,7 @@ pub struct BuehlmannModel {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BuehlmannState {
     depth: Depth,
-    time: Seconds,
+    time: Time,
     gas: Gas,
     gf_low_depth: Option<Depth>,
     ox_tox: OxTox,
@@ -31,7 +31,7 @@ impl Default for BuehlmannState {
     fn default() -> Self {
         Self {
             depth: Depth::zero(),
-            time: 0,
+            time: Time::zero(),
             gas: Gas::air(),
             gf_low_depth: None,
             ox_tox: OxTox::default(),
@@ -67,7 +67,7 @@ impl DecoModel for BuehlmannModel {
     }
 
     /// record data: depth (meters), time (seconds), gas
-    fn record(&mut self, depth: Depth, time: Seconds, gas: &Gas) {
+    fn record(&mut self, depth: Depth, time: Time, gas: &Gas) {
         self.validate_depth(depth);
         self.state.depth = depth;
         self.state.gas = *gas;
@@ -78,20 +78,20 @@ impl DecoModel for BuehlmannModel {
 
     /// model travel between depths in 1s intervals
     // @todo: Schreiner equation instead of Haldane to avoid imprecise intervals
-    fn record_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas) {
+    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
         let mut current_depth = self.state.depth;
         let distance = target_depth - current_depth;
-        let travel_time = time as f64;
-        let dist_rate = distance / travel_time;
+        let travel_time = time;
+        let dist_rate = distance.as_meters() / travel_time.as_seconds();
         let mut i = 0;
-        while i < travel_time as usize {
-            self.state.time += 1;
-            current_depth += dist_rate;
+        while i < travel_time.as_seconds() as i32 {
+            self.state.time += Time::from_seconds(1.);
+            current_depth += Depth::from_meters(dist_rate);
             let record = RecordData {
                 depth: current_depth,
-                time: 1,
+                time: Time::from_seconds(1.),
                 gas,
             };
             self.recalculate(record);
@@ -113,27 +113,28 @@ impl DecoModel for BuehlmannModel {
         // let distance = Depth::m((target_depth - self.state.depth).meters().abs());
         let distance = (target_depth - self.state.depth).as_meters().abs();
 
-        let travel_time_seconds = (distance / rate * 60.) as Seconds;
+        let travel_time_seconds = distance / rate * 60.;
         // @todo
-        self.record_travel(target_depth, travel_time_seconds, gas);
+        self.record_travel(target_depth, Time::from_seconds(travel_time_seconds), gas);
     }
 
-    fn ndl(&self) -> Minutes {
-        let mut ndl: Minutes = NDL_CUT_OFF_MINS;
+    fn ndl(&self) -> Time {
+        let mut ndl = Time::from_minutes(NDL_CUT_OFF_MINS.into());
 
         if self.in_deco() {
-            return 0;
+            return Time::zero();
         }
 
         // create a simulation model based on current model's state
         let mut sim_model = self.fork();
 
         // iterate simulation model over 1min records until NDL cut-off or in deco
+        let interval = Time::from_minutes(1.);
         for i in 0..NDL_CUT_OFF_MINS {
             // @todo
-            sim_model.record(self.state.depth, 60, &self.state.gas);
+            sim_model.record(self.state.depth, interval, &self.state.gas);
             if sim_model.in_deco() {
-                ndl = i;
+                ndl = interval * i;
                 break;
             }
         }
@@ -330,7 +331,7 @@ impl BuehlmannModel {
     fn recalculate_all_tisues_with_gf(&mut self, record: &RecordData, max_gf: GradientFactor) {
         let recalc_record = RecordData {
             depth: record.depth,
-            time: 0,
+            time: Time::zero(),
             gas: record.gas,
         };
         for compartment in self.compartments.iter_mut() {
@@ -349,7 +350,7 @@ impl BuehlmannModel {
         // recalculate leading tissue with max gf
         let leading_tissue_recalc_record = RecordData {
             depth: record.depth,
-            time: 0,
+            time: Time::zero(),
             gas: record.gas,
         };
         leading.recalculate(&leading_tissue_recalc_record, max_gf, surface_pressure);
@@ -380,7 +381,7 @@ impl BuehlmannModel {
                     if sim_record_depth < Depth::zero() {
                         sim_record_depth = Depth::zero();
                     }
-                    sim_model.record(sim_record_depth, 0, &sim_gas);
+                    sim_model.record(sim_record_depth, Time::zero(), &sim_gas);
                     let Supersaturation { gf_99, .. } = sim_model.supersaturation();
                     if gf_99 >= gf_low.into() {
                         break;
@@ -428,10 +429,10 @@ mod tests {
         let mut model = BuehlmannModel::new(BuehlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let nx32 = Gas::new(0.32, 0.);
-        model.record(Depth::from_meters(10.), 10 * 60, &air);
-        model.record(Depth::from_meters(15.), 15 * 60, &nx32);
+        model.record(Depth::from_meters(10.), Time::from_minutes(10.), &air);
+        model.record(Depth::from_meters(15.), Time::from_minutes(15.), &nx32);
         assert_eq!(model.state.depth.as_meters(), 15.);
-        assert_eq!(model.state.time, (25 * 60));
+        assert_eq!(model.state.time, Time::from_minutes(25.));
         assert_eq!(model.state.gas, nx32);
         assert_eq!(model.state.gf_low_depth, None);
         assert_ne!(model.state.ox_tox, OxTox::default());
@@ -445,7 +446,7 @@ mod tests {
         let air = Gas::air();
         let record = RecordData {
             depth: Depth::from_meters(0.),
-            time: 0,
+            time: Time::zero(),
             gas: &air,
         };
         model.record(record.depth, record.time, record.gas);
@@ -461,7 +462,7 @@ mod tests {
         let air = Gas::air();
         let record = RecordData {
             depth: Depth::from_meters(40.),
-            time: (12 * 60),
+            time: Time::from_minutes(12.),
             gas: &air,
         };
         model.record(record.depth, record.time, record.gas);
@@ -475,9 +476,9 @@ mod tests {
             BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
-        model.record(Depth::from_meters(40.), 30 * 60, &air);
-        model.record(Depth::from_meters(21.), 5 * 60, &air);
-        model.record(Depth::from_meters(14.), 0, &air);
+        model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
+        model.record(Depth::from_meters(21.), Time::from_minutes(5.), &air);
+        model.record(Depth::from_meters(14.), Time::zero(), &air);
         assert_eq!(model.max_gf(gf, Depth::from_meters(14.)), 40);
     }
 
@@ -504,7 +505,7 @@ mod tests {
         let model_initial = BuehlmannModel::default();
 
         let mut model_with_surface_interval = BuehlmannModel::default();
-        model_with_surface_interval.record(Depth::zero(), 999999, &Gas::air());
+        model_with_surface_interval.record(Depth::zero(), Time::from_seconds(999999.), &Gas::air());
 
         let initial_gfs = extract_supersaturations(model_initial);
         let surface_interval_gfs = extract_supersaturations(model_with_surface_interval);
@@ -547,9 +548,9 @@ mod tests {
                 .with_ceiling_type(CeilingType::Actual),
         );
         let air = Gas::air();
-        model.record(Depth::from_meters(40.), 6 * 60, &air);
-        model.record(Depth::from_meters(9.), 0, &air);
+        model.record(Depth::from_meters(40.), Time::from_minutes(6.), &air);
+        model.record(Depth::from_meters(9.), Time::zero(), &air);
         let ndl = model.ndl();
-        assert_eq!(ndl, 0);
+        assert_eq!(ndl, Time::zero());
     }
 }
