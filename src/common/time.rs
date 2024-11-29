@@ -1,4 +1,7 @@
-use std::ops::{Add, AddAssign, Div, Mul, Sub};
+use std::{
+    cmp::Ordering,
+    ops::{Add, AddAssign, Div, Mul, Sub},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Time {
@@ -41,6 +44,11 @@ impl Div<Self> for Time {
 
     fn div(self, rhs: Self) -> Self::Output {
         Self { s: self.s / rhs.s }
+    }
+}
+impl PartialOrd for Time {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.s.partial_cmp(&other.s)
     }
 }
 
