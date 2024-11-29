@@ -73,14 +73,14 @@ Current config options:
 - `recalc_all_tissues_m_values` - recalculate all tissues considering gradient factors (default: true). If set to false, only leading tissue is recalculated with max gf
 
 ```rust
-    // fluid-interface-like built config
-    let config = BuehlmannConfig::new()
-        .with_gradient_factors(30, 70)
-        .with_surface_pressure(1013)
-        .with_deco_ascent_rate(10.)
-        .with_ceiling_type(CeilingType::Actual);
-    let model = BuehlmannModel::new(config);
-    println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
+// fluid-interface-like built config
+let config = BuehlmannConfig::new()
+    .with_gradient_factors(30, 70)
+    .with_surface_pressure(1013)
+    .with_deco_ascent_rate(10.)
+    .with_ceiling_type(CeilingType::Actual);
+let model = BuehlmannModel::new(config);
+println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 ```
 
 ---
@@ -97,22 +97,32 @@ A VO representing depth, both constructed from and represented as meters or feet
 - `as_feet() -> f64`
 
 ```rust
-    let depth_1 = Depth::from_meters(10.);
-    println!("{}m", depth_1.as_meters()); // 10m
-    println!("{}ft", depth_1.as_feet()); // 32.80ft
+let depth_1 = Depth::from_meters(10.);
+println!("{}m", depth_1.as_meters()); // 10m
+println!("{}ft", depth_1.as_feet()); // 32.80ft
 
-    let depth_2 = Depth::from_feet(100.);
-    println!("{}m", depth_2.as_meters()); // 30.48m
-    println!("{}ft", depth_2.as_feet()); // 100ft
+let depth_2 = Depth::from_feet(100.);
+println!("{}m", depth_2.as_meters()); // 30.48m
+println!("{}ft", depth_2.as_feet()); // 100ft
 
-    let depths_sum = depth_1 + depth_2;
-    println!(
-        "{}m + {}ft = {}m / {}ft",
-        depth_1.as_meters(),
-        depth_2.as_feet(),
-        depths_sum.as_meters(),
-        depths_sum.as_feet()
-    ); // 10m + 100ft = 40.48m / 132.80ft
+let depths_sum = depth_1 + depth_2;
+println!(
+    "{}m + {}ft = {}m / {}ft",
+    depth_1.as_meters(),
+    depth_2.as_feet(),
+    depths_sum.as_meters(),
+    depths_sum.as_feet()
+); // 10m + 100ft = 40.48m / 132.80ft
+```
+
+##### Time
+
+A VO representing time, both constructed from and represented as seconds or minutes.
+
+```rust
+let time = Time::from_minutes(1.); // same as Time::from_seconds(60.);
+println!("{}m = {}s", time.as_minutes(), time.as_seconds()); // 1m = 60s
+assert_eq!(Time::from_minutes(0.5), Time::from_seconds(30.));
 ```
 
 ##### Gas
@@ -180,14 +190,14 @@ model.record_travel(target_depth, time, &nitrox);
 All decompression stages calculated to clear deco obligations and resurface in a most efficient way - a partial deco runtime from current model state to resurfacing.
 
 ```text
-  .deco(Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>
+.deco(Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>
 
-  <!-- DecoRuntime {
-    deco_stages: Vec<DecoStage>,
-    tts: u64,
-    tts_at_5: u64,
-    tts_delta_at_5: i64
-  } -->
+<!-- DecoRuntime {
+  deco_stages: Vec<DecoStage>,
+  tts: u64,
+  tts_at_5: u64,
+  tts_delta_at_5: i64
+} -->
 ```
 
 - `DecoRuntime`
@@ -207,33 +217,33 @@ All decompression stages calculated to clear deco obligations and resurface in a
   - `CurrentGasNotInList` - occurs when provided available list doesn't include gas currently in use according to deco model's state
 
 ```rust
-    let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
-    let mut model = BuehlmannModel::new(config);
+let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
+let mut model = BuehlmannModel::new(config);
 
-    // bottom gas
-    let air = Gas::air();
-    // deco gases
-    let ean_50 = Gas::new(0.5, 0.);
-    let oxygen = Gas::new(1., 0.);
-    let available_gas_mixes = vec![
-        air,
-        ean_50,
-        oxygen,
-    ];
+// bottom gas
+let air = Gas::air();
+// deco gases
+let ean_50 = Gas::new(0.5, 0.);
+let oxygen = Gas::new(1., 0.);
+let available_gas_mixes = vec![
+    air,
+    ean_50,
+    oxygen,
+];
 
-    let bottom_depth = Depth::from_meters(40.);
-    let bottom_time = 20 * 60; // 20 min
+let bottom_depth = Depth::from_meters(40.);
+let bottom_time = 20 * 60; // 20 min
 
-    // descent to 40m at a rate of 9min/min using air
-    model.record_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);
+// descent to 40m at a rate of 9min/min using air
+model.record_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);
 
-    // 20 min bottom time
-    model.record(bottom_depth, bottom_time, &air);
+// 20 min bottom time
+model.record(bottom_depth, bottom_time, &air);
 
-    // calculate deco runtime providing available gasses
-    let deco_runtime = model.deco(available_gas_mixes);
+// calculate deco runtime providing available gasses
+let deco_runtime = model.deco(available_gas_mixes);
 
-    println!("{:#?}", deco_runtime);
+println!("{:#?}", deco_runtime);
 ```
 
 <details>
@@ -356,10 +366,10 @@ fn main() {
 
     let air = Gas::new(0.21, 0.);
     let depth = Depth::from_meters(30.);
-    let bottom_time_minutes = 10;
+    let bottom_time = Time::from_minutes(10.);
 
     // a simulated instantaneous drop to 20m with a single record simulating 20 minutes bottom time using air
-    model.record(depth, bottom_time_minutes * 60, &air);
+    model.record(depth, bottom_time, &air);
     // model.record(....)
     // model.record(....)
 
@@ -380,17 +390,17 @@ Minimum theoretical depth that can be reached at the moment without breaking the
 use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
 
 fn main() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+let mut model = BuehlmannModel::new(BuehlmannConfig::default());
 
-    let nitrox_32 = Gas::new(0.32, 0.);
+let nitrox_32 = Gas::new(0.32, 0.);
 
-    // ceiling after 20 min at 20 meters using EAN32 - ceiling at 0m
-    model.record(Depth::from_meters(20.), 20 * 60, &nitrox_32);
-    println!("Ceiling: {}m", model.ceiling()); // Ceiling: 0m
+// ceiling after 20 min at 20 meters using EAN32 - ceiling at 0m
+model.record(Depth::from_meters(20.), 20 * 60, &nitrox_32);
+println!("Ceiling: {}m", model.ceiling()); // Ceiling: 0m
 
-    // ceiling after another 42 min at 30 meters using EAN32 - ceiling at 3m
-    model.record(Depth::from_meters(30.), 42 * 60, &nitrox_32);
-    println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
+// ceiling after another 42 min at 30 meters using EAN32 - ceiling at 3m
+model.record(Depth::from_meters(30.), 42 * 60, &nitrox_32);
+println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 }
 ```
 
@@ -403,11 +413,11 @@ Current tissue oversaturation as gradient factors.
   - gf_surf (f64) - Surface GF, current oversaturation relative to surface pressure
 
 ```rust
-  // given model state after 120 seconds at 40 meters breathing air
-  // (...)
+// given model state after 120 seconds at 40 meters breathing air
+// (...)
 
-  // on-gassing, gf99: 0%, surfGF: 71%
-  let supersaturation = model.supersaturation(); // Supersaturation { gf_99: 0.0, gf_surf: 71.09852831834125 }
+// on-gassing, gf99: 0%, surfGF: 71%
+let supersaturation = model.supersaturation(); // Supersaturation { gf_99: 0.0, gf_surf: 71.09852831834125 }
 ```
 
 ##### CNS (Central Nervous System Toxicity)
@@ -418,9 +428,9 @@ Measure (%) of accumulated exposure to elevated oxygen partial pressure in relat
 - `cns()` - CNS %
 
 ```rust
-  // given model
-  // (...)
-  let cns = model.cns(); // 32.5
+// given model
+// (...)
+let cns = model.cns(); // 32.5
 ```
 
 ##### OTU (Oxygen Toxicity Units) / UPTD (unit pulmonary toxic dose)
@@ -431,9 +441,9 @@ to oxygen at elevated partial pressures presented as units (1 OTU = 100% O2 @ 1b
 - `otu()` - OTU
 
 ```rust
-  // given model
-  // (...)
-  let cns = model.otu(); // 78.43
+// given model
+// (...)
+let cns = model.otu(); // 78.43
 ```
 
 ---
