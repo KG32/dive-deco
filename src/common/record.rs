@@ -1,10 +1,8 @@
-use crate::common::{Gas, Seconds};
-
-use super::Depth;
+use crate::common::{Depth, Gas, Time};
 
 #[derive(Debug)]
 pub struct RecordData<'a> {
     pub depth: Depth,
-    pub time: Seconds,
+    pub time: Time,
     pub gas: &'a Gas,
 }

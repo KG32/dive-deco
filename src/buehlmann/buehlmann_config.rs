@@ -19,7 +19,6 @@ pub struct BuehlmannConfig {
     pub ceiling_type: CeilingType,
     pub round_ceiling: bool,
     pub recalc_all_tissues_m_values: bool,
-    pub units: Units,
 }
 
 impl BuehlmannConfig {
@@ -67,7 +66,6 @@ impl Default for BuehlmannConfig {
             ceiling_type: CeilingType::Actual,
             round_ceiling: false,
             recalc_all_tissues_m_values: true,
-            units: Units::Metric,
         }
     }
 }

@@ -1,9 +1,8 @@
 use std::{cmp::Ordering, fmt};
 
-use super::{
-    global_types::MinutesSigned, DecoModelConfig, Depth, DiveState, MbarPressure, Sim, Time,
-};
-use crate::{DecoModel, DepthType, Gas};
+use crate::{DecoModel, Depth, DepthType, Gas, Time};
+
+use super::{DecoModelConfig, DiveState, MbarPressure, Sim};
 
 // @todo move to model config
 const DEFAULT_CEILING_WINDOW: DepthType = 3.;
@@ -257,7 +256,7 @@ impl Deco {
                 .calc(nested_sim_model, gas_mixes.clone())
                 .unwrap();
             tts_at_5 = nested_deco.tts;
-            tts_delta_at_5 = tts_at_5 as MinutesSigned - tts as MinutesSigned;
+            tts_delta_at_5 = tts_at_5 as Time - tts as Time;
         }
 
         Ok(DecoRuntime {

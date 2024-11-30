@@ -18,7 +18,7 @@ pub use time::Time;
 pub use gas::{Gas, InertGas, PartialPressures};
 pub use global_types::{
     AscentRatePerMinute, CeilingType, Cns, DepthType, GradientFactor, GradientFactors,
-    MbarPressure, Minutes, MinutesSigned, NDLType, Otu, Pressure, Seconds,
+    MbarPressure, NDLType, Otu, Pressure,
 };
 pub use ox_tox::OxTox;
 pub use record::RecordData;

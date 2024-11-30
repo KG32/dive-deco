@@ -1,10 +1,5 @@
-use super::Time;
-
 pub type Pressure = f64;
 pub type DepthType = f64;
-pub type Seconds = Time;
-pub type Minutes = Time;
-pub type MinutesSigned = Time;
 pub type GradientFactor = u8;
 pub type GradientFactors = (u8, u8);
 pub type MbarPressure = u16;

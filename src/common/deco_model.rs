@@ -1,9 +1,8 @@
 use crate::common::deco::{DecoCalculationError, DecoRuntime};
 use crate::common::global_types::{CeilingType, MbarPressure};
 use crate::common::ox_tox::OxTox;
-use crate::common::{AscentRatePerMinute, Cns, Gas, Minutes, Otu, Seconds};
-
-use super::Depth;
+use crate::common::{AscentRatePerMinute, Cns, Gas, Otu};
+use crate::common::{Depth, Time};
 
 #[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr {
@@ -31,7 +30,7 @@ pub trait DecoModelConfig {
 #[derive(Debug, Clone)]
 pub struct DiveState {
     pub depth: Depth,
-    pub time: Seconds,
+    pub time: Time,
     pub gas: Gas,
     pub ox_tox: OxTox,
 }
@@ -52,10 +51,10 @@ pub trait DecoModel {
     fn dive_state(&self) -> DiveState;
 
     /// record (depth: meters, time: seconds)
-    fn record(&mut self, depth: Depth, time: Seconds, gas: &Gas);
+    fn record(&mut self, depth: Depth, time: Time, gas: &Gas);
 
     /// record linear ascent / descent record given travel time
-    fn record_travel(&mut self, target_depth: Depth, time: Seconds, gas: &Gas);
+    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas);
 
     /// register linear ascent / descent record given rate
     fn record_travel_with_rate(
@@ -66,7 +65,7 @@ pub trait DecoModel {
     );
 
     /// current non decompression limit (NDL)
-    fn ndl(&self) -> Minutes;
+    fn ndl(&self) -> Time;
 
     /// current decompression ceiling in meters
     fn ceiling(&self) -> Depth;

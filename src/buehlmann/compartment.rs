@@ -3,7 +3,7 @@ use crate::{
     common::{
         Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
     },
-    BuehlmannConfig, Gas, Seconds,
+    BuehlmannConfig, Gas, Time,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -170,7 +170,7 @@ impl Compartment {
         &self,
         inert_gas: InertGas,
         gas_inspired_p: Pressure,
-        time: Seconds,
+        time: Time,
         half_time: ZHLParam,
     ) -> Pressure {
         let inert_gas_load = match inert_gas {
