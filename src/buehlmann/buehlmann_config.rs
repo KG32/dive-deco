@@ -1,7 +1,6 @@
 use crate::{
     common::{
         AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure,
-        Units,
     },
     CeilingType,
 };

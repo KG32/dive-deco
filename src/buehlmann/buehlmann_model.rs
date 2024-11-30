@@ -110,12 +110,8 @@ impl DecoModel for BuehlmannModel {
         gas: &Gas,
     ) {
         self.validate_depth(target_depth);
-        // let distance = Depth::m((target_depth - self.state.depth).meters().abs());
         let distance = (target_depth - self.state.depth).as_meters().abs();
-
-        let travel_time_seconds = distance / rate * 60.;
-        // @todo
-        self.record_travel(target_depth, Time::from_seconds(travel_time_seconds), gas);
+        self.record_travel(target_depth, Time::from_seconds(distance / rate * 60.), gas);
     }
 
     fn ndl(&self) -> Time {
