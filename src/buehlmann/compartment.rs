@@ -3,7 +3,7 @@ use crate::{
     common::{
         Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
     },
-    BuehlmannConfig, Gas, Seconds,
+    BuehlmannConfig, Gas, Time,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -38,7 +38,7 @@ impl Compartment {
     pub fn new(no: u8, params: ZHLParams, model_config: BuehlmannConfig) -> Self {
         let init_gas = Gas::air();
         let init_gas_compound_pressures =
-            init_gas.inspired_partial_pressures(0., model_config.surface_pressure);
+            init_gas.inspired_partial_pressures(Depth::zero(), model_config.surface_pressure);
         let n2_ip = init_gas_compound_pressures.n2;
         let he_ip = init_gas_compound_pressures.he;
 
@@ -56,7 +56,8 @@ impl Compartment {
 
         // calculate initial minimal tolerable ambient pressure
         let (_, gf_high) = model_config.gf;
-        compartment.m_value_raw = compartment.m_value(0., model_config.surface_pressure, 100);
+        compartment.m_value_raw =
+            compartment.m_value(Depth::zero(), model_config.surface_pressure, 100);
         compartment.m_value_calc = compartment.m_value_raw;
         compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high);
 
@@ -94,15 +95,15 @@ impl Compartment {
             ceil = 0.;
         }
 
-        ceil
+        Depth::from_meters(ceil)
     }
 
     // tissue supersaturation (gf99, surface gf)
     pub fn supersaturation(&self, surface_pressure: MbarPressure, depth: Depth) -> Supersaturation {
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth / 10.);
+        let p_amb = p_surf + (depth.as_meters() / 10.);
         let m_value = self.m_value_raw;
-        let m_value_surf = self.m_value(0., surface_pressure, 100);
+        let m_value_surf = self.m_value(Depth::zero(), surface_pressure, 100);
         let gf_99 = ((self.total_ip - p_amb) / (m_value - p_amb)) * 100.;
         let gf_surf = ((self.total_ip - p_surf) / (m_value_surf - p_surf)) * 100.;
 
@@ -119,7 +120,7 @@ impl Compartment {
         let (_, a_coeff_adjusted, b_coeff_adjusted) =
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth / 10.);
+        let p_amb = p_surf + (depth.as_meters() / 10.);
 
         a_coeff_adjusted + (p_amb / b_coeff_adjusted)
     }
@@ -169,7 +170,7 @@ impl Compartment {
         &self,
         inert_gas: InertGas,
         gas_inspired_p: Pressure,
-        time: Seconds,
+        time: Time,
         half_time: ZHLParam,
     ) -> Pressure {
         let inert_gas_load = match inert_gas {
@@ -178,7 +179,7 @@ impl Compartment {
         };
 
         // (Pi - Po)(1 - e^(-0.693t/half-time))
-        (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time as f64 / 60.) / half_time)))
+        (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time.as_minutes()) / half_time)))
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buehlmann ZHL params based on tissue inert gasses saturation proportions
@@ -232,7 +233,7 @@ impl Compartment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::Gas;
+    use crate::{common::Gas, Time};
 
     fn comp_1() -> Compartment {
         let comp_1_params = (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245);
@@ -270,8 +271,8 @@ mod tests {
         let mut comp_5 = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: 0.,
-            time: 1,
+            depth: Depth::zero(),
+            time: Time::from_seconds(1.),
             gas: &air,
         };
         comp_1.recalculate(&record, 100, 1000);
@@ -286,8 +287,8 @@ mod tests {
         let mut comp_5 = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: 0.,
-            time: 1,
+            depth: Depth::zero(),
+            time: Time::from_seconds(1.),
             gas: &air,
         };
         comp_1.recalculate(&record, 70, 1000);
@@ -301,8 +302,8 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let record = RecordData {
-            depth: 30.,
-            time: (10 * 60),
+            depth: Depth::from_meters(30.),
+            time: Time::from_minutes(10.),
             gas: &air,
         };
         comp.recalculate(&record, 100, 1000);
@@ -324,8 +325,8 @@ mod tests {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
         let recprd = RecordData {
-            depth: 30.,
-            time: (10 * 60),
+            depth: Depth::from_meters(30.),
+            time: Time::from_minutes(10.),
             gas: &air,
         };
         comp.recalculate(&recprd, 100, 100);

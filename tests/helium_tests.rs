@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Gas, RecordData, Supersaturation};
+use dive_deco::{DecoModel, Depth, Gas, Supersaturation, Time};
 pub mod fixtures;
 
 #[test]
@@ -7,12 +7,7 @@ fn test_tmx_gf_surf() {
 
     let tmx = Gas::new(0.21, 0.35);
 
-    let record = RecordData {
-        depth: 30.,
-        time: (300 * 60),
-        gas: &tmx,
-    };
-    model.record(record.depth, record.time, record.gas);
+    model.record(Depth::from_meters(30.), Time::from_minutes(300.), &tmx);
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 
@@ -25,14 +20,9 @@ fn test_tmx_ndl() {
 
     let tmx = Gas::new(0.21, 0.35);
 
-    let record = RecordData {
-        depth: 20.,
-        time: 0,
-        gas: &tmx,
-    };
-    model.record(record.depth, record.time, record.gas);
+    model.record(Depth::from_meters(20.), Time::zero(), &tmx);
 
-    assert_eq!(model.ndl(), 17);
+    assert_eq!(model.ndl(), Time::from_minutes(17.));
 }
 
 // heliox
@@ -40,14 +30,7 @@ fn test_tmx_ndl() {
 fn test_heliox_gf_surf() {
     let mut model = fixtures::model_gf((100, 100));
     let tmx = Gas::new(0.21, 0.79);
-
-    let record = RecordData {
-        depth: 30.,
-        time: (40 * 60),
-        gas: &tmx,
-    };
-
-    model.record(record.depth, record.time, record.gas);
+    model.record(Depth::from_meters(30.), Time::from_minutes(40.), &tmx);
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();
 

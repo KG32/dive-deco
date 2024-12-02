@@ -1,11 +1,12 @@
 use std::{cmp::Ordering, fmt};
 
-use super::{global_types::MinutesSigned, DecoModelConfig, DiveState, MbarPressure, Seconds, Sim};
-use crate::{DecoModel, Depth, Gas, Minutes};
+use crate::{DecoModel, Depth, DepthType, Gas, Time};
+
+use super::{DecoModelConfig, DiveState, MbarPressure, Sim};
 
 // @todo move to model config
-const DEFAULT_CEILING_WINDOW: Depth = 3.;
-const DEFAULT_MAX_END_DEPTH: Depth = 30.;
+const DEFAULT_CEILING_WINDOW: DepthType = 3.;
+const DEFAULT_MAX_END_DEPTH: DepthType = 30.;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum DecoAction {
@@ -27,14 +28,14 @@ pub struct DecoStage {
     pub stage_type: DecoStageType,
     pub start_depth: Depth,
     pub end_depth: Depth,
-    pub duration: Seconds,
+    pub duration: Time,
     pub gas: Gas,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Deco {
     deco_stages: Vec<DecoStage>,
-    tts_seconds: Seconds,
+    tts: Time,
     sim: bool,
 }
 
@@ -43,11 +44,11 @@ pub struct DecoRuntime {
     // runtime
     pub deco_stages: Vec<DecoStage>,
     // current TTS in minutes
-    pub tts: Minutes,
+    pub tts: Time,
     // TTS @+5 (TTS in 5 min given current depth and gas mix)
-    pub tts_at_5: Minutes,
+    pub tts_at_5: Time,
     // TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
-    pub tts_delta_at_5: MinutesSigned,
+    pub tts_delta_at_5: Time,
 }
 
 #[derive(Debug)]
@@ -117,7 +118,11 @@ impl Deco {
             if let Err(e) = next_deco_action {
                 match e {
                     MissedDecoStopViolation => {
-                        sim_model.record(self.deco_stop_depth(ceiling), 0, &pre_stage_gas);
+                        sim_model.record(
+                            self.deco_stop_depth(ceiling),
+                            Time::zero(),
+                            &pre_stage_gas,
+                        );
                         return self.calc(sim_model, gas_mixes);
                     }
                 }
@@ -178,14 +183,18 @@ impl Deco {
                                 });
 
                                 // switch gas @todo configurable gas change duration
-                                sim_model.record(sim_model.dive_state().depth, 0, &next_switch_gas);
+                                sim_model.record(
+                                    sim_model.dive_state().depth,
+                                    Time::zero(),
+                                    &next_switch_gas,
+                                );
                                 // @todo configurable oxygen window stop
                                 let post_switch_state = sim_model.dive_state();
                                 deco_stages.push(DecoStage {
                                     stage_type: DecoStageType::GasSwitch,
                                     start_depth: post_ascent_depth,
                                     end_depth: post_switch_state.depth,
-                                    duration: 0,
+                                    duration: Time::zero(),
                                     gas: next_switch_gas,
                                 });
                             }
@@ -195,19 +204,23 @@ impl Deco {
                         DecoAction::SwitchGas => {
                             let switch_gas = next_switch_gas.unwrap();
                             // @todo configurable gas switch duration
-                            sim_model.record(pre_stage_depth, 0, &switch_gas);
+                            sim_model.record(pre_stage_depth, Time::zero(), &switch_gas);
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::GasSwitch,
                                 start_depth: pre_stage_depth,
                                 end_depth: pre_stage_depth,
-                                duration: 0,
+                                duration: Time::zero(),
                                 gas: switch_gas,
                             })
                         }
 
                         // decompression stop (a series of 1s segments, merged into one on cleared stop)
                         DecoAction::Stop => {
-                            sim_model.record(pre_stage_depth, 1, &pre_stage_gas);
+                            sim_model.record(
+                                pre_stage_depth,
+                                Time::from_seconds(1.),
+                                &pre_stage_gas,
+                            );
                             let sim_state = sim_model.dive_state();
                             // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
@@ -227,9 +240,9 @@ impl Deco {
                 .for_each(|deco_stage| self.register_deco_stage(deco_stage));
         }
 
-        let tts = (self.tts_seconds as f64 / 60.).ceil() as Minutes;
-        let mut tts_at_5 = 0;
-        let mut tts_delta_at_5: MinutesSigned = 0;
+        let tts = self.tts;
+        let mut tts_at_5 = Time::zero();
+        let mut tts_delta_at_5 = Time::zero();
         if !self.is_sim() {
             let mut nested_sim_deco = Deco::new_sim();
             let mut nested_sim_model = deco_model.clone();
@@ -238,12 +251,12 @@ impl Deco {
                 gas: sim_gas,
                 ..
             } = nested_sim_model.dive_state();
-            nested_sim_model.record(sim_depth, 5 * 60, &sim_gas);
+            nested_sim_model.record(sim_depth, Time::from_minutes(5.), &sim_gas);
             let nested_deco = nested_sim_deco
                 .calc(nested_sim_model, gas_mixes.clone())
                 .unwrap();
             tts_at_5 = nested_deco.tts;
-            tts_delta_at_5 = tts_at_5 as MinutesSigned - tts as MinutesSigned;
+            tts_delta_at_5 = tts_at_5 as Time - tts as Time;
         }
 
         Ok(DecoRuntime {
@@ -267,13 +280,13 @@ impl Deco {
         let surface_pressure = sim_model.config().surface_pressure();
 
         // end deco simulation - surface
-        if current_depth <= 0. {
+        if current_depth <= Depth::zero() {
             return Ok((None, None));
         }
 
         let ceiling = sim_model.ceiling();
 
-        match ceiling.partial_cmp(&0.) {
+        match ceiling.partial_cmp(&Depth::zero()) {
             Some(Ordering::Equal | Ordering::Less) => Ok((Some(DecoAction::AscentToCeil), None)),
             Some(Ordering::Greater) => {
                 // check if deco violation
@@ -290,7 +303,7 @@ impl Deco {
                     let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
                     if (switch_gas != current_gas)
                         && (current_depth <= gas_mod)
-                        && (gas_end <= DEFAULT_MAX_END_DEPTH)
+                        && (gas_end <= Depth::from_meters(DEFAULT_MAX_END_DEPTH))
                     {
                         return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
                     }
@@ -298,7 +311,7 @@ impl Deco {
 
                 // check if within or below deco stop window
                 let ceiling_padding = current_depth - ceiling;
-                if ceiling_padding <= DEFAULT_CEILING_WINDOW {
+                if ceiling_padding <= Depth::from_meters(DEFAULT_CEILING_WINDOW) {
                     Ok((Some(DecoAction::Stop), None))
                 } else {
                     // ascent to next gas switch depth if next gas' MOD below ceiling
@@ -363,12 +376,14 @@ impl Deco {
         }
 
         // increment TTS by deco stage duration
-        self.tts_seconds += stage.duration;
+        self.tts += stage.duration;
     }
 
     // round ceiling up to the bottom of deco window
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
-        DEFAULT_CEILING_WINDOW * (ceiling / DEFAULT_CEILING_WINDOW).ceil()
+        Depth::from_meters(
+            DEFAULT_CEILING_WINDOW * (ceiling.as_meters() / DEFAULT_CEILING_WINDOW).ceil(),
+        )
     }
 
     fn validate_gas_mixes<T: DecoModel>(
@@ -394,7 +409,7 @@ mod tests {
 
     #[test]
     fn test_ceiling_rounding() {
-        let test_cases: Vec<(Depth, Depth)> = vec![
+        let test_cases: Vec<(DepthType, DepthType)> = vec![
             (0., 0.),
             (2., 3.),
             (2.999, 3.),
@@ -405,8 +420,8 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
-            let res = deco.deco_stop_depth(input_depth);
-            assert_eq!(res, expected_depth);
+            let res = deco.deco_stop_depth(Depth::from_meters(input_depth));
+            assert_eq!(res, Depth::from_meters(expected_depth));
         }
     }
 
@@ -419,7 +434,8 @@ mod tests {
 
         // potential switch if in deco!
         // [ (current_depth, current_gas, gas_mixes, expected_result) ]
-        let test_cases: Vec<(Depth, Gas, Vec<Gas>, Option<Gas>)> = vec![
+        // @todo depth constructor in test cases
+        let test_cases: Vec<(DepthType, Gas, Vec<Gas>, Option<Gas>)> = vec![
             // single gas air
             (10., air, vec![air], None),
             // air + ean50 within MOD
@@ -437,7 +453,12 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
-            let res = deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
+            let res = deco.next_switch_gas(
+                Depth::from_meters(current_depth),
+                &current_gas,
+                available_gas_mixes,
+                1000,
+            );
             assert_eq!(res, expected_switch_gas);
         }
     }
@@ -457,7 +478,7 @@ mod tests {
         let air = Gas::air();
         let ean50 = Gas::new(0.50, 0.);
         let tmx2135 = Gas::new(0.21, 0.35);
-        deco_model.record_travel_with_rate(40., 10., &air);
+        deco_model.record_travel_with_rate(Depth::from_meters(40.), 10., &air);
         let deco_res = deco.calc(deco_model, vec![ean50, tmx2135]);
         assert_eq!(deco_res, Err(DecoCalculationError::CurrentGasNotInList));
     }
