@@ -53,11 +53,13 @@ impl PartialOrd for Time {
 }
 
 impl Time {
-    pub fn from_seconds(val: f64) -> Self {
-        Self { s: val }
+    pub fn from_seconds<T: Into<f64>>(val: T) -> Self {
+        Self { s: val.into() }
     }
-    pub fn from_minutes(val: f64) -> Self {
-        Self { s: val * 60. }
+    pub fn from_minutes<T: Into<f64>>(val: T) -> Self {
+        Self {
+            s: val.into() * 60.,
+        }
     }
     pub fn zero() -> Self {
         Self { s: 0. }
@@ -96,5 +98,13 @@ mod tests {
     fn test_as_minutes() {
         let time = Time::from_seconds(30.0);
         assert_eq!(time.as_minutes(), 0.5);
+    }
+
+    #[test]
+    fn test_into_time() {
+        Time::from_seconds(1.);
+        Time::from_seconds(1);
+        Time::from_minutes(1.);
+        Time::from_minutes(1);
     }
 }

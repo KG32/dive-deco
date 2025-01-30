@@ -120,12 +120,12 @@ impl Depth {
     pub fn zero() -> Self {
         Self { m: 0. }
     }
-    pub fn from_meters(val: DepthType) -> Self {
-        Self { m: val }
+    pub fn from_meters<T: Into<DepthType>>(val: T) -> Self {
+        Self { m: val.into() }
     }
-    pub fn from_feet(val: DepthType) -> Self {
+    pub fn from_feet<T: Into<DepthType>>(val: T) -> Self {
         Self {
-            m: Self::ft_to_m(val),
+            m: Self::ft_to_m(val.into()),
         }
     }
     pub fn as_meters(&self) -> DepthType {
@@ -178,6 +178,23 @@ mod tests {
         let depth_ft = Depth::from_units(1., Units::Imperial);
         assert_eq!(with_precision(depth_ft.as_feet(), 5), 1.);
         assert_eq!(depth_ft.as_meters(), 0.3048);
+    }
+
+    #[test]
+    fn test_depth_param_type_conversion() {
+        vec![Depth::from_meters(1.), Depth::from_meters(1)]
+            .into_iter()
+            .reduce(|a, b| {
+                assert_eq!(a, b);
+                Depth::zero()
+            });
+
+        vec![Depth::from_feet(1.), Depth::from_feet(1)]
+            .into_iter()
+            .reduce(|a, b| {
+                assert_eq!(a, b);
+                Depth::zero()
+            });
     }
 
     fn with_precision(x: f64, precision: u32) -> f64 {

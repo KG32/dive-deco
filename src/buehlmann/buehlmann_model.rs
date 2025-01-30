@@ -115,7 +115,7 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn ndl(&self) -> Time {
-        let mut ndl = Time::from_minutes(NDL_CUT_OFF_MINS.into());
+        let mut ndl = Time::from_minutes(NDL_CUT_OFF_MINS);
 
         if self.in_deco() {
             return Time::zero();

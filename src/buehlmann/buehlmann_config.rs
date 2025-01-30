@@ -1,6 +1,7 @@
 use crate::{
     common::{
-        AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure,
+        AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactor, GradientFactors,
+        MbarPressure,
     },
     CeilingType,
 };
@@ -25,18 +26,21 @@ impl BuehlmannConfig {
         Self::default()
     }
 
-    pub fn with_gradient_factors(mut self, gf_low: u8, gf_high: u8) -> Self {
-        self.gf = (gf_low, gf_high);
+    pub fn with_gradient_factors<T: Into<GradientFactor>>(mut self, gf_low: T, gf_high: T) -> Self {
+        self.gf = (gf_low.into(), gf_high.into());
         self
     }
 
-    pub fn with_surface_pressure(mut self, surface_pressure: MbarPressure) -> Self {
-        self.surface_pressure = surface_pressure;
+    pub fn with_surface_pressure<T: Into<MbarPressure>>(mut self, surface_pressure: T) -> Self {
+        self.surface_pressure = surface_pressure.into();
         self
     }
 
-    pub fn with_deco_ascent_rate(mut self, deco_ascent_rate: AscentRatePerMinute) -> Self {
-        self.deco_ascent_rate = deco_ascent_rate;
+    pub fn with_deco_ascent_rate<T: Into<AscentRatePerMinute>>(
+        mut self,
+        deco_ascent_rate: T,
+    ) -> Self {
+        self.deco_ascent_rate = deco_ascent_rate.into();
         self
     }
 
