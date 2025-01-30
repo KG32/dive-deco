@@ -91,8 +91,8 @@ println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 
 A VO representing depth, both constructed from and represented as meters or feet.
 
-- `from_meters(val: f64) -> Depth`
-- `from_feet(val: f64) -> Depth`
+- `from_meters(val: Into<f64>) -> Depth`
+- `from_feet(val: Into<f64>) -> Depth`
 - `as_meters() -> f64`
 - `as_feet() -> f64`
 
