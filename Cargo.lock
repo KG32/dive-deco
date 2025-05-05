@@ -171,6 +171,7 @@ name = "dive-deco"
 version = "5.0.1"
 dependencies = [
  "criterion",
+ "serde",
 ]
 
 [[package]]

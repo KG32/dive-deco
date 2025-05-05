@@ -1,4 +1,6 @@
 use crate::common::global_types::{MbarPressure, Pressure};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use super::Depth;
 
@@ -6,6 +8,7 @@ use super::Depth;
 const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Gas {
     o2_pp: Pressure,
     n2_pp: Pressure,
@@ -13,12 +16,15 @@ pub struct Gas {
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PartialPressures {
     pub o2: Pressure,
     pub n2: Pressure,
     pub he: Pressure,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum InertGas {
     Helium,
     Nitrogen,

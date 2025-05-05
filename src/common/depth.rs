@@ -1,9 +1,12 @@
 use core::fmt;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
 use super::DepthType;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Units {
     Metric,
     Imperial,
@@ -16,6 +19,7 @@ pub trait Unit<T = f64>: Sized {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Depth {
     m: DepthType,
 }

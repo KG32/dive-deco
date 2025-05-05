@@ -5,6 +5,8 @@ use crate::{
     },
     CeilingType,
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
 const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
@@ -12,6 +14,7 @@ const SURFACE_PRESSURE_ERR_MSG: &str = "Surface pressure must be in milibars in 
 const DECO_ASCENT_RATE_ERR_MSG: &str = "Ascent rate must in 1-30 m/s range";
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BuehlmannConfig {
     pub gf: GradientFactors,
     pub surface_pressure: MbarPressure,
