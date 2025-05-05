@@ -6,11 +6,14 @@ use crate::common::{
     DiveState, Gas, GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 const NDL_CUT_OFF_MINS: u8 = 99;
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BuehlmannModel {
     config: BuehlmannConfig,
     compartments: Vec<Compartment>,
@@ -19,6 +22,7 @@ pub struct BuehlmannModel {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct BuehlmannState {
     depth: Depth,
     time: Time,

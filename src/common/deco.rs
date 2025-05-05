@@ -1,3 +1,5 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt};
 
 use crate::{DecoModel, Depth, DepthType, Gas, Time};
@@ -9,6 +11,7 @@ const DEFAULT_CEILING_WINDOW: DepthType = 3.;
 const DEFAULT_MAX_END_DEPTH: DepthType = 30.;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 enum DecoAction {
     AscentToCeil,
     AscentToGasSwitchDepth,
@@ -17,6 +20,7 @@ enum DecoAction {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DecoStageType {
     Ascent,
     DecoStop,
@@ -24,6 +28,7 @@ pub enum DecoStageType {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DecoStage {
     pub stage_type: DecoStageType,
     pub start_depth: Depth,
@@ -33,6 +38,7 @@ pub struct DecoStage {
 }
 
 #[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Deco {
     deco_stages: Vec<DecoStage>,
     tts: Time,
@@ -40,6 +46,7 @@ pub struct Deco {
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DecoRuntime {
     // runtime
     pub deco_stages: Vec<DecoStage>,
@@ -55,6 +62,7 @@ pub struct DecoRuntime {
 struct MissedDecoStopViolation;
 
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DecoCalculationError {
     EmptyGasList,
     CurrentGasNotInList,

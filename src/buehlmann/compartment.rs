@@ -5,8 +5,11 @@ use crate::{
     },
     BuehlmannConfig, Gas, Time,
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Compartment {
     // tissue number
     pub no: u8,
@@ -29,6 +32,7 @@ pub struct Compartment {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Supersaturation {
     pub gf_99: f64,
     pub gf_surf: f64,

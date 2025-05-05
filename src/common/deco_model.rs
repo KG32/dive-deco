@@ -3,8 +3,11 @@ use crate::common::global_types::{CeilingType, MbarPressure};
 use crate::common::ox_tox::OxTox;
 use crate::common::{AscentRatePerMinute, Cns, Gas, Otu};
 use crate::common::{Depth, Time};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ConfigValidationErr {
     pub field: String,
     pub reason: String,
@@ -28,6 +31,7 @@ pub trait DecoModelConfig {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DiveState {
     pub depth: Depth,
     pub time: Time,

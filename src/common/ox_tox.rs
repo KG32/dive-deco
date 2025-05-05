@@ -1,3 +1,5 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
 use crate::common::CNS_COEFFICIENTS;
@@ -11,6 +13,7 @@ const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f64 = 400.;
 const OTU_EQUATION_EXPONENT: f64 = -0.8333;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct OxTox {
     cns: Cns,
     otu: Otu,

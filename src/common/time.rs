@@ -1,9 +1,12 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     ops::{Add, AddAssign, Div, Mul, Sub},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Time {
     s: f64,
 }
