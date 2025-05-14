@@ -20,6 +20,7 @@ pub struct BuhlmannModel {
     state: BuhlmannState,
     sim: bool,
 }
+pub type BuehlmannModel = BuhlmannModel;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
