@@ -1,32 +1,32 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
+use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
-pub fn buehlmann_ndl_benchmark(c: &mut Criterion) {
-    c.bench_function("Buehlmann NDL", |b| {
+pub fn buhlmann_ndl_benchmark(c: &mut Criterion) {
+    c.bench_function("Buhlmann NDL", |b| {
         b.iter(|| {
-            let mut model = BuehlmannModel::default();
+            let mut model = BuhlmannModel::default();
             model.record(Depth::from_meters(20.), Time::from_seconds(5.), &Gas::air());
             model.ndl();
         })
     });
 }
 
-pub fn buehlmann_deco_benchmark(c: &mut Criterion) {
-    let mut model = BuehlmannModel::default();
+pub fn buhlmann_deco_benchmark(c: &mut Criterion) {
+    let mut model = BuhlmannModel::default();
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
     model.record(Depth::from_meters(40.0001), Time::from_minutes(20.), &air);
-    c.bench_function("Buehlmann deco", |b| {
+    c.bench_function("Buhlmann deco", |b| {
         b.iter(|| model.deco(vec![air, ean_50]))
     });
 }
 
-pub fn buehlmann_deco_adaptive_recalc(c: &mut Criterion) {
-    let config = BuehlmannConfig::default()
+pub fn buhlmann_deco_adaptive_recalc(c: &mut Criterion) {
+    let config = BuhlmannConfig::default()
         .with_gradient_factors(30, 70)
         .with_ceiling_type(dive_deco::CeilingType::Adaptive);
 
-    let mut model = BuehlmannModel::new(config);
+    let mut model = BuhlmannModel::new(config);
 
     let air = Gas::air();
     let ean50 = Gas::new(0.50, 0.);
@@ -43,20 +43,20 @@ pub fn buehlmann_deco_adaptive_recalc(c: &mut Criterion) {
     });
 }
 
-pub fn buehlmann_full(c: &mut Criterion) {
-    let config = BuehlmannConfig::default()
+pub fn buhlmann_full(c: &mut Criterion) {
+    let config = BuhlmannConfig::default()
         .with_gradient_factors(30, 70)
         .with_ceiling_type(dive_deco::CeilingType::Adaptive)
         .with_all_m_values_recalculated(true);
 
-    let mut model = BuehlmannModel::new(config);
+    let mut model = BuhlmannModel::new(config);
 
     let air = Gas::air();
     let ean50 = Gas::new(0.50, 0.);
     let o2 = Gas::new(1., 0.);
     let available_gasses = vec![air, ean50, o2];
 
-    c.bench_function("Buehlmann full", |b| {
+    c.bench_function("Buhlmann full", |b| {
         b.iter(|| {
             model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
             model.deco(available_gasses.clone()).unwrap();
@@ -77,9 +77,9 @@ pub fn buehlmann_full(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    buehlmann_ndl_benchmark,
-    buehlmann_deco_benchmark,
-    buehlmann_deco_adaptive_recalc,
-    buehlmann_full,
+    buhlmann_ndl_benchmark,
+    buhlmann_deco_benchmark,
+    buhlmann_deco_adaptive_recalc,
+    buhlmann_full,
 );
 criterion_main!(benches);

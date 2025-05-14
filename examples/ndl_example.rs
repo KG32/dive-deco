@@ -1,9 +1,9 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
+use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {
-    // initialize a Buehlmann ZHL-16C deco model with default config (GF 100/100)
-    let config = BuehlmannConfig::default();
-    let mut model = BuehlmannModel::new(config);
+    // initialize a Buhlmann ZHL-16C deco model with default config (GF 100/100)
+    let config = BuhlmannConfig::default();
+    let mut model = BuhlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
     let depth = Depth::from_meters(30.);

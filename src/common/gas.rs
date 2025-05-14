@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::Depth;
 
-// alveolar water vapor pressure assuming 47 mm Hg at 37C (Buehlmann's value)
+// alveolar water vapor pressure assuming 47 mm Hg at 37C (Buhlmann's value)
 const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

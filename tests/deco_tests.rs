@@ -1,5 +1,5 @@
 use dive_deco::{
-    BuehlmannConfig, BuehlmannModel, CeilingType, DecoModel, DecoRuntime, DecoStage, DecoStageType,
+    BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, DecoRuntime, DecoStage, DecoStageType,
     Depth, Gas, Time,
 };
 
@@ -21,7 +21,7 @@ fn test_deco_ascent_no_deco() {
 #[test]
 fn test_deco_single_gas() {
     let air = fixtures::gas_air();
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
+    let mut model = BuhlmannModel::new(BuhlmannConfig::default().with_deco_ascent_rate(9.));
     model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
 
     let DecoRuntime {
@@ -74,7 +74,7 @@ fn test_deco_single_gas() {
 
 #[test]
 fn test_deco_multi_gas() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
+    let mut model = BuhlmannModel::new(BuhlmannConfig::default().with_deco_ascent_rate(9.));
 
     let air = Gas::new(0.21, 0.);
     let ean_50 = Gas::new(0.50, 0.);
@@ -143,7 +143,7 @@ fn test_deco_multi_gas() {
 
 #[test]
 fn test_deco_with_deco_mod_at_bottom() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default().with_deco_ascent_rate(9.));
+    let mut model = BuhlmannModel::new(BuhlmannConfig::default().with_deco_ascent_rate(9.));
     let air = Gas::air();
     let ean_36 = Gas::new(0.36, 0.);
 
@@ -208,16 +208,16 @@ fn test_runtime_on_missed_stop() {
     let available_gas_mixes = vec![air, ean_50];
 
     let configs = vec![
-        BuehlmannConfig::default()
+        BuhlmannConfig::default()
             .with_ceiling_type(dive_deco::CeilingType::Actual)
             .with_gradient_factors(30, 70),
-        BuehlmannConfig::default()
+        BuhlmannConfig::default()
             .with_ceiling_type(dive_deco::CeilingType::Adaptive)
             .with_gradient_factors(30, 70),
     ];
 
     for config in configs.into_iter() {
-        let mut model = BuehlmannModel::new(config);
+        let mut model = BuhlmannModel::new(config);
         model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
         model.record(Depth::from_meters(22.), Time::zero(), &air);
         let initial_deco = model.deco(available_gas_mixes.clone()).unwrap();
@@ -247,10 +247,10 @@ fn test_runtime_on_missed_stop() {
 
 #[test]
 fn test_deco_runtime_integrity() {
-    let config = BuehlmannConfig::new()
+    let config = BuhlmannConfig::new()
         .with_gradient_factors(30, 70)
         .with_ceiling_type(CeilingType::Adaptive);
-    let mut model = BuehlmannModel::new(config);
+    let mut model = BuhlmannModel::new(config);
     let air = Gas::air();
     let ean_50 = Gas::new(0.50, 0.);
     let oxygen = Gas::new(1., 0.);

@@ -3,7 +3,7 @@ use crate::{
     common::{
         Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
     },
-    BuehlmannConfig, Gas, Time,
+    BuhlmannConfig, Gas, Time,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -25,10 +25,10 @@ pub struct Compartment {
     pub m_value_raw: Pressure,
     // M-value (calculated considering gradient factors)
     pub m_value_calc: Pressure,
-    // compartment'a Buehlmann params (N2 half time, n2 'a' coefficient, n2 'b' coefficient, He half time, ..)
+    // compartment'a Buhlmann params (N2 half time, n2 'a' coefficient, n2 'b' coefficient, He half time, ..)
     pub params: ZHLParams,
-    // Buehlmann model config (gradient factors, surface pressure)
-    model_config: BuehlmannConfig,
+    // Buhlmann model config (gradient factors, surface pressure)
+    model_config: BuhlmannConfig,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -39,7 +39,7 @@ pub struct Supersaturation {
 }
 
 impl Compartment {
-    pub fn new(no: u8, params: ZHLParams, model_config: BuehlmannConfig) -> Self {
+    pub fn new(no: u8, params: ZHLParams, model_config: BuhlmannConfig) -> Self {
         let init_gas = Gas::air();
         let init_gas_compound_pressures =
             init_gas.inspired_partial_pressures(Depth::zero(), model_config.surface_pressure);
@@ -186,7 +186,7 @@ impl Compartment {
         (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time.as_minutes()) / half_time)))
     }
 
-    // tissue tolerable ambient pressure using GF slope, weighted Buehlmann ZHL params based on tissue inert gasses saturation proportions
+    // tissue tolerable ambient pressure using GF slope, weighted Buhlmann ZHL params based on tissue inert gasses saturation proportions
     fn min_tolerable_amb_pressure(&self, max_gf: GradientFactor) -> Pressure {
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
         let (_, a_coefficient_adjusted, b_coefficient_adjusted) =
@@ -241,12 +241,12 @@ mod tests {
 
     fn comp_1() -> Compartment {
         let comp_1_params = (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245);
-        Compartment::new(1, comp_1_params, BuehlmannConfig::default())
+        Compartment::new(1, comp_1_params, BuhlmannConfig::default())
     }
 
     fn comp_5() -> Compartment {
         let comp_5_params = (27., 0.6200, 0.8126, 10.21, 0.9220, 0.7582);
-        Compartment::new(5, comp_5_params, BuehlmannConfig::default())
+        Compartment::new(5, comp_5_params, BuhlmannConfig::default())
     }
 
     #[test]
@@ -264,7 +264,7 @@ mod tests {
                 m_value_calc: 3.265840594059406,
                 params: (4.0, 1.2599, 0.505, 1.51, 1.7424, 0.4245),
                 // mocked config and state
-                model_config: BuehlmannConfig::default(),
+                model_config: BuhlmannConfig::default(),
             }
         );
     }

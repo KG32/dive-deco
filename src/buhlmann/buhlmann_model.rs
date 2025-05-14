@@ -1,6 +1,6 @@
-use crate::buehlmann::buehlmann_config::BuehlmannConfig;
-use crate::buehlmann::compartment::{Compartment, Supersaturation};
-use crate::buehlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
+use crate::buhlmann::buhlmann_config::BuhlmannConfig;
+use crate::buhlmann::compartment::{Compartment, Supersaturation};
+use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{
     AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
     DiveState, Gas, GradientFactor, OxTox, RecordData,
@@ -14,16 +14,16 @@ const NDL_CUT_OFF_MINS: u8 = 99;
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BuehlmannModel {
-    config: BuehlmannConfig,
+pub struct BuhlmannModel {
+    config: BuhlmannConfig,
     compartments: Vec<Compartment>,
-    state: BuehlmannState,
+    state: BuhlmannState,
     sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BuehlmannState {
+pub struct BuhlmannState {
     depth: Depth,
     time: Time,
     gas: Gas,
@@ -31,7 +31,7 @@ pub struct BuehlmannState {
     ox_tox: OxTox,
 }
 
-impl Default for BuehlmannState {
+impl Default for BuhlmannState {
     fn default() -> Self {
         Self {
             depth: Depth::zero(),
@@ -43,22 +43,22 @@ impl Default for BuehlmannState {
     }
 }
 
-impl DecoModel for BuehlmannModel {
-    type ConfigType = BuehlmannConfig;
+impl DecoModel for BuhlmannModel {
+    type ConfigType = BuhlmannConfig;
 
     // initialize with default config
     fn default() -> Self {
-        Self::new(BuehlmannConfig::default())
+        Self::new(BuhlmannConfig::default())
     }
 
-    /// initialize new Buehlmann (ZH-L16C) model with gradient factors
-    fn new(config: BuehlmannConfig) -> Self {
+    /// initialize new Buhlmann (ZH-L16C) model with gradient factors
+    fn new(config: BuhlmannConfig) -> Self {
         // validate config
         if let Err(e) = config.validate() {
             panic!("Config error [{}]: {}", e.field, e.reason);
         }
         // air as a default init gas
-        let initial_model_state = BuehlmannState::default();
+        let initial_model_state = BuhlmannState::default();
         let mut model = Self {
             config,
             compartments: vec![],
@@ -142,7 +142,7 @@ impl DecoModel for BuehlmannModel {
     }
 
     fn ceiling(&self) -> Depth {
-        let BuehlmannConfig {
+        let BuhlmannConfig {
             deco_ascent_rate,
             mut ceiling_type,
             ..
@@ -192,12 +192,12 @@ impl DecoModel for BuehlmannModel {
         deco.calc(self.fork(), gas_mixes)
     }
 
-    fn config(&self) -> BuehlmannConfig {
+    fn config(&self) -> BuhlmannConfig {
         self.config
     }
 
     fn dive_state(&self) -> DiveState {
-        let BuehlmannState {
+        let BuhlmannState {
             depth,
             time,
             gas,
@@ -221,7 +221,7 @@ impl DecoModel for BuehlmannModel {
     }
 }
 
-impl Sim for BuehlmannModel {
+impl Sim for BuhlmannModel {
     fn fork(&self) -> Self {
         Self {
             sim: true,
@@ -233,7 +233,7 @@ impl Sim for BuehlmannModel {
     }
 }
 
-impl BuehlmannModel {
+impl BuhlmannModel {
     /// set of current gradient factors (GF now, GF surface)
     pub fn supersaturation(&self) -> Supersaturation {
         let mut acc_gf_99 = 0.;
@@ -259,10 +259,7 @@ impl BuehlmannModel {
         self.compartments.clone()
     }
 
-    pub fn update_config(
-        &mut self,
-        new_config: BuehlmannConfig,
-    ) -> Result<(), ConfigValidationErr> {
+    pub fn update_config(&mut self, new_config: BuhlmannConfig) -> Result<(), ConfigValidationErr> {
         new_config.validate()?;
         self.config = new_config;
         Ok(())
@@ -293,7 +290,7 @@ impl BuehlmannModel {
         &mut comps[leading_comp_index]
     }
 
-    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {
+    fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuhlmannConfig) {
         let mut compartments: Vec<Compartment> = vec![];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
             let compartment = Compartment::new(i as u8 + 1, comp_values, config);
@@ -426,7 +423,7 @@ mod tests {
 
     #[test]
     fn test_state() {
-        let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+        let mut model = BuhlmannModel::new(BuhlmannConfig::default());
         let air = Gas::new(0.21, 0.);
         let nx32 = Gas::new(0.32, 0.);
         model.record(Depth::from_meters(10.), Time::from_minutes(10.), &air);
@@ -441,8 +438,7 @@ mod tests {
     #[test]
     fn test_max_gf_within_ndl() {
         let gf = (50, 100);
-        let mut model =
-            BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
+        let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData {
             depth: Depth::from_meters(0.),
@@ -457,8 +453,7 @@ mod tests {
     fn test_max_gf_below_first_stop() {
         let gf = (50, 100);
 
-        let mut model =
-            BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
+        let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
         let record = RecordData {
             depth: Depth::from_meters(40.),
@@ -472,8 +467,7 @@ mod tests {
     #[test]
     fn test_max_gf_during_deco() {
         let gf = (30, 70);
-        let mut model =
-            BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
+        let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let air = Gas::air();
 
         model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
@@ -485,7 +479,7 @@ mod tests {
     #[test]
     fn test_gf_slope_point() {
         let gf = (30, 85);
-        let model = BuehlmannModel::new(BuehlmannConfig::new().with_gradient_factors(gf.0, gf.1));
+        let model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
         let slope_point =
             model.gf_slope_point(gf, Depth::from_meters(33.528), Depth::from_meters(30.48));
         assert_eq!(slope_point, 35);
@@ -493,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_initial_supersaturation() {
-        fn extract_supersaturations(model: BuehlmannModel) -> Vec<Supersaturation> {
+        fn extract_supersaturations(model: BuhlmannModel) -> Vec<Supersaturation> {
             model
                 .compartments
                 .clone()
@@ -502,9 +496,9 @@ mod tests {
                 .collect::<Vec<Supersaturation>>()
         }
 
-        let model_initial = BuehlmannModel::default();
+        let model_initial = BuhlmannModel::default();
 
-        let mut model_with_surface_interval = BuehlmannModel::default();
+        let mut model_with_surface_interval = BuhlmannModel::default();
         model_with_surface_interval.record(Depth::zero(), Time::from_seconds(999999.), &Gas::air());
 
         let initial_gfs = extract_supersaturations(model_initial);
@@ -515,9 +509,9 @@ mod tests {
 
     #[test]
     fn test_updating_config() {
-        let mut model = BuehlmannModel::default();
+        let mut model = BuhlmannModel::default();
         let initial_config = model.config();
-        let new_config = BuehlmannConfig::new()
+        let new_config = BuhlmannConfig::new()
             .with_gradient_factors(30, 70)
             .with_round_ceiling(true)
             .with_ceiling_type(CeilingType::Adaptive)
@@ -542,8 +536,8 @@ mod tests {
 
     #[test]
     fn test_ndl_0_if_in_deco() {
-        let mut model = BuehlmannModel::new(
-            BuehlmannConfig::default()
+        let mut model = BuhlmannModel::new(
+            BuhlmannConfig::default()
                 .with_gradient_factors(30, 70)
                 .with_ceiling_type(CeilingType::Actual),
         );
