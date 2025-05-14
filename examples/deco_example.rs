@@ -1,8 +1,8 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
+use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {
-    let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
-    let mut model = BuehlmannModel::new(config);
+    let config = BuhlmannConfig::new().with_gradient_factors(30, 70);
+    let mut model = BuhlmannModel::new(config);
 
     // bottom gas
     let air = Gas::air();

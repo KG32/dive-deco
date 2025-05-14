@@ -15,7 +15,7 @@ const DECO_ASCENT_RATE_ERR_MSG: &str = "Ascent rate must in 1-30 m/s range";
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct BuehlmannConfig {
+pub struct BuhlmannConfig {
     pub gf: GradientFactors,
     pub surface_pressure: MbarPressure,
     pub deco_ascent_rate: AscentRatePerMinute,
@@ -24,7 +24,7 @@ pub struct BuehlmannConfig {
     pub recalc_all_tissues_m_values: bool,
 }
 
-impl BuehlmannConfig {
+impl BuhlmannConfig {
     pub fn new() -> Self {
         Self::default()
     }
@@ -63,7 +63,7 @@ impl BuehlmannConfig {
     }
 }
 
-impl Default for BuehlmannConfig {
+impl Default for BuhlmannConfig {
     fn default() -> Self {
         Self {
             gf: (100, 100),
@@ -76,7 +76,7 @@ impl Default for BuehlmannConfig {
     }
 }
 
-impl DecoModelConfig for BuehlmannConfig {
+impl DecoModelConfig for BuhlmannConfig {
     fn validate(&self) -> Result<(), ConfigValidationErr> {
         let Self {
             gf,
@@ -109,7 +109,7 @@ impl DecoModelConfig for BuehlmannConfig {
     }
 }
 
-impl BuehlmannConfig {
+impl BuhlmannConfig {
     fn validate_gradient_factors(&self, gf: &GradientFactors) -> Result<(), ConfigValidationErr> {
         let (gf_low, gf_high) = gf;
         let gf_range = 1..=100;
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_default_config() {
-        let config = BuehlmannConfig::default();
+        let config = BuhlmannConfig::default();
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.gf, (100, 100));
         assert_eq!(config.deco_ascent_rate, 10.);
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_variable_gradient_factors() {
-        let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
+        let config = BuhlmannConfig::new().with_gradient_factors(30, 70);
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.gf, (30, 70));
     }
@@ -182,7 +182,7 @@ mod tests {
         let invalid_gf_range_cases = vec![(1, 101), (0, 99), (120, 240)];
         for case in invalid_gf_range_cases {
             let (gf_low, gf_high) = case;
-            let config = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
+            let config = BuhlmannConfig::new().with_gradient_factors(gf_low, gf_high);
             assert_eq!(
                 config.validate(),
                 Err(ConfigValidationErr::new("gf", GF_RANGE_ERR_MSG))
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_gf_order() {
-        let config = BuehlmannConfig::new().with_gradient_factors(90, 80);
+        let config = BuhlmannConfig::new().with_gradient_factors(90, 80);
         assert_eq!(
             config.validate(),
             Err(ConfigValidationErr::new("gf", GF_ORDER_ERR_MSG))
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_surface_pressure_config() {
-        let config = BuehlmannConfig::new().with_surface_pressure(1032);
+        let config = BuhlmannConfig::new().with_surface_pressure(1032);
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.surface_pressure, 1032);
     }
@@ -210,7 +210,7 @@ mod tests {
     fn test_invalid_surface_pressure_values() {
         let invalid_surface_pressure_cases = vec![0, 100, 2000];
         for invalid_case in invalid_surface_pressure_cases {
-            let config = BuehlmannConfig::new().with_surface_pressure(invalid_case);
+            let config = BuhlmannConfig::new().with_surface_pressure(invalid_case);
             assert_eq!(
                 config.validate(),
                 Err(ConfigValidationErr::new(
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_deco_ascent_rate_config() {
-        let config = BuehlmannConfig::new().with_deco_ascent_rate(15.5);
+        let config = BuhlmannConfig::new().with_deco_ascent_rate(15.5);
         assert_eq!(config.validate(), Ok(()));
         assert_eq!(config.deco_ascent_rate, 15.5);
     }
@@ -232,7 +232,7 @@ mod tests {
     fn test_invalid_deco_ascent_rate_values() {
         let invalid_deco_ascent_rate_cases = vec![-3., 0.5, 31.0, 50.5];
         for invalid_case in invalid_deco_ascent_rate_cases {
-            let config = BuehlmannConfig::new().with_deco_ascent_rate(invalid_case);
+            let config = BuhlmannConfig::new().with_deco_ascent_rate(invalid_case);
             assert_eq!(
                 config.validate(),
                 Err(ConfigValidationErr::new(

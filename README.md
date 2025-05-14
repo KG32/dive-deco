@@ -2,7 +2,7 @@
 
 A dive decompression models library.
 
-## Buehlmann ZH-L16C
+## Buhlmann ZH-L16C
 
 The Bühlmann decompression set of parameters is an Haldanian mathematical model of the way in which inert gases enter and leave the human body as the ambient pressure changes. Versions are used to create Bühlmann decompression tables and in personal dive computers to compute no-decompression limits and decompression schedules for dives in real-time.[^1]
 
@@ -51,12 +51,12 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ##### Using default config
 
 ```rust
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel };
+use dive_deco::{ BuhlmannConfig, BuhlmannModel, DecoModel };
 
 fn main() {
     // model with default config (GF 100/100)
-    let model = BuehlmannModel::default();
-    println!("{:?}", model.config()); // BuehlmannConfig { gf: (100, 100) }
+    let model = BuhlmannModel::default();
+    println!("{:?}", model.config()); // BuhlmannConfig { gf: (100, 100) }
 }
 ```
 
@@ -74,13 +74,13 @@ Current config options:
 
 ```rust
 // fluid-interface-like built config
-let config = BuehlmannConfig::new()
+let config = BuhlmannConfig::new()
     .with_gradient_factors(30, 70)
     .with_surface_pressure(1013)
     .with_deco_ascent_rate(10.)
     .with_ceiling_type(CeilingType::Actual);
-let model = BuehlmannModel::new(config);
-println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
+let model = BuhlmannModel::new(config);
+println!("{:?}", model.config()); // BuhlmannConfig { gf: (30, 70) }
 ```
 
 ---
@@ -217,8 +217,8 @@ All decompression stages calculated to clear deco obligations and resurface in a
   - `CurrentGasNotInList` - occurs when provided available list doesn't include gas currently in use according to deco model's state
 
 ```rust
-let config = BuehlmannConfig::new().with_gradient_factors(30, 70);
-let mut model = BuehlmannModel::new(config);
+let config = BuhlmannConfig::new().with_gradient_factors(30, 70);
+let mut model = BuhlmannModel::new(config);
 
 // bottom gas
 let air = Gas::air();
@@ -357,12 +357,12 @@ The NDL is a theoretical time obtained by calculating inert gas uptake and relea
 NDL controllable by `ceiling_type` model config. By default (`Actual`), NDL is determined by the current tissues saturation, it counts down to a condition where ceiling isn't equal to the surface. The other ceiling type config (`Adaptive`) takes into account off-gassing during ascent and it's defined as a maximum time at given depth that won't create any decompression obligations (i.e. even on existing ceiling, limit occures when a direct ascent with configured ascent rate doesn't cause any tissue to intersect with its M-Value at a given time).
 
 ```rust
-use dive_deco::{DecoModel, BuehlmannModel, BuehlmannConfig, Gas};
+use dive_deco::{DecoModel, BuhlmannModel, BuhlmannConfig, Gas};
 
 fn main() {
-    // initialize a Buehlmann ZHL-16C deco model with default config (GF 100/100)
-    let config = BuehlmannConfig::default();
-    let mut model = BuehlmannModel::new(config);
+    // initialize a Buhlmann ZHL-16C deco model with default config (GF 100/100)
+    let config = BuhlmannConfig::default();
+    let mut model = BuhlmannModel::new(config);
 
     let air = Gas::new(0.21, 0.);
     let depth = Depth::from_meters(30.);
@@ -382,15 +382,15 @@ fn main() {
 
 ##### Decompression Ceiling
 
-Minimum theoretical depth that can be reached at the moment without breaking the decompression obligation. In case of Buehlmann algorithm, a depth restricted by M-value given leading tissue saturation and gradient factors setting.
+Minimum theoretical depth that can be reached at the moment without breaking the decompression obligation. In case of Buhlmann algorithm, a depth restricted by M-value given leading tissue saturation and gradient factors setting.
 
 - `ceiling()` - current decompression ceiling in meters, given current model state and gradient factors settings
 
 ```rust
-use dive_deco::{ BuehlmannConfig, BuehlmannModel, DecoModel, Gas };
+use dive_deco::{ BuhlmannConfig, BuhlmannModel, DecoModel, Gas };
 
 fn main() {
-let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+let mut model = BuhlmannModel::new(BuhlmannConfig::default());
 
 let nitrox_32 = Gas::new(0.32, 0.);
 

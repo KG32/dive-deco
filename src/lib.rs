@@ -1,7 +1,9 @@
-mod buehlmann;
+mod buhlmann;
 mod common;
 
-pub use buehlmann::{BuehlmannConfig, BuehlmannModel, Compartment, Supersaturation};
+pub use buhlmann::{
+    BuehlmannConfig, BuehlmannModel, BuhlmannConfig, BuhlmannModel, Compartment, Supersaturation,
+};
 
 pub use common::{
     CeilingType, Deco, DecoCalculationError, DecoModel, DecoRuntime, DecoStage, DecoStageType,

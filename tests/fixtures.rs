@@ -1,13 +1,13 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Gas, GradientFactors};
+use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Gas, GradientFactors};
 
-pub fn model_default() -> BuehlmannModel {
-    BuehlmannModel::default()
+pub fn model_default() -> BuhlmannModel {
+    BuhlmannModel::default()
 }
 
-pub fn model_gf(gf: GradientFactors) -> BuehlmannModel {
+pub fn model_gf(gf: GradientFactors) -> BuhlmannModel {
     let (gf_low, gf_high) = gf;
-    let config_with_gf = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
-    BuehlmannModel::new(config_with_gf)
+    let config_with_gf = BuhlmannConfig::new().with_gradient_factors(gf_low, gf_high);
+    BuhlmannModel::new(config_with_gf)
 }
 
 pub fn gas_air() -> Gas {

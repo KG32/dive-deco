@@ -1,11 +1,11 @@
 [package]
 name = "dive-deco"
-version = "5.1.0"
+version = "5.1.1"
 edition = "2021"
 license = "MIT"
-description = "A dive decompression models library (Buehlmann ZH-L 16C)"
+description = "A dive decompression models library (Buhlmann ZH-L 16C)"
 repository = "https://github.com/KG32/dive-deco.git"
-keywords = ["scuba", "diving", "decompression", "Buhlmann", "Buehlmann"]
+keywords = ["scuba", "diving", "decompression", "Buhlmann", "Buhlmann"]
 categories = ["algorithms", "simulation", "science"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,7 +17,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 
 [[bench]]
-name = "buehlmann_benchmark"
+name = "buhlmann_benchmark"
 harness = false
 
 [features]

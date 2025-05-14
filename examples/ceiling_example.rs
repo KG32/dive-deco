@@ -1,7 +1,7 @@
-use dive_deco::{BuehlmannConfig, BuehlmannModel, DecoModel, Depth, Gas, Time};
+use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {
-    let mut model = BuehlmannModel::new(BuehlmannConfig::default());
+    let mut model = BuhlmannModel::new(BuhlmannConfig::default());
 
     let nitrox_32 = Gas::new(0.32, 0.);
 

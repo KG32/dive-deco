@@ -413,7 +413,7 @@ impl Deco {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BuehlmannModel;
+    use crate::BuhlmannModel;
 
     #[test]
     fn test_ceiling_rounding() {
@@ -474,7 +474,7 @@ mod tests {
     #[test]
     fn should_err_on_empty_gas_mixes() {
         let mut deco = Deco::default();
-        let deco_model = BuehlmannModel::default();
+        let deco_model = BuhlmannModel::default();
         let deco_res = deco.calc(deco_model, vec![]);
         assert_eq!(deco_res, Err(DecoCalculationError::EmptyGasList));
     }
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn should_err_on_gas_mixes_without_current_mix() {
         let mut deco = Deco::default();
-        let mut deco_model = BuehlmannModel::default();
+        let mut deco_model = BuhlmannModel::default();
         let air = Gas::air();
         let ean50 = Gas::new(0.50, 0.);
         let tmx2135 = Gas::new(0.21, 0.35);
