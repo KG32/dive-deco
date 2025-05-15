@@ -1,4 +1,6 @@
 use crate::common::global_types::{MbarPressure, Pressure};
+use alloc::string::String;
+use libm::round;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -30,8 +32,8 @@ pub enum InertGas {
     Nitrogen,
 }
 
-impl std::fmt::Display for Gas {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Gas {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:.0}/{:.0}", self.o2_pp * 100., self.he_pp * 100.)
     }
 }
@@ -52,12 +54,17 @@ impl Gas {
         Self {
             o2_pp,
             he_pp,
-            n2_pp: ((1. - (o2_pp + he_pp)) * 100.0).round() / 100.0,
+            n2_pp: round((1. - (o2_pp + he_pp)) * 100.0) / 100.0,
         }
     }
 
     pub fn id(&self) -> String {
-        self.to_string()
+        let mut s = String::new();
+        let _ = core::fmt::write(
+            &mut s,
+            format_args!("{:.0}/{:.0}", self.o2_pp * 100., self.he_pp * 100.),
+        );
+        s
     }
 
     /// gas partial pressures

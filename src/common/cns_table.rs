@@ -1,4 +1,4 @@
-use std::ops::RangeInclusive;
+use core::ops::RangeInclusive;
 
 // (PO2 Range, slope, intercept)
 pub type CNSCoeffRow = (RangeInclusive<f64>, i32, i32);

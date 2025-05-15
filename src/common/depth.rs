@@ -1,12 +1,15 @@
-use core::fmt;
+use core::{
+    fmt,
+    ops::{Add, AddAssign, Div, Mul, Sub},
+};
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
-use super::DepthType;
+#[cfg(test)]
+use alloc::vec;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub type DepthType = f64;
 pub enum Units {
     Metric,
     Imperial,
@@ -31,7 +34,7 @@ impl Default for Depth {
 }
 
 impl fmt::Display for Depth {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, r"{}m \ {}ft", self.as_meters(), self.as_feet())
     }
 }
@@ -43,7 +46,7 @@ impl PartialEq<Self> for Depth {
 }
 
 impl PartialOrd<Self> for Depth {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         self.m.partial_cmp(&other.m)
     }
 }

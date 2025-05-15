@@ -1,3 +1,5 @@
+use alloc::vec;
+use alloc::vec::Vec;
 use criterion::{criterion_group, criterion_main, Criterion};
 use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 

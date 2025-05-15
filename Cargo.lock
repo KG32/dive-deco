@@ -168,9 +168,10 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
 name = "dive-deco"
-version = "5.1.1"
+version = "5.2.0"
 dependencies = [
  "criterion",
+ "libm",
  "serde",
 ]
 
@@ -236,6 +237,12 @@ name = "libc"
 version = "0.2.164"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "433bfe06b8c75da9b2e3fbea6e5329ff87748f0b144ef75306e674c3f6f7c13f"
+
+[[package]]
+name = "libm"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 
 [[package]]
 name = "log"

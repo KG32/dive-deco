@@ -1,3 +1,7 @@
+#![no_std]
+
+extern crate alloc;
+
 mod buhlmann;
 mod common;
 
@@ -10,3 +14,7 @@ pub use common::{
     Depth, DepthType, DiveState, Gas, GradientFactors, NDLType, Pressure, RecordData, Sim, Time,
     Unit, Units,
 };
+
+// Re-export Vec and vec macro from alloc for convenience
+pub use alloc::vec;
+pub use alloc::vec::Vec;
