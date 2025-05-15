@@ -3,6 +3,9 @@ use crate::common::global_types::{CeilingType, MbarPressure};
 use crate::common::ox_tox::OxTox;
 use crate::common::{AscentRatePerMinute, Cns, Gas, Otu};
 use crate::common::{Depth, Time};
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -16,8 +19,8 @@ pub struct ConfigValidationErr {
 impl ConfigValidationErr {
     pub fn new(field: &str, reason: &str) -> Self {
         Self {
-            field: field.to_string(),
-            reason: reason.to_string(),
+            field: String::from(field),
+            reason: String::from(reason),
         }
     }
 }

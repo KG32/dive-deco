@@ -6,9 +6,11 @@ use crate::common::{
     DiveState, Gas, GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
+use alloc::vec;
+use alloc::vec::Vec;
+use core::cmp::Ordering;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 
 const NDL_CUT_OFF_MINS: u8 = 99;
 

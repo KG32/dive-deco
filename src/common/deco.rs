@@ -1,6 +1,8 @@
+use alloc::vec;
+use alloc::vec::Vec;
+use core::{cmp::Ordering, fmt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt};
 
 use crate::{DecoModel, Depth, DepthType, Gas, Time};
 

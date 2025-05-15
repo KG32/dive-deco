@@ -2,6 +2,8 @@ use dive_deco::{
     BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, DecoRuntime, DecoStage, DecoStageType,
     Depth, Gas, Time,
 };
+use alloc::vec;
+use alloc::vec::Vec;
 
 pub mod fixtures;
 
@@ -198,7 +200,7 @@ fn test_tts_delta() {
     model.record(Depth::from_meters(40.), Time::from_minutes(5.), &air);
     let deco_2 = model.deco(gas_mixes).unwrap();
     assert_eq!(deco_1.tts_at_5, deco_2.tts);
-    assert_eq!(deco_1.tts_delta_at_5, (deco_2.tts - deco_1.tts) as Time);
+    assert_eq!(deco_1.tts_delta_at_5, deco_2.tts - deco_1.tts);
 }
 
 #[test]

@@ -1,3 +1,4 @@
+use alloc::vec;
 use dive_deco::{
     BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, Depth, Gas, Supersaturation, Time,
 };
