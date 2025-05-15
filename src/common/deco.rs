@@ -1,6 +1,7 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::{cmp::Ordering, fmt};
+use libm::ceil;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -392,7 +393,7 @@ impl Deco {
     // round ceiling up to the bottom of deco window
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
         Depth::from_meters(
-            DEFAULT_CEILING_WINDOW * (ceiling.as_meters() / DEFAULT_CEILING_WINDOW).ceil(),
+            DEFAULT_CEILING_WINDOW * ceil(ceiling.as_meters() / DEFAULT_CEILING_WINDOW),
         )
     }
 

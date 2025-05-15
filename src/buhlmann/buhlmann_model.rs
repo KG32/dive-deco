@@ -6,9 +6,11 @@ use crate::common::{
     DiveState, Gas, GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cmp::Ordering;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -117,7 +119,7 @@ impl DecoModel for BuhlmannModel {
         gas: &Gas,
     ) {
         self.validate_depth(target_depth);
-        let distance = (target_depth - self.state.depth).as_meters().abs();
+        let distance = libm::fabs((target_depth - self.state.depth).as_meters());
         self.record_travel(target_depth, Time::from_seconds(distance / rate * 60.), gas);
     }
 
@@ -184,7 +186,7 @@ impl DecoModel for BuhlmannModel {
         };
 
         if self.config().round_ceiling() {
-            ceiling = Depth::from_meters(ceiling.as_meters().ceil());
+            ceiling = Depth::from_meters(libm::ceil(ceiling.as_meters()));
         }
 
         ceiling
@@ -530,8 +532,8 @@ mod tests {
         assert_eq!(
             update_res,
             Err(ConfigValidationErr {
-                field: "gf".to_string(),
-                reason: "GF values have to be in 1-100 range".to_string(),
+                field: String::from("gf"),
+                reason: String::from("GF values have to be in 1-100 range"),
             }),
             "invalid config update results in Err"
         );

@@ -1,5 +1,3 @@
-use alloc::vec;
-use alloc::vec::Vec;
 use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {

@@ -1,9 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-use std::{
+use core::{
     cmp::Ordering,
     ops::{Add, AddAssign, Div, Mul, Sub},
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

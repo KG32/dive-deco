@@ -5,6 +5,7 @@ use crate::{
     },
     BuhlmannConfig, Gas, Time,
 };
+use libm::pow;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -183,7 +184,7 @@ impl Compartment {
         };
 
         // (Pi - Po)(1 - e^(-0.693t/half-time))
-        (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time.as_minutes()) / half_time)))
+        (gas_inspired_p - inert_gas_load) * (1. - pow(2., -(time.as_minutes()) / half_time))
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buhlmann ZHL params based on tissue inert gasses saturation proportions

@@ -2,8 +2,6 @@ use dive_deco::{
     BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, DecoRuntime, DecoStage, DecoStageType,
     Depth, Gas, Time,
 };
-use alloc::vec;
-use alloc::vec::Vec;
 
 pub mod fixtures;
 
