@@ -1,5 +1,4 @@
 use core::{
-    cmp::Ordering,
     fmt,
     ops::{Add, AddAssign, Div, Mul, Sub},
 };
