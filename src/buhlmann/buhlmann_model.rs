@@ -318,7 +318,7 @@ impl BuhlmannModel {
 
         // recalc
         if gf_high != gf_low {
-            let max_gf = self.max_gf(self.config.gf, record.depth);
+            let max_gf = self.calc_max_sloped_gf(self.config.gf, record.depth);
 
             let should_recalc_all_tissues =
                 !self.is_sim() && self.config.recalc_all_tissues_m_values;
@@ -363,7 +363,10 @@ impl BuhlmannModel {
             .recalculate(record, self.config().surface_pressure);
     }
 
-    fn max_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
+    /// Calculate the maximum gradient factor (GF) for a given depth and gradient factors.
+    /// This is the maximum supersaturation on a slope between GF_low and GF_high for a given depth.
+    /// Side effect: updates self.state.gf_low_depth
+    fn calc_max_sloped_gf(&mut self, gf: GradientFactors, depth: Depth) -> GradientFactor {
         let (gf_low, gf_high) = gf;
         let in_deco = self.ceiling() > Depth::zero();
         if !in_deco {
@@ -373,24 +376,28 @@ impl BuhlmannModel {
         let gf_low_depth = match self.state.gf_low_depth {
             Some(gf_low_depth) => gf_low_depth,
             None => {
-                // find GF low depth
-                let mut sim_model = self.fork();
-                let sim_gas = sim_model.state.gas;
-                let mut target_depth = sim_model.state.depth;
-                while target_depth > Depth::zero() {
-                    let mut sim_record_depth = target_depth - Depth::from_meters(1.);
-                    if sim_record_depth < Depth::zero() {
-                        sim_record_depth = Depth::zero();
-                    }
-                    sim_model.record(sim_record_depth, Time::zero(), &sim_gas);
-                    let Supersaturation { gf_99, .. } = sim_model.supersaturation();
-                    if gf_99 >= gf_low.into() {
-                        break;
-                    }
-                    target_depth = sim_record_depth;
+                // Direct calculation for gf_low_depth
+                let surface_pressure_bar = self.config.surface_pressure as f64 / 1000.0;
+                let gf_low_fraction = gf.0 as f64 / 100.0; // gf.0 is gf_low
+
+                let mut max_calculated_depth_m = 0.0f64;
+
+                for comp in self.compartments.iter() {
+                    let total_ip = comp.total_ip;
+                    let (_, a_weighted, b_weighted) =
+                        comp.weighted_zhl_params(comp.he_ip, comp.n2_ip);
+
+                    // General case: P_amb = (P_ip - G*a) / (1 - G + G/b)
+                    let max_amb_p = (total_ip - gf_low_fraction * a_weighted)
+                        / (1.0 - gf_low_fraction + gf_low_fraction / b_weighted);
+
+                    let max_depth = (10.0 * (max_amb_p - surface_pressure_bar)).max(0.0);
+                    max_calculated_depth_m = max_calculated_depth_m.max(max_depth);
                 }
-                self.state.gf_low_depth = Some(target_depth);
-                target_depth
+
+                let calculated_gf_low_depth = Depth::from_meters(max_calculated_depth_m);
+                self.state.gf_low_depth = Some(calculated_gf_low_depth);
+                calculated_gf_low_depth
             }
         };
 
@@ -451,7 +458,7 @@ mod tests {
             gas: &air,
         };
         model.record(record.depth, record.time, record.gas);
-        assert_eq!(model.max_gf(gf, record.depth), 100);
+        assert_eq!(model.calc_max_sloped_gf(gf, record.depth), 100);
     }
 
     #[test]
@@ -466,7 +473,7 @@ mod tests {
             gas: &air,
         };
         model.record(record.depth, record.time, record.gas);
-        assert_eq!(model.max_gf(gf, record.depth), 50);
+        assert_eq!(model.calc_max_sloped_gf(gf, record.depth), 50);
     }
 
     #[test]
@@ -478,7 +485,7 @@ mod tests {
         model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
         model.record(Depth::from_meters(21.), Time::from_minutes(5.), &air);
         model.record(Depth::from_meters(14.), Time::zero(), &air);
-        assert_eq!(model.max_gf(gf, Depth::from_meters(14.)), 40);
+        assert_eq!(model.calc_max_sloped_gf(gf, Depth::from_meters(14.)), 40);
     }
 
     #[test]
