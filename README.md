@@ -42,6 +42,24 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 - [API documentation](https://docs.rs/dive-deco/latest/dive_deco/)
 
+### Feature Flags
+
+This crate provides the following optional features that can be enabled in your `Cargo.toml`:
+
+- **no-std**: Enables compatibility with `no_std` environments by using the `libm` crate for math operations instead of the standard library. This is useful for embedded systems or other environments without the standard library.
+
+```toml
+[dependencies]
+dive-deco = { version = "6.0.0", features = ["no-std"] }
+```
+
+- **serde**: Adds serialization and deserialization support via the `serde` crate, allowing model state to be saved and restored. This is useful for persisting dive calculations.
+
+```toml
+[dependencies]
+dive-deco = { version = "6.0.0", features = ["serde"] }
+```
+
 ---
 
 ### Usage
