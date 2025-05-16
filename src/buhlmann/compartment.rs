@@ -197,7 +197,7 @@ impl Compartment {
     }
 
     // weighted ZHL params (half time, a coefficient, b coefficient) based on N2 and He params and inert gasses proportions in tissue
-    fn weighted_zhl_params(
+    pub fn weighted_zhl_params(
         &self,
         he_pp: Pressure,
         n2_pp: Pressure,
