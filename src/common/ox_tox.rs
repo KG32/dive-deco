@@ -1,5 +1,4 @@
 use core::cmp::Ordering;
-use libm::pow;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +6,7 @@ use crate::common::CNS_COEFFICIENTS;
 use crate::{Pressure, RecordData};
 
 use super::global_types::Otu;
-use super::{CNSCoeffRow, Cns, Depth, MbarPressure};
+use super::{powf, CNSCoeffRow, Cns, Depth, MbarPressure};
 
 const CNS_ELIMINATION_HALF_TIME_MINUTES: f64 = 90.;
 const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f64 = 400.;
@@ -56,7 +55,8 @@ impl OxTox {
             // PO2 out of cns table range
             if (depth == Depth::zero()) && (pp_o2 <= 0.5) {
                 // eliminate CNS with half time
-                self.cns /= pow(2.0, time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES));
+                let factor = powf(2.0, time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES));
+                self.cns /= factor;
             } else if pp_o2 > 1.6 {
                 // increase CNS by a constant when ppO2 higher than 1.6
                 self.cns += (time.as_seconds() / CNS_LIMIT_OVER_MAX_PP02_SECONDS) * 100.;
@@ -71,7 +71,7 @@ impl OxTox {
         let otu_delta = match pp_o2.total_cmp(&0.5) {
             Ordering::Less => 0.,
             Ordering::Equal | Ordering::Greater => {
-                time.as_minutes() * pow(0.5 / (pp_o2 - 0.5), OTU_EQUATION_EXPONENT)
+                time.as_minutes() * powf(0.5 / (pp_o2 - 0.5), OTU_EQUATION_EXPONENT)
             }
         };
         self.otu += otu_delta;

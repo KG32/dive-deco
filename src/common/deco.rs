@@ -1,13 +1,12 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::{cmp::Ordering, fmt};
-use libm::ceil;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use crate::{DecoModel, Depth, DepthType, Gas, Time};
 
-use super::{DecoModelConfig, DiveState, MbarPressure, Sim};
+use super::{ceil, DecoModelConfig, DiveState, MbarPressure, Sim};
 
 // @todo move to model config
 const DEFAULT_CEILING_WINDOW: DepthType = 3.;
@@ -392,9 +391,8 @@ impl Deco {
 
     // round ceiling up to the bottom of deco window
     fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
-        Depth::from_meters(
-            DEFAULT_CEILING_WINDOW * ceil(ceiling.as_meters() / DEFAULT_CEILING_WINDOW),
-        )
+        let depth = DEFAULT_CEILING_WINDOW * ceil(ceiling.as_meters() / DEFAULT_CEILING_WINDOW);
+        Depth::from_meters(depth)
     }
 
     fn validate_gas_mixes<T: DecoModel>(

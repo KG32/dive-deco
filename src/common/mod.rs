@@ -4,6 +4,7 @@ mod deco_model;
 mod depth;
 mod gas;
 mod global_types;
+mod math_utils;
 mod ox_tox;
 mod record;
 mod sim;
@@ -20,6 +21,7 @@ pub use global_types::{
     AscentRatePerMinute, CeilingType, Cns, DepthType, GradientFactor, GradientFactors,
     MbarPressure, NDLType, Otu, Pressure,
 };
+pub(crate) use math_utils::{abs, ceil, powf, round};
 pub use ox_tox::OxTox;
 pub use record::RecordData;
 pub use sim::Sim;

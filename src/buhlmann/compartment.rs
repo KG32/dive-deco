@@ -1,11 +1,10 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
+        powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
     },
     BuhlmannConfig, Gas, Time,
 };
-use libm::pow;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -184,7 +183,9 @@ impl Compartment {
         };
 
         // (Pi - Po)(1 - e^(-0.693t/half-time))
-        (gas_inspired_p - inert_gas_load) * (1. - pow(2., -(time.as_minutes()) / half_time))
+        let factor = 1. - powf(2.0, -(time.as_minutes()) / half_time);
+
+        (gas_inspired_p - inert_gas_load) * factor
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buhlmann ZHL params based on tissue inert gasses saturation proportions
