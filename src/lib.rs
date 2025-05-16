@@ -1,5 +1,4 @@
-#![no_std]
-
+#![cfg_attr(feature = "no-std", no_std)]
 extern crate alloc;
 
 mod buhlmann;

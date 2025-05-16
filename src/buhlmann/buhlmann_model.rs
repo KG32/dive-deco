@@ -1,6 +1,7 @@
 use crate::buhlmann::buhlmann_config::BuhlmannConfig;
 use crate::buhlmann::compartment::{Compartment, Supersaturation};
 use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
+use crate::common::{abs, ceil};
 use crate::common::{
     AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
     DiveState, Gas, GradientFactor, OxTox, RecordData,
@@ -118,8 +119,14 @@ impl DecoModel for BuhlmannModel {
         gas: &Gas,
     ) {
         self.validate_depth(target_depth);
-        let distance = libm::fabs((target_depth - self.state.depth).as_meters());
-        self.record_travel(target_depth, Time::from_seconds(distance / rate * 60.), gas);
+
+        let travel_distance = abs((target_depth - self.state.depth).as_meters());
+
+        self.record_travel(
+            target_depth,
+            Time::from_seconds(travel_distance / rate * 60.),
+            gas,
+        );
     }
 
     fn ndl(&self) -> Time {
@@ -185,7 +192,7 @@ impl DecoModel for BuhlmannModel {
         };
 
         if self.config().round_ceiling() {
-            ceiling = Depth::from_meters(libm::ceil(ceiling.as_meters()));
+            ceiling = Depth::from_meters(ceil(ceiling.as_meters()));
         }
 
         ceiling

@@ -1,10 +1,9 @@
 use crate::common::global_types::{MbarPressure, Pressure};
 use alloc::string::String;
-use libm::round;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::Depth;
+use super::{round, Depth};
 
 // alveolar water vapor pressure assuming 47 mm Hg at 37C (Buhlmann's value)
 const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
@@ -54,7 +53,10 @@ impl Gas {
         Self {
             o2_pp,
             he_pp,
-            n2_pp: round((1. - (o2_pp + he_pp)) * 100.0) / 100.0,
+            n2_pp: {
+                let n2 = round((1. - (o2_pp + he_pp)) * 100.0) / 100.0;
+                n2
+            },
         }
     }
 
