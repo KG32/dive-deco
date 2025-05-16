@@ -54,8 +54,8 @@ impl Gas {
             o2_pp,
             he_pp,
             n2_pp: {
-                let n2 = round((1. - (o2_pp + he_pp)) * 100.0) / 100.0;
-                n2
+                
+                round((1. - (o2_pp + he_pp)) * 100.0) / 100.0
             },
         }
     }
