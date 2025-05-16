@@ -71,7 +71,6 @@ impl OxTox {
         let otu_delta = match pp_o2.total_cmp(&0.5) {
             Ordering::Less => 0.,
             Ordering::Equal | Ordering::Greater => {
-                
                 time.as_minutes() * powf(0.5 / (pp_o2 - 0.5), OTU_EQUATION_EXPONENT)
             }
         };
