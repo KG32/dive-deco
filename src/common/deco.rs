@@ -226,6 +226,8 @@ impl Deco {
 
                         // decompression stop (a series of 1s segments, merged into one on cleared stop)
                         DecoAction::Stop => {
+                            let stop_depth = self.deco_stop_depth(ceiling);
+
                             sim_model.record(
                                 pre_stage_depth,
                                 Time::from_seconds(1.),
@@ -235,8 +237,8 @@ impl Deco {
                             // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::DecoStop,
-                                start_depth: pre_stage_depth,
-                                end_depth: sim_state.depth,
+                                start_depth: stop_depth,
+                                end_depth: stop_depth,
                                 duration: sim_state.time - pre_stage_time,
                                 gas: sim_state.gas,
                             })

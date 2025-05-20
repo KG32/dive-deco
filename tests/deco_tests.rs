@@ -260,19 +260,69 @@ fn test_deco_runtime_integrity() {
     let deco_stages = deco_runtime.deco_stages;
 
     deco_stages.iter().reduce(|a, b| {
-        // validate depth order
-        assert!(
-            b.start_depth == a.end_depth,
-            "next stage start depth ({:?}@{}m) should equal previous stage end depth ({:?}@{}m)",
-            b.stage_type,
-            b.start_depth,
-            a.stage_type,
-            a.end_depth
-        );
+        if b.stage_type == DecoStageType::DecoStop {
+            let stop_depth_meters = b.start_depth.as_meters();
+            let prev_end_depth_meters = a.end_depth.as_meters();
+            let epsilon = 1e-9; // Tolerance for floating point comparisons
+
+            // Check 1: Deco stop depth must be a multiple of 3m.
+            let rounded_to_3m_multiple = (stop_depth_meters / 3.0).round() * 3.0;
+            assert!(
+                (stop_depth_meters - rounded_to_3m_multiple).abs() < epsilon,
+                "Deco stop depth ({}m) for stage {:?} should be a multiple of 3m (expected approx {}m). Preceded by {:?} ending at {}m.",
+                stop_depth_meters,
+                b.stage_type,
+                rounded_to_3m_multiple,
+                a.stage_type,
+                prev_end_depth_meters
+            );
+
+            // Check 2: Actual depth where previous stage ended must be at or deeper than the displayed stop depth.
+            assert!(
+                prev_end_depth_meters >= stop_depth_meters - epsilon,
+                "Previous stage end depth ({}m) for {:?} should be >= deco stop depth ({}m) for {:?}.",
+                prev_end_depth_meters,
+                a.stage_type,
+                stop_depth_meters,
+                b.stage_type
+            );
+
+            // Check 3: The difference between actual depth and displayed stop depth should be less than 3m.
+            assert!(
+                (prev_end_depth_meters - stop_depth_meters) < (3.0 - epsilon),
+                "Previous stage end depth ({}m) for {:?} should be within 3m of (and >=) deco stop depth ({}m) for {:?}. Difference: {}m",
+                prev_end_depth_meters,
+                a.stage_type,
+                stop_depth_meters,
+                b.stage_type,
+                prev_end_depth_meters - stop_depth_meters
+            );
+
+        } else {
+            // For non-DecoStop stages, maintain strict continuity.
+            // Using an epsilon for float comparison.
+            assert!(
+                (b.start_depth.as_meters() - a.end_depth.as_meters()).abs() < 1e-9,
+                "Next stage start depth ({:?}@{}m) should equal previous stage end depth ({:?}@{}m). Diff: {}m",
+                b.stage_type,
+                b.start_depth,
+                a.stage_type,
+                a.end_depth,
+                b.start_depth.as_meters() - a.end_depth.as_meters()
+            );
+        }
+
         // validate gas switch MOD
         if a.stage_type == DecoStageType::GasSwitch {
             let gas_switch_target_mod = a.gas.max_operating_depth(1.6);
-            assert!(a.start_depth <= gas_switch_target_mod);
+            // Using an epsilon for float comparison.
+            assert!(
+                a.start_depth.as_meters() <= gas_switch_target_mod.as_meters() + 1e-9,
+                "Gas switch for {:?} at depth {}m exceeds MOD of {}m",
+                a.gas,
+                a.start_depth,
+                gas_switch_target_mod
+            );
         }
         b
     });
