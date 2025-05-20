@@ -42,6 +42,21 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 - [API documentation](https://docs.rs/dive-deco/latest/dive_deco/)
 
+## Installation
+
+To use `dive-deco` in your Rust project, you can add it as a dependency in your `Cargo.toml` file:
+
+```toml
+[dependencies]
+dive-deco = "6.0.1" # Check for the latest version on crates.io
+```
+
+Or, you can use the `cargo add` command:
+
+```sh
+cargo add dive-deco
+```
+
 ### Feature Flags
 
 This crate provides the following optional features that can be enabled in your `Cargo.toml`:
