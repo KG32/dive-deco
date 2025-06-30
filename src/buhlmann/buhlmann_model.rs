@@ -430,7 +430,7 @@ impl BuhlmannModel {
 
     fn validate_depth(&self, depth: Depth) {
         if depth < Depth::zero() {
-            panic!("Invalid depth [{}]", depth);
+            panic!("Invalid depth [{depth}]");
         }
     }
 }

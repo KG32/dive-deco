@@ -321,9 +321,9 @@ impl Deco {
                     }
                 }
 
-                // check if within or below deco stop window
-                let ceiling_padding = current_depth - ceiling;
-                if ceiling_padding <= Depth::from_meters(DEFAULT_CEILING_WINDOW) {
+                // check if already at deco stop depth
+                let stop_depth = self.deco_stop_depth(ceiling);
+                if current_depth == stop_depth {
                     Ok((Some(DecoAction::Stop), None))
                 } else {
                     // ascent to next gas switch depth if next gas' MOD below ceiling
@@ -416,7 +416,7 @@ impl Deco {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BuhlmannModel;
+    use crate::{BuhlmannConfig, BuhlmannModel};
 
     #[test]
     fn test_ceiling_rounding() {
@@ -492,5 +492,37 @@ mod tests {
         deco_model.record_travel_with_rate(Depth::from_meters(40.), 10., &air);
         let deco_res = deco.calc(deco_model, vec![ean50, tmx2135]);
         assert_eq!(deco_res, Err(DecoCalculationError::CurrentGasNotInList));
+    }
+
+    #[test]
+    fn no_duplicated_stops_within_deco_padding() {
+        let mut deco = Deco::default();
+        let mut deco_model =
+            BuhlmannModel::new(BuhlmannConfig::default().with_gradient_factors(30, 70));
+        let air = Gas::air();
+        let ean50 = Gas::new(0.50, 0.);
+        deco_model.record_travel_with_rate(Depth::from_meters(40.), 10., &air);
+        deco_model.record(Depth::from_meters(40.), Time::from_minutes(27.), &air);
+        deco_model.record_travel_with_rate(Depth::from_meters(16.), 10., &air);
+        deco_model.record(
+            Depth::from_meters(16.),
+            Time::from_minutes(1.),
+            &Gas::new(0.50, 0.),
+        );
+
+        let mut deco_stop_depths: Vec<Depth> = vec![];
+        let deco_res = deco.calc(deco_model, vec![air, ean50]).unwrap();
+        for deco_stage in deco_res.deco_stages {
+            if deco_stage.stage_type == DecoStageType::DecoStop {
+                let deco_stop_depth = deco_stage.start_depth;
+                assert_eq!(
+                    deco_stop_depths.contains(&deco_stop_depth),
+                    false,
+                    "{}m deco stop should not repeat",
+                    deco_stop_depth
+                );
+                deco_stop_depths.push(deco_stop_depth);
+            }
+        }
     }
 }

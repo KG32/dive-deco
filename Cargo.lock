@@ -168,7 +168,7 @@ checksum = "43da5946c66ffcc7745f48db692ffbb10a83bfe0afd96235c5c2a4fb23994929"
 
 [[package]]
 name = "dive-deco"
-version = "6.0.2"
+version = "6.0.3"
 dependencies = [
  "criterion",
  "libm",
