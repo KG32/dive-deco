@@ -80,12 +80,6 @@ pub trait DecoModel {
     /// deco stages, TTL
     fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>;
 
-    /// central nervous system oxygen toxicity
-    fn cns(&self) -> Cns;
-
-    /// pulmonary oxygen toxicity
-    fn otu(&self) -> Otu;
-
     /// is in deco check
     fn in_deco(&self) -> bool {
         let ceiling_type = self.config().ceiling_type();
@@ -98,5 +92,15 @@ pub trait DecoModel {
                 deco_stages.len() > 1
             }
         }
+    }
+
+    /// central nervous system oxygen toxicity
+    fn cns(&self) -> Cns {
+        self.dive_state().ox_tox.cns()
+    }
+
+    /// pulmonary oxygen toxicity
+    fn otu(&self) -> Otu {
+        self.dive_state().ox_tox.otu()
     }
 }

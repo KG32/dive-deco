@@ -3,8 +3,8 @@ use crate::buhlmann::compartment::{Compartment, Supersaturation};
 use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{abs, ceil};
 use crate::common::{
-    AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
-    DiveState, Gas, GradientFactor, OxTox, RecordData,
+    AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
+    Gas, GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use alloc::vec;
@@ -51,7 +51,7 @@ impl Default for BuhlmannState {
 impl DecoModel for BuhlmannModel {
     type ConfigType = BuhlmannConfig;
 
-    // initialize with default config
+    // initialize with the default config
     fn default() -> Self {
         Self::new(BuhlmannConfig::default())
     }
@@ -73,6 +73,26 @@ impl DecoModel for BuhlmannModel {
         model.create_compartments(ZHL_16C_N2_16A_HE_VALUES, config);
 
         model
+    }
+
+    fn config(&self) -> BuhlmannConfig {
+        self.config
+    }
+
+    fn dive_state(&self) -> DiveState {
+        let BuhlmannState {
+            depth,
+            time,
+            gas,
+            ox_tox,
+            ..
+        } = self.state;
+        DiveState {
+            depth,
+            time,
+            gas,
+            ox_tox,
+        }
     }
 
     /// record data: depth (meters), time (seconds), gas
@@ -202,34 +222,6 @@ impl DecoModel for BuhlmannModel {
         let mut deco = Deco::default();
         deco.calc(self.fork(), gas_mixes)
     }
-
-    fn config(&self) -> BuhlmannConfig {
-        self.config
-    }
-
-    fn dive_state(&self) -> DiveState {
-        let BuhlmannState {
-            depth,
-            time,
-            gas,
-            ox_tox,
-            ..
-        } = self.state;
-        DiveState {
-            depth,
-            time,
-            gas,
-            ox_tox,
-        }
-    }
-
-    fn cns(&self) -> Cns {
-        self.state.ox_tox.cns()
-    }
-
-    fn otu(&self) -> Cns {
-        self.state.ox_tox.otu()
-    }
 }
 
 impl Sim for BuhlmannModel {
@@ -330,13 +322,13 @@ impl BuhlmannModel {
             let should_recalc_all_tissues =
                 !self.is_sim() && self.config.recalc_all_tissues_m_values;
             match should_recalc_all_tissues {
-                true => self.recalculate_all_tisues_with_gf(record, max_gf),
+                true => self.recalculate_all_tissues_with_gf(record, max_gf),
                 false => self.recalculate_leading_compartment_with_gf(record, max_gf),
             }
         }
     }
 
-    fn recalculate_all_tisues_with_gf(&mut self, record: &RecordData, max_gf: GradientFactor) {
+    fn recalculate_all_tissues_with_gf(&mut self, record: &RecordData, max_gf: GradientFactor) {
         let recalc_record = RecordData {
             depth: record.depth,
             time: Time::zero(),
