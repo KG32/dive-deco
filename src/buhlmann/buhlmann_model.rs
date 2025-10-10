@@ -3,8 +3,8 @@ use crate::buhlmann::compartment::{Compartment, Supersaturation};
 use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{abs, ceil};
 use crate::common::{
-    AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
-    DiveState, Gas, GradientFactor, OxTox, RecordData,
+    AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
+    Gas, GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use alloc::vec;
