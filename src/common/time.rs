@@ -34,19 +34,17 @@ impl Mul<Self> for Time {
         Self { s: self.s * rhs.s }
     }
 }
-impl Mul<u8> for Time {
+impl Mul<f64> for Time {
     type Output = Self;
-    fn mul(self, rhs: u8) -> Self::Output {
-        Self {
-            s: self.s * rhs as f64,
-        }
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self { s: self.s * rhs }
     }
 }
-impl Div<Self> for Time {
+impl Div<f64> for Time {
     type Output = Self;
 
-    fn div(self, rhs: Self) -> Self::Output {
-        Self { s: self.s / rhs.s }
+    fn div(self, rhs: f64) -> Self::Output {
+        Self { s: self.s / rhs }
     }
 }
 impl PartialOrd for Time {
