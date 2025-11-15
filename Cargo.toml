@@ -21,6 +21,10 @@ criterion = { version = "0.5.1", features = ["html_reports"] }
 name = "buhlmann_benchmark"
 harness = false
 
+[[bench]]
+name = "baseline_benchmark"
+harness = false
+
 [features]
 default = []
 no-std = ["dep:libm"]
