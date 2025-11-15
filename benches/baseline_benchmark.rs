@@ -85,8 +85,7 @@ pub fn ceiling_calculations(c: &mut Criterion) {
 
     // Test with Actual ceiling (simple)
     group.bench_function("Actual ceiling - in deco", |b| {
-        let config = BuhlmannConfig::default()
-            .with_ceiling_type(CeilingType::Actual);
+        let config = BuhlmannConfig::default().with_ceiling_type(CeilingType::Actual);
         let mut model = BuhlmannModel::new(config);
         model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
         b.iter(|| black_box(model.ceiling()));
@@ -94,8 +93,7 @@ pub fn ceiling_calculations(c: &mut Criterion) {
 
     // Test with Adaptive ceiling (expensive)
     group.bench_function("Adaptive ceiling - in deco", |b| {
-        let config = BuhlmannConfig::default()
-            .with_ceiling_type(CeilingType::Adaptive);
+        let config = BuhlmannConfig::default().with_ceiling_type(CeilingType::Adaptive);
         let mut model = BuhlmannModel::new(config);
         model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
         b.iter(|| black_box(model.ceiling()));
@@ -163,8 +161,7 @@ pub fn tissue_recalculation(c: &mut Criterion) {
 
     // Test without GF slope (no recalculation needed)
     group.bench_function("No GF slope (GF 100/100)", |b| {
-        let config = BuhlmannConfig::default()
-            .with_gradient_factors(100, 100);
+        let config = BuhlmannConfig::default().with_gradient_factors(100, 100);
         let mut model = BuhlmannModel::new(config);
         model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
         b.iter(|| {
@@ -353,4 +350,3 @@ criterion_group!(
 );
 
 criterion_main!(baseline_benches);
-

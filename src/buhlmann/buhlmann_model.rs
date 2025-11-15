@@ -150,26 +150,37 @@ impl DecoModel for BuhlmannModel {
     }
 
     fn ndl(&self) -> Time {
-        let mut ndl = Time::from_minutes(NDL_CUT_OFF_MINS);
-
+        // Early return if already in deco
         if self.in_deco() {
             return Time::zero();
         }
-
-        // create a simulation model based on current model's state
-        let mut sim_model = self.fork();
-
-        // iterate simulation model over 1min records until NDL cut-off or in deco
-        let interval = Time::from_minutes(1.);
-        for i in 0..NDL_CUT_OFF_MINS {
-            // @todo
-            sim_model.record(self.state.depth, interval, &self.state.gas);
-            if sim_model.in_deco() {
-                ndl = interval * i;
-                break;
+        // Binary search for NDL between 0 and NDL_CUT_OFF_MINS using minute intervals
+        let mut low: u8 = 0;
+        let mut high: u8 = NDL_CUT_OFF_MINS;
+        // Binary search until we narrow down to adjacent minutes
+        while high - low > 1 {
+            let mid = (low + high) / 2;
+            // Check if staying for 'mid' minutes keeps us within NDL
+            if self.check_ndl_for(Time::from_minutes(mid)) {
+                // Still within NDL at mid-point, so NDL is at least this high
+                low = mid;
+            } else {
+                // In deco at mid-point, so NDL is lower
+                high = mid;
             }
         }
-        ndl
+        // Check if we can stay for the full cut-off time
+        if self.check_ndl_for(Time::from_minutes(high)) {
+            Time::from_minutes(high)
+        }
+        // At this point, low is safe and high is in deco (or high == low + 1)
+        // Verify that 'low' minutes keeps us within NDL
+        else if self.check_ndl_for(Time::from_minutes(low)) {
+            Time::from_minutes(low)
+        } else {
+            // Edge case: even 'low' puts us in deco
+            Time::from_minutes(0)
+        }
     }
 
     fn ceiling(&self) -> Depth {
@@ -266,6 +277,12 @@ impl BuhlmannModel {
         new_config.validate()?;
         self.config = new_config;
         Ok(())
+    }
+
+    fn check_ndl_for(&self, time: Time) -> bool {
+        let mut sim_model = self.fork();
+        sim_model.record(self.state.depth, time, &self.state.gas);
+        !sim_model.in_deco()
     }
 
     fn leading_comp(&self) -> &Compartment {
