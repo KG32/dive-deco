@@ -294,7 +294,7 @@ pub fn full_dive_profile(c: &mut Criterion) {
     let trimix = Gas::new(0.18, 0.45);
     let ean50 = Gas::new(0.50, 0.);
     let oxygen = Gas::new(1.0, 0.);
-    let gases = vec![trimix, ean50, oxygen];
+    let gases = vec![oxygen, trimix, ean50];
 
     group.bench_function("Complete technical dive profile", |b| {
         b.iter(|| {
