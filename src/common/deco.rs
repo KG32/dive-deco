@@ -78,7 +78,7 @@ impl fmt::Display for DecoCalculationError {
             }
             DecoCalculationError::CurrentGasNotInList => write!(
                 f,
-                "Avaibalbe gas mixes must include current gas mix used by deco model"
+                "Available gas mixes must include current gas mix used by deco model"
             ),
         }
     }
@@ -105,10 +105,16 @@ impl Deco {
     pub fn calc<T: DecoModel + Clone + Sim>(
         &mut self,
         deco_model: T,
-        gas_mixes: Vec<Gas>,
+        mut gas_mixes: Vec<Gas>,
     ) -> Result<DecoRuntime, DecoCalculationError> {
         // validate gas mixes
         Self::validate_gas_mixes(&deco_model, &gas_mixes)?;
+        // sort deco gasses by o2 content
+        gas_mixes.sort_by(|a, b| {
+            let x = a.gas_pressures_compound(1.);
+            let y = b.gas_pressures_compound(1.);
+            x.o2.partial_cmp(&y.o2).unwrap()
+        });
 
         // run model simulation until no deco stages
         let mut sim_model: T = deco_model.clone();
@@ -126,16 +132,16 @@ impl Deco {
             // if missed deco stop, override sim model to depth at the expected stop and rerun the calculation
             let next_deco_action = self.next_deco_action(&sim_model, gas_mixes.clone());
             if let Err(e) = next_deco_action {
-                match e {
+                return match e {
                     MissedDecoStopViolation => {
                         sim_model.record(
                             self.deco_stop_depth(ceiling),
                             Time::zero(),
                             &pre_stage_gas,
                         );
-                        return self.calc(sim_model, gas_mixes);
+                        self.calc(sim_model, gas_mixes)
                     }
-                }
+                };
             }
 
             // handle deco actions
@@ -264,11 +270,9 @@ impl Deco {
                 ..
             } = nested_sim_model.dive_state();
             nested_sim_model.record(sim_depth, Time::from_minutes(5.), &sim_gas);
-            let nested_deco = nested_sim_deco
-                .calc(nested_sim_model, gas_mixes.clone())
-                .unwrap();
+            let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone())?;
             tts_at_5 = nested_deco.tts;
-            tts_delta_at_5 = tts_at_5 as Time - tts as Time;
+            tts_delta_at_5 = tts_at_5 - tts;
         }
 
         Ok(DecoRuntime {
@@ -342,7 +346,7 @@ impl Deco {
         }
     }
 
-    /// check next deco gas in deco (the one with lowest MOD while more oxygen-rich than current)
+    /// check next deco gas in deco (the one with the lowest MOD while more oxygen-rich than current)
     fn next_switch_gas(
         &self,
         current_depth: Depth,
@@ -353,7 +357,7 @@ impl Deco {
         let current_gas_partial_pressures =
             current_gas.partial_pressures(current_depth, surface_pressure);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
-        let mut switch_gasses = gas_mixes
+        let switch_gasses = gas_mixes
             .into_iter()
             .filter(|gas| {
                 let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
@@ -361,14 +365,7 @@ impl Deco {
             })
             .collect::<Vec<Gas>>();
 
-        // sort deco gasses by o2 content
-        switch_gasses.sort_by(|a, b| {
-            let x = a.gas_pressures_compound(1.);
-            let y = b.gas_pressures_compound(1.);
-            x.o2.partial_cmp(&y.o2).unwrap()
-        });
-
-        // mix with lowest MOD (by absolute o2 content)
+        // mix with the lowest MOD (by absolute o2 content)
         switch_gasses.first().copied()
     }
 
