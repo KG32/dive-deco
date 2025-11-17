@@ -60,8 +60,11 @@ impl Compartment {
 
         // calculate initial minimal tolerable ambient pressure
         let (_, gf_high) = compartment.model_config.gf;
-        compartment.m_value_raw =
-            compartment.m_value(Depth::zero(), compartment.model_config.surface_pressure, 100);
+        compartment.m_value_raw = compartment.m_value(
+            Depth::zero(),
+            compartment.model_config.surface_pressure,
+            100,
+        );
         compartment.m_value_calc = compartment.m_value_raw;
         compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high);
 
