@@ -1,7 +1,10 @@
 use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 #[test]
-fn test_run_1080_deco_subsurface_validation() {
+fn test_deep_air_deco_profile() {
+    // This profile (80m on air) is an extreme edge case intended to validate robust handling
+    // of high gas loading and oxygen toxicity calculations. It matches behavior observed
+    // in existing dive planning software (Subsurface) to ensure consistency in edge scenarios.
     // "Deco model: Bühlmann ZHL-16C with GFLow = 10% and GFHigh = 80%"
     let config = BuhlmannConfig::new()
         .with_gradient_factors(10, 80)

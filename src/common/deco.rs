@@ -239,6 +239,7 @@ impl Deco {
                             sim_model.record(pre_stage_depth, stop_duration, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
                             // @todo dedupe here on deco instead of of add deco
+                            // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::DecoStop,
                                 start_depth: stop_depth,
