@@ -308,8 +308,13 @@ impl Deco {
                     return Err(MissedDecoStopViolation);
                 }
 
-                let next_switch_gas =
-                    self.next_switch_gas(current_depth, &current_gas, gas_mixes, surface_pressure);
+                let next_switch_gas = self.next_switch_gas(
+                    current_depth,
+                    &current_gas,
+                    gas_mixes,
+                    surface_pressure,
+                    sim_model.config().water_density(),
+                );
                 // check if within mod @todo min operational depth
                 if let Some(switch_gas) = next_switch_gas {
                     //switch gas without ascent if within mod of next deco gas
@@ -351,14 +356,16 @@ impl Deco {
         current_gas: &Gas,
         gas_mixes: Vec<Gas>,
         surface_pressure: MbarPressure,
+        water_density: f64,
     ) -> Option<Gas> {
-        let current_gas_partial_pressures =
-            current_gas.partial_pressures(current_depth, surface_pressure);
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(current_depth, surface_pressure, water_density);
+        let current_gas_partial_pressures = current_gas.partial_pressures(p_amb);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
         let switch_gasses = gas_mixes
             .into_iter()
             .filter(|gas| {
-                let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
+                let partial_pressures = gas.partial_pressures(p_amb);
                 partial_pressures.o2 > current_gas_partial_pressures.o2
             })
             .collect::<Vec<Gas>>();
@@ -525,6 +532,7 @@ mod tests {
                 &current_gas,
                 available_gas_mixes,
                 1000,
+                1020.0,
             );
             assert_eq!(res, expected_switch_gas);
         }

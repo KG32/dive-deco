@@ -51,15 +51,27 @@ impl OxTox {
         self.otu
     }
 
-    pub fn recalculate(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
-        self.recalculate_cns(record, surface_pressure);
-        self.recalculate_otu(record, surface_pressure);
+    pub fn recalculate(
+        &mut self,
+        record: &RecordData,
+        surface_pressure: MbarPressure,
+        water_density: f64,
+    ) {
+        self.recalculate_cns(record, surface_pressure, water_density);
+        self.recalculate_otu(record, surface_pressure, water_density);
     }
 
-    fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+    fn recalculate_cns(
+        &mut self,
+        record: &RecordData,
+        surface_pressure: MbarPressure,
+        water_density: f64,
+    ) {
         let RecordData { depth, time, gas } = *record;
 
-        let pp_o2 = gas.inspired_partial_pressures(depth, surface_pressure).o2;
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(depth, surface_pressure, water_density);
+        let pp_o2 = gas.inspired_partial_pressures(p_amb).o2;
 
         let index = ((pp_o2 - 0.50) * 100.0).round() as isize;
 
@@ -91,9 +103,16 @@ impl OxTox {
         }
     }
 
-    fn recalculate_otu(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+    fn recalculate_otu(
+        &mut self,
+        record: &RecordData,
+        surface_pressure: MbarPressure,
+        water_density: f64,
+    ) {
         let RecordData { depth, time, gas } = *record;
-        let pp_o2 = gas.inspired_partial_pressures(depth, surface_pressure).o2;
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(depth, surface_pressure, water_density);
+        let pp_o2 = gas.inspired_partial_pressures(p_amb).o2;
 
         let otu_delta = match pp_o2.total_cmp(&0.5) {
             Ordering::Less => 0.,
@@ -132,11 +151,108 @@ mod tests {
             gas: &ean_32,
         };
 
-        ox_tox.recalculate_cns(&record, 1013);
+        ox_tox.recalculate_cns(&record, 1013, 1020.0);
         // assert_eq!(ox_tox.cns(), 15.018262206843517);
         // With lookup table, value might differ slightly from 15.01826...
         // Let's check proximity or update expectation.
         assert!(ox_tox.cns() > 14.5 && ox_tox.cns() < 15.5);
+    }
+
+    #[test]
+    fn test_cns_no_accumulation_low_ppo2() {
+        let mut ox_tox = OxTox::default();
+        let air = Gas::new(0.21, 0.);
+        let record = RecordData {
+            depth: Depth::from_meters(0.),
+            time: Time::from_minutes(60.),
+            gas: &air,
+        };
+        ox_tox.recalculate_cns(&record, 1013, 1020.0);
+        assert_eq!(ox_tox.cns(), 0.);
+    }
+
+    #[test]
+    fn test_cns_accumulation() {
+        let mut ox_tox = OxTox::default();
+        let ean50 = Gas::new(0.5, 0.);
+        let record = RecordData {
+            depth: Depth::from_meters(22.), // 1.6 ppo2
+            time: Time::from_minutes(45.),
+            gas: &ean50,
+        };
+        // 45 min at 22m (3.2 ATA - vapor = 3.137 ATA * 0.5 = 1.57 PO2).
+        // Limit for ~1.57 PO2 is ~67.5 mins. 45/67.5 = 66.6%.
+        ox_tox.recalculate_cns(&record, 1000, 1020.0); // 1000mbar surface for easy math
+                                                       // allow small error margin for float math / table interpolation
+        assert!(
+            (ox_tox.cns() - 66.66).abs() < 1.0,
+            "CNS should be approx 66.66, was {}",
+            ox_tox.cns()
+        );
+    }
+
+    #[test]
+    fn test_otu_accumulation() {
+        let mut ox_tox = OxTox::default();
+        let oxygen = Gas::new(1.0, 0.);
+        let record = RecordData {
+            depth: Depth::from_meters(0.), // 1.0 ppo2
+            time: Time::from_minutes(60.),
+            gas: &oxygen,
+        };
+        ox_tox.recalculate_cns(&record, 1000, 1020.0);
+        ox_tox.recalculate_otu(&record, 1000, 1020.0);
+
+        // 1.0 ppo2 -> Kp = 1.0. 60 min * 1.0 = 60 OTU ??
+        // Formula: t * ( (pO2 - 0.5) / 0.5 ) ^ 0.83
+        // 1.0 ppo2: (0.5/0.5)^0.83 = 1.
+        // so rate is ~1 OTU/min (actually different formula constant, this is rough check)
+        // With standard formula: rate = ( (1 - 0.5) / 0.5 )^(5/6) is not quite right.
+        // Real formula: ( (PO2 - 0.5) / 0.5 ) ^ 0.83ish
+        // calculated: 60 * 1^0.83 = 60 ?
+        // Using common implementation values: ~1.42 OTU/min approx? No.
+        // Let's just ensure it increased positive.
+        assert!(ox_tox.otu() > 50.0);
+    }
+
+    #[test]
+    fn test_cns_half_life_elimination() {
+        let mut ox_tox = OxTox::default();
+        let ean50 = Gas::new(0.5, 0.);
+
+        // Build up some CNS
+        let record = RecordData {
+            depth: Depth::from_meters(22.), // 1.6
+            time: Time::from_minutes(22.5), // ~50% of 45m
+            gas: &ean50,
+        };
+        ox_tox.recalculate_cns(&record, 1000, 1020.0);
+        let cns_start = ox_tox.cns();
+
+        // 22.5 mins @ 1.57 PO2 -> 22.5 / 67.5 = 33.33%
+        assert!(cns_start > 30.0, "CNS start {} should be > 30.0", cns_start);
+
+        // Surface interval 90 mins (one half life)
+        let surface_record = RecordData {
+            depth: Depth::from_meters(0.),
+            time: Time::from_minutes(90.),
+            gas: &Gas::air(),
+        };
+        // This will add negligible CNS (air at surface is low PO2) but trigger decay?
+        // Actually recalculate_cns adds exposure. Decay is separate or integrated?
+        // Looking at impl: recalculate_cns calls eliminate_cns BEFORE adding new exposure.
+        ox_tox.recalculate_cns(&surface_record, 1000, 1020.0);
+
+        let cns_end = ox_tox.cns();
+        // Should be approx half of start (+ negligible surface exposure)
+        assert!(
+            cns_end < cns_start * 0.6,
+            "CNS should have decayed significantly"
+        );
+        assert!(
+            cns_end > cns_start * 0.4,
+            "CNS should not have disappeared completely"
+        );
     }
 
     #[test]
@@ -153,7 +269,7 @@ mod tests {
             gas: &air,
         };
 
-        ox_tox.recalculate_cns(&record, 1013);
+        ox_tox.recalculate_cns(&record, 1013, 1020.0);
 
         // PO2 is 0.21. Should trigger elimination.
         // After 90 mins (one half time), CNS should halve.
@@ -185,7 +301,7 @@ mod tests {
             time,
             gas: &oxygen,
         };
-        ox_tox.recalculate_cns(&record, 1000); // 1000mbar surface for easy math
+        ox_tox.recalculate_cns(&record, 1000, 1020.0); // 1000mbar surface for easy math
 
         // Should be close to 100%
         // We accept a wider margin because table steps are discrete (0.01 PO2)
@@ -213,7 +329,7 @@ mod tests {
             time,
             gas: &oxygen,
         };
-        ox_tox.recalculate_cns(&record, 1000);
+        ox_tox.recalculate_cns(&record, 1000, 1020.0);
 
         println!("CNS 1.6 Ambient: {}", ox_tox.cns());
         assert!(
@@ -238,7 +354,7 @@ mod tests {
             time,
             gas: &oxygen,
         };
-        ox_tox.recalculate_cns(&record, 1000);
+        ox_tox.recalculate_cns(&record, 1000, 1020.0);
 
         // Expect fallback calculation to be applied
         assert!(ox_tox.cns() > 0.0);

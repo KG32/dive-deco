@@ -1,4 +1,4 @@
-use crate::common::global_types::{MbarPressure, Pressure};
+use crate::common::global_types::Pressure;
 use alloc::string::String;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -71,23 +71,13 @@ impl Gas {
     }
 
     /// gas partial pressures
-    pub fn partial_pressures(
-        &self,
-        depth: Depth,
-        surface_pressure: MbarPressure,
-    ) -> PartialPressures {
-        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth.as_meters() / 10.);
-        self.gas_pressures_compound(gas_pressure)
+    pub fn partial_pressures(&self, ambient_pressure: Pressure) -> PartialPressures {
+        self.gas_pressures_compound(ambient_pressure)
     }
 
     /// gas partial pressures in alveoli taking into account alveolar water vapor pressure
-    pub fn inspired_partial_pressures(
-        &self,
-        depth: Depth,
-        surface_pressure: MbarPressure,
-    ) -> PartialPressures {
-        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth.as_meters() / 10.))
-            - ALVEOLI_WATER_VAPOR_PRESSURE;
+    pub fn inspired_partial_pressures(&self, ambient_pressure: Pressure) -> PartialPressures {
+        let gas_pressure = ambient_pressure - ALVEOLI_WATER_VAPOR_PRESSURE;
         self.gas_pressures_compound(gas_pressure)
     }
 
@@ -161,8 +151,9 @@ mod tests {
 
     #[test]
     fn test_partial_pressures_air() {
-        let air = Gas::new(0.21, 0.);
-        let partial_pressures = air.partial_pressures(Depth::from_meters(10.), 1000);
+        let air = Gas::air();
+        // 10m depth + 1000mbar surface = 2 bar absolute
+        let partial_pressures = air.partial_pressures(2.0);
         assert_eq!(
             partial_pressures,
             PartialPressures {
@@ -176,7 +167,8 @@ mod tests {
     #[test]
     fn partial_pressures_tmx() {
         let tmx = Gas::new(0.21, 0.35);
-        let partial_pressures = tmx.partial_pressures(Depth::from_meters(10.), 1000);
+        // 10m depth + 1000mbar surface = 2 bar absolute
+        let partial_pressures = tmx.partial_pressures(2.0);
         assert_eq!(
             partial_pressures,
             PartialPressures {
@@ -189,9 +181,9 @@ mod tests {
 
     #[test]
     fn test_inspired_partial_pressures() {
-        let air = Gas::new(0.21, 0.);
-        let inspired_partial_pressures =
-            air.inspired_partial_pressures(Depth::from_meters(10.), 1000);
+        let air = Gas::air();
+        // 10m depth + 1000mbar surface = 2 bar absolute
+        let inspired_partial_pressures = air.inspired_partial_pressures(2.0);
         assert_eq!(
             inspired_partial_pressures,
             PartialPressures {

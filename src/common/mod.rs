@@ -23,3 +23,6 @@ pub(crate) use math_utils::{abs, ceil, exp, ln, powf, round};
 pub use ox_tox::OxTox;
 pub use record::RecordData;
 pub use sim::Sim;
+
+pub mod physics;
+pub use physics::{density as WaterDensities, WaterDensity};

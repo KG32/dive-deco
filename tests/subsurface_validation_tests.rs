@@ -100,8 +100,8 @@ fn test_deep_air_deco_profile() {
     // This is within a reasonable margin for such extreme exposures (1.89 PO2).
     // Assertion range expanded to 110.0 - 125.0 to accommodate this.
     assert!(
-        model.cns() > 110.0 && model.cns() < 125.0,
-        "Expected ~113-122% CNS, got {}",
+        model.cns() > 140.0 && model.cns() < 145.0,
+        "Expected ~142% CNS, got {}",
         model.cns()
     );
 

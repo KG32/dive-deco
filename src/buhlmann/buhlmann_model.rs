@@ -124,8 +124,20 @@ impl DecoModel for BuhlmannModel {
 
         // Calculate inspired partial pressures at start and end
         // Note: We use the water vapor adjusted calculation inside the model
-        let start_pp = gas.inspired_partial_pressures(start_depth, self.config.surface_pressure);
-        let end_pp = gas.inspired_partial_pressures(target_depth, self.config.surface_pressure);
+        use crate::common::physics::depth_to_pressure;
+        let start_p_amb = depth_to_pressure(
+            start_depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+        let end_p_amb = depth_to_pressure(
+            target_depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+
+        let start_pp = gas.inspired_partial_pressures(start_p_amb);
+        let end_pp = gas.inspired_partial_pressures(end_p_amb);
 
         // Recalculate all compartments using Schreiner equation
         // (This does the heavy lifting analytically instead of iterating 1s steps)
@@ -307,7 +319,10 @@ impl BuhlmannModel {
     pub fn desaturation_time(&self) -> Time {
         let surface_pressure = self.config.surface_pressure;
         let air = Gas::air();
-        let surface_pp = air.inspired_partial_pressures(Depth::zero(), surface_pressure);
+        use crate::common::physics::depth_to_pressure;
+        let surface_p_amb =
+            depth_to_pressure(Depth::zero(), surface_pressure, self.config.water_density);
+        let surface_pp = air.inspired_partial_pressures(surface_p_amb);
 
         // Target is 1.05 * surface partial pressure (standard safety margin)
         let target_n2 = surface_pp.n2 * 1.05;
@@ -480,9 +495,11 @@ impl BuhlmannModel {
     }
 
     fn recalculate_ox_tox(&mut self, record: &RecordData) {
-        self.state
-            .ox_tox
-            .recalculate(record, self.config().surface_pressure);
+        self.state.ox_tox.recalculate(
+            record,
+            self.config().surface_pressure,
+            self.config().water_density,
+        );
     }
 
     /// Calculate the maximum gradient factor (GF) for a given depth and gradient factors.
