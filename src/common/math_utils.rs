@@ -54,3 +54,17 @@ pub fn round(val: f64) -> f64 {
         libm::round(val)
     }
 }
+
+
+/// Base-2 exponential function for f64
+#[inline]
+pub fn exp2(val: f64) -> f64 {
+    #[cfg(not(feature = "no-std"))]
+    {
+        val.exp2()
+    }
+    #[cfg(feature = "no-std")]
+    {
+        libm::exp2(val)
+    }
+}
