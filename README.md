@@ -486,6 +486,7 @@ let cns = model.otu(); // 78.43
 - [Eric C. Baker, P.E. Dissolved Gas Decompression Modeling](https://www.shearwater.com/wp-content/uploads/2012/08/Introductory-Deco-Lessons.pdf)
 - [Eric C. Baker, P.E. (1998) Understanding M-Values](http://www.dive-tech.co.uk/resources/mvalues.pdf)
 - [Eric C Baker, P.E., Oxygen Toxicity Calculations](https://njscuba.net/wp-content/uploads/gear/pdf/deco_oxy_tox_calcs.pdf)
+- [The Theoretical Diver: Calculating Oxygen CNS toxicity](https://thetheoreticaldiver.org/wordpress/index.php/2019/08/15/calculating-oxygen-cns-toxicity/)
 - [Workman RD. Calculation of decompression schedules for nitrogen-oxygen and helium-oxygen dives.](https://apps.dtic.mil/sti/pdfs/AD0620879.pdf)
 - [Ralph Lembcke and Matthias Heinrichs (2020), Decompression calculations in the OSTC](https://www.heinrichsweikamp.net/downloads/OSTC_GF_web_en.pdf)
 - ["Tauchmedizin.", Albert A. Bühlmann, Ernst B. Völlm (Mitarbeiter), P. Nussberger; 5. edition in 2002, Springer, ISBN 3-540-42979-4](https://books.google.com/books?id=MYAGBgAAQBAJ&printsec=copyright&redir_esc=y#v=onepage&q&f=false)

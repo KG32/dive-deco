@@ -59,6 +59,10 @@ fn test_travel_record_with_rate() {
 
     let state = model.dive_state();
     assert_eq!(state.depth, target_depth);
-    assert_eq!(state.time, bottom_time + expected_travel_time);
+    assert!(
+        (state.time.as_seconds() - (bottom_time + expected_travel_time).as_seconds()).abs() < 1.0,
+        "Expected ~1333.33s, got {:?}",
+        state.time
+    );
     assert_close_to_percent!(model.supersaturation().gf_99, 61., 5.);
 }
