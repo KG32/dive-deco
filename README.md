@@ -9,6 +9,7 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Features
 
 - step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas (incl. helium mixes)
+- optimized travel calculations using Schreiner equation (analytical solution for linear ascent/descent)
 - NDL (no-decompression limit)
 - GF (gradient factors) ascent profile conservatism
 - current deco runtime / deco stop planner
@@ -34,7 +35,7 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Planned features
 
 - extended deco model config [water density and other configuration options] (currently metric and density assumed to be 1.03kg/l as salt water)
-- travel records optimization (linear ascent / descent records using Schreiner equation instead of iterative Haldane equation)
+
 - other deco algorithms (VPM-B)
 - other optimizations
 
