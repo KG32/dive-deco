@@ -239,7 +239,6 @@ impl Deco {
                             sim_model.record(pre_stage_depth, stop_duration, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
                             // @todo dedupe here on deco instead of of add deco
-                            // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
                                 stage_type: DecoStageType::DecoStop,
                                 start_depth: stop_depth,
@@ -463,13 +462,8 @@ impl Deco {
             }
         }
 
-        // Granularity is minutes. If we need seconds, we'd multiply bounds.
-        // Let's refine to seconds if needed, or stick to minutes for standard deco.
-        // Assuming minutes is fine for standard Buhlmann.
-
-        // Verify 'low' vs 'high'. High should be the first valid minute.
-        // Optimization: if low is 0 and it passes, 0. But we usually need > 0.
-        // Current logic: low is "not enough", high is "enough".
+        // Return first valid duration found (high bound of the binary search)
+        // Granularity is currently in minutes.
 
         Time::from_minutes(high as f64)
     }

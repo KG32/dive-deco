@@ -139,22 +139,14 @@ impl DecoModel for BuhlmannModel {
             );
         }
 
-        // After updating compartments, we need to sync the rest of the model state
-        // Recalculate OxTox (this is still linear/approximated usually, but let's check recalculate_ox_tox)
-        // Note: The original recalculate_ox_tox uses the record which has a SINGLE depth (usually average or end?)
-        // The original code iterated 1s, so it handled gradient of depth.
-        // For OxTox, if we jump, we might lose precision if we just use end depth.
-        // However, standard implementation usually uses average PO2 or just recalculates at end for simplifiction if segments are short.
-        // But for long travel, we might want to do better.
-        // For now, let's stick to using the 'record' struct which implies a specific depth.
-        // If we want to be precise, we arguably should integration CNS.
-        // But let's follow the plan: "Update record_travel to remove the while i < travel_time loop"
+        // After updating compartments, we calculate CNS toxicity.
+        // We use the 'record' struct which implies a specific depth.
+        // This is consistent with standard implementations for short segments.
 
         if !self.is_sim() {
-            // Fix: CNS accumulation is non-linear (exponential at high PO2).
-            // Using average depth underestimates CNS significantly for deep dives.
-            // We iterate in 1-second intervals (or slightly coarser if needed) to integrate CNS.
-            // Since OxTox calc is cheap (table lookup), this is acceptable even if travel is long.
+            // CNS accumulation is non-linear (exponential at high PO2).
+            // We iterate in 1-second intervals (or coarser if needed) to integrate CNS.
+            // OxTox calc is cheap (table lookup), making this acceptable for travel segments.
             let steps = time.as_seconds() as usize;
             if steps > 0 {
                 let depth_delta =
@@ -184,16 +176,13 @@ impl DecoModel for BuhlmannModel {
 
         // Finally, trigger a standard recalculate_compartments to ensure M-values, GF-factors, etc
         // are consistent with the FINAL depth (target_depth).
-        // The schreiner recalc updated the pressures (IP), but we need to ensure min_tolerable_pressure
-        // and other derived values are set correct for the NEW depth.
         let final_record = RecordData {
             depth: target_depth,
             time: Time::zero(), // Time already accounted for
             gas,
         };
 
-        // We can reuse the existing logic to update derived values
-        // We pass time 0 so it doesn't add MORE pressure, just updates derived stats (M-values, ceilings)
+        // Update derived values (M-values, ceilings) without adding more pressure/time.
         self.recalculate_compartments(&final_record);
     }
 

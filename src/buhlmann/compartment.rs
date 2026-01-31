@@ -219,16 +219,12 @@ impl Compartment {
         // Update M-values
         let (_, _gf_high) = self.model_config.gf;
         self.m_value_raw = self.m_value(
-            Depth::zero(), // This depth parameter is actually not used correctly in m_value_raw calculation in original code?
-            // wait, m_value_raw in updated code depends on calc which depends on depth?
-            // Actually m_value_raw is typically at surface (depth 0) for GF calculation purposes?
-            // Let's keep consistent with recalculate()
+            Depth::zero(), // m_value_raw is typically calculated at surface pressure (std behavior)
             self.model_config.surface_pressure,
             100,
         );
-        // Note: min tolerate pressure and m_value_calc depend on current ambient pressure (depth), which isn't passed here.
-        // The calling code typically calls recalculate() with the final depth after travel, which fixes this.
-        // However, we should at least update m_value_raw based on new IP.
+        // Calling code is expected to call recalculate() with the final depth after travel
+        // to correctly update min_tolerable_pressure and m_value_calc.
     }
 
     fn schreiner_equation(
