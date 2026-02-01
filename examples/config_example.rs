@@ -10,7 +10,8 @@ fn main() {
     let config_instance = BuhlmannConfig {
         gf: (85, 85),
         surface_pressure: 1013,
-        deco_ascent_rate: 9.,
+        deco_ascent_rate: 10.,
+        water_density: 1020.0,
         ceiling_type: CeilingType::Actual,
         round_ceiling: false,
         recalc_all_tissues_m_values: true,

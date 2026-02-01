@@ -26,6 +26,7 @@ pub struct BuhlmannConfig {
     pub ceiling_type: CeilingType,
     pub round_ceiling: bool,
     pub recalc_all_tissues_m_values: bool,
+    pub water_density: f64,
 }
 
 impl BuhlmannConfig {
@@ -65,6 +66,18 @@ impl BuhlmannConfig {
         self.recalc_all_tissues_m_values = recalc_all_tissues_m_values;
         self
     }
+
+    pub fn with_water_density(mut self, water_density: f64) -> Self {
+        self.water_density = water_density;
+        self
+    }
+
+    /// Set water density using D6 firmware code logic (0-4 approx)
+    /// Density = 1000.0 + (code * 10.0)
+    pub fn with_d6_salinity_code(mut self, code: u8) -> Self {
+        self.water_density = 1000.0 + (code as f64 * 10.0);
+        self
+    }
 }
 
 impl Default for BuhlmannConfig {
@@ -76,6 +89,8 @@ impl Default for BuhlmannConfig {
             ceiling_type: CeilingType::Actual,
             round_ceiling: false,
             recalc_all_tissues_m_values: true,
+            // Default to EN13319 standard (1030 kg/m3)
+            water_density: crate::common::WaterDensities::EN13319,
         }
     }
 }
@@ -92,6 +107,7 @@ impl DecoModelConfig for BuhlmannConfig {
         self.validate_gradient_factors(gf)?;
         self.validate_surface_pressure(surface_pressure)?;
         self.validate_deco_ascent_rate(deco_ascent_rate)?;
+        self.validate_water_density(self.water_density)?;
 
         Ok(())
     }
@@ -111,9 +127,22 @@ impl DecoModelConfig for BuhlmannConfig {
     fn round_ceiling(&self) -> bool {
         self.round_ceiling
     }
+
+    fn water_density(&self) -> f64 {
+        self.water_density
+    }
 }
 
 impl BuhlmannConfig {
+    fn validate_water_density(&self, water_density: f64) -> Result<(), ConfigValidationErr> {
+        if !(900.0..=1100.0).contains(&water_density) {
+            return Err(ConfigValidationErr::new(
+                "water_density",
+                "Water density must be between 900 and 1100 kg/m3",
+            ));
+        }
+        Ok(())
+    }
     fn validate_gradient_factors(&self, gf: &GradientFactors) -> Result<(), ConfigValidationErr> {
         let (gf_low, gf_high) = gf;
         let gf_range = 1..=100;

@@ -6,11 +6,11 @@ fn test_ndl() {
     // (gradient_factors, depth, expected_ndl)
     let test_cases: Vec<(GradientFactors, DepthType, Time)> = vec![
         // 100/100
-        ((100, 100), 21., Time::from_minutes(40.)),
-        ((100, 100), 15., Time::from_minutes(90.)),
+        ((100, 100), 21., Time::from_minutes(39.)),
+        ((100, 100), 15., Time::from_minutes(88.)),
         // 70/70
-        ((70, 70), 21., Time::from_minutes(19.)),
-        ((70, 70), 15., Time::from_minutes(47.)),
+        ((70, 70), 21., Time::from_minutes(18.)),
+        ((70, 70), 15., Time::from_minutes(46.)),
     ];
 
     let air = fixtures::gas_air();

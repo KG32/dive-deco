@@ -42,6 +42,32 @@ pub fn powf(base: f64, exp: f64) -> f64 {
     }
 }
 
+/// Simple e^x wrapper
+#[inline]
+pub fn exp(exponent: f64) -> f64 {
+    #[cfg(not(feature = "no-std"))]
+    {
+        exponent.exp()
+    }
+    #[cfg(feature = "no-std")]
+    {
+        libm::exp(exponent)
+    }
+}
+
+/// Simple ln(x) wrapper
+#[inline]
+pub fn ln(val: f64) -> f64 {
+    #[cfg(not(feature = "no-std"))]
+    {
+        val.ln()
+    }
+    #[cfg(feature = "no-std")]
+    {
+        libm::log(val)
+    }
+}
+
 /// Round function for f64
 #[inline]
 pub fn round(val: f64) -> f64 {
@@ -54,7 +80,6 @@ pub fn round(val: f64) -> f64 {
         libm::round(val)
     }
 }
-
 
 /// Base-2 exponential function for f64
 #[inline]

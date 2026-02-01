@@ -230,15 +230,13 @@ impl Deco {
                             })
                         }
 
-                        // decompression stop (a series of 1s segments, merged into one on cleared stop)
+                        // decompression stop
                         DecoAction::Stop => {
                             let stop_depth = self.deco_stop_depth(ceiling);
+                            let stop_duration =
+                                self.find_min_stop_time(&sim_model, gas_mixes.clone(), stop_depth);
 
-                            sim_model.record(
-                                pre_stage_depth,
-                                Time::from_seconds(1.),
-                                &pre_stage_gas,
-                            );
+                            sim_model.record(pre_stage_depth, stop_duration, &pre_stage_gas);
                             let sim_state = sim_model.dive_state();
                             // @todo dedupe here on deco instead of of add deco
                             deco_stages.push(DecoStage {
@@ -310,8 +308,13 @@ impl Deco {
                     return Err(MissedDecoStopViolation);
                 }
 
-                let next_switch_gas =
-                    self.next_switch_gas(current_depth, &current_gas, gas_mixes, surface_pressure);
+                let next_switch_gas = self.next_switch_gas(
+                    current_depth,
+                    &current_gas,
+                    gas_mixes,
+                    surface_pressure,
+                    sim_model.config().water_density(),
+                );
                 // check if within mod @todo min operational depth
                 if let Some(switch_gas) = next_switch_gas {
                     //switch gas without ascent if within mod of next deco gas
@@ -353,13 +356,15 @@ impl Deco {
         current_gas: &Gas,
         gas_mixes: Vec<Gas>,
         surface_pressure: MbarPressure,
+        water_density: f64,
     ) -> Option<Gas> {
-        let current_gas_partial_pressures =
-            current_gas.partial_pressures(current_depth, surface_pressure);
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(current_depth, surface_pressure, water_density);
+        let current_gas_partial_pressures = current_gas.partial_pressures(p_amb);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
         // mix with the lowest MOD (by absolute o2 content)
         gas_mixes.into_iter().find(|gas| {
-            let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
+            let partial_pressures = gas.partial_pressures(p_amb);
             partial_pressures.o2 > current_gas_partial_pressures.o2
         })
     }
@@ -403,6 +408,67 @@ impl Deco {
         }
         Ok(())
     }
+
+    /// Binary search for the minimum time required to clear the current stop
+    /// or reach a state where a gas switch is better/possible.
+    /// Returns the duration as Time.
+    fn find_min_stop_time<T: DecoModel + Sim + Clone>(
+        &self,
+        current_model: &T,
+        gas_mixes: Vec<Gas>,
+        current_stop_depth: Depth,
+    ) -> Time {
+        // We want to find min time t such that next_deco_action is NOT Stop at current_depth
+        // OR the stop is cleared (AscentToCeil / AscentToGasSwitchDepth).
+        // Max wait time: 24 hours (arbitrary upper bound for binary search).
+        // In reality, stops are usually minutes.
+        let mut low: u32 = 0;
+        let mut high: u32 = 24 * 60; // Minutes
+
+        let check_condition = |time_min: u32| -> bool {
+            let mut sim = current_model.fork();
+            let state = sim.dive_state();
+            sim.record(state.depth, Time::from_minutes(time_min as f64), &state.gas);
+
+            let res = self.next_deco_action(&sim, gas_mixes.clone());
+            match res {
+                Ok((Some(action), _)) => {
+                    // We are "done" with this specific stop logic if:
+                    // 1. Action is NOT Stop
+                    // 2. OR Action IS Stop but depth changed (shouldn't happen if we are at stop depth)
+                    match action {
+                        DecoAction::Stop => {
+                            // If we are still told to stop, check if the calculated stop depth
+                            // is STILL the same as current_stop_depth.
+                            let ceiling = sim.ceiling();
+                            let new_stop_depth = self.deco_stop_depth(ceiling);
+                            // If calculated stop depth is shallower, we can ascend -> condmet
+                            // If it's same, we still need to wait -> cond false
+                            new_stop_depth < current_stop_depth
+                        }
+                        _ => true, // Any other action (Ascent, Switch) means we moved on
+                    }
+                }
+                Ok((None, _)) => true, // Deco cleared
+                Err(_) => false,       // Error case, assume not done? Or panic?
+            }
+        };
+
+        // Binary search for first 'true'
+        while high - low > 1 {
+            let mid = (low + high) / 2;
+            if check_condition(mid) {
+                high = mid;
+            } else {
+                low = mid;
+            }
+        }
+
+        // Return first valid duration found (high bound of the binary search)
+        // Granularity is currently in minutes.
+
+        Time::from_minutes(high as f64)
+    }
 }
 
 #[cfg(test)]
@@ -441,9 +507,19 @@ mod tests {
             // single gas air
             (Depth::from_meters(10.), air, vec![air], None),
             // air + ean50 within MOD
-            (Depth::from_meters(10.), air, vec![air, ean_50], Some(ean_50)),
+            (
+                Depth::from_meters(10.),
+                air,
+                vec![air, ean_50],
+                Some(ean_50),
+            ),
             // air + ean50 over MOD
-            (Depth::from_meters(30.), air, vec![air, ean_50], Some(ean_50)),
+            (
+                Depth::from_meters(30.),
+                air,
+                vec![air, ean_50],
+                Some(ean_50),
+            ),
             // air + ean50 + oxygen, ean50 withing MOD, oxygen out
             (
                 Depth::from_meters(20.),
@@ -470,8 +546,13 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
-            let res =
-                deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
+            let res = deco.next_switch_gas(
+                current_depth,
+                &current_gas,
+                available_gas_mixes,
+                1000,
+                1020.0,
+            );
             assert_eq!(res, expected_switch_gas);
         }
     }

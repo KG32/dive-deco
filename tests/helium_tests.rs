@@ -22,7 +22,7 @@ fn test_tmx_ndl() {
 
     model.record(Depth::from_meters(20.), Time::zero(), &tmx);
 
-    assert_eq!(model.ndl(), Time::from_minutes(17.));
+    assert_eq!(model.ndl(), Time::from_minutes(16.));
 }
 
 // heliox

@@ -1,8 +1,8 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        exp2, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure,
-        RecordData,
+        abs, exp, exp2, powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures,
+        Pressure, RecordData,
     },
     BuhlmannConfig, Gas, Time,
 };
@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 pub struct Compartment {
     // tissue number
     pub no: u8,
+    // decay constant k for He (ln(2)/half_time)
+    pub he_k: f64,
+    // decay constant k for N2 (ln(2)/half_time)
+    pub n2_k: f64,
     // tolerable tissue ambient pressure
     pub min_tolerable_amb_pressure: Pressure,
     // helium saturation pressure
@@ -46,18 +50,29 @@ pub struct Supersaturation {
 impl Compartment {
     pub fn new(no: u8, params: ZHLParams, model_config: BuhlmannConfig) -> Self {
         let init_gas = Gas::air();
-        let init_gas_compound_pressures =
-            init_gas.inspired_partial_pressures(Depth::zero(), model_config.surface_pressure);
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(
+            Depth::zero(),
+            model_config.surface_pressure,
+            model_config.water_density,
+        );
+        let init_gas_compound_pressures = init_gas.inspired_partial_pressures(p_amb);
         let n2_ip = init_gas_compound_pressures.n2;
         let he_ip = init_gas_compound_pressures.he;
 
         let (n2_half_time, _, _, he_half_time, ..) = params;
+        let ln2 = 0.69314718056;
+        let n2_k = ln2 / n2_half_time;
+        let he_k = ln2 / he_half_time;
+
         // Precalculate reciprocal of half-time in seconds
         let n2_factor = 1.0 / (n2_half_time * 60.0);
         let he_factor = 1.0 / (he_half_time * 60.0);
 
         let mut compartment = Self {
             no,
+            he_k,
+            n2_k,
             params,
             n2_ip,
             he_ip,
@@ -97,6 +112,13 @@ impl Compartment {
         self.n2_ip = n2_inert_pressure;
         self.total_ip = he_inert_pressure + n2_inert_pressure;
 
+        if self.total_ip.is_nan() {
+            println!(
+                "recalculate (Haldane) NaN detected: n2_ip={}, he_ip={}, record={:?}",
+                self.n2_ip, self.he_ip, record
+            );
+        }
+
         // @todo m_value tuple
         self.m_value_raw = self.m_value(record.depth, surface_pressure, 100);
         self.m_value_calc = self.m_value(record.depth, surface_pressure, max_gf);
@@ -106,21 +128,25 @@ impl Compartment {
 
     // tissue ceiling as depth
     pub fn ceiling(&self) -> Depth {
-        let mut ceil = (self.min_tolerable_amb_pressure
-            - (self.model_config.surface_pressure as f64 / 1000.))
-            * 10.;
-        // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
-        if ceil < 0. {
-            ceil = 0.;
-        }
+        use crate::common::physics::pressure_to_depth;
 
-        Depth::from_meters(ceil)
+        let floor_pressure = self.min_tolerable_amb_pressure;
+        let ceiling_depth = pressure_to_depth(
+            floor_pressure,
+            self.model_config.surface_pressure,
+            self.model_config.water_density,
+        );
+
+        ceiling_depth
     }
 
     // tissue supersaturation (gf99, surface gf)
     pub fn supersaturation(&self, surface_pressure: MbarPressure, depth: Depth) -> Supersaturation {
+        use crate::common::physics::depth_to_pressure;
+
         let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth.as_meters() / 10.);
+        let p_amb = depth_to_pressure(depth, surface_pressure, self.model_config.water_density);
+
         let m_value = self.m_value_raw;
         let m_value_surf = self.m_value(Depth::zero(), surface_pressure, 100);
         let gf_99 = ((self.total_ip - p_amb) / (m_value - p_amb)) * 100.;
@@ -135,11 +161,14 @@ impl Compartment {
         surface_pressure: MbarPressure,
         max_gf: GradientFactor,
     ) -> Pressure {
+        use crate::common::physics::depth_to_pressure;
+
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
         let (_, a_coeff_adjusted, b_coeff_adjusted) =
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
-        let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = p_surf + (depth.as_meters() / 10.);
+
+        // p_amb logic updated to use water density
+        let p_amb = depth_to_pressure(depth, surface_pressure, self.model_config.water_density);
 
         a_coeff_adjusted + (p_amb / b_coeff_adjusted)
     }
@@ -152,11 +181,14 @@ impl Compartment {
     ) -> (Pressure, Pressure) {
         // (he, n2)
         let RecordData { depth, time, gas } = record;
+        // p_amb logic updated to use water density
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(*depth, surface_pressure, self.model_config.water_density);
         let PartialPressures {
             n2: n2_pp,
             he: he_pp,
             ..
-        } = gas.inspired_partial_pressures(*depth, surface_pressure);
+        } = gas.inspired_partial_pressures(p_amb);
 
         // partial pressure of inert gases in inspired gas (adjusted alveoli water vapor pressure)
         let he_inspired_pp = he_pp;
@@ -181,6 +213,58 @@ impl Compartment {
         let n2_final = self.n2_ip + n2_p_comp_delta;
 
         (he_final, n2_final)
+    }
+
+    /// Calculate new tissue pressure using Schreiner equation (analytical solution for linear ascent/descent)
+    /// This replaces the iterative Haldane approach for travel
+    pub fn recalculate_schreiner(
+        &mut self,
+        p_alv_start_n2: Pressure,
+        p_alv_end_n2: Pressure,
+        p_alv_start_he: Pressure,
+        p_alv_end_he: Pressure,
+        time_min: f64,
+    ) {
+        // N2
+        let n2_r = (p_alv_end_n2 - p_alv_start_n2) / time_min;
+        self.n2_ip = self.schreiner_equation(p_alv_start_n2, n2_r, time_min, self.n2_k, self.n2_ip);
+
+        // He
+        let he_r = (p_alv_end_he - p_alv_start_he) / time_min;
+        self.he_ip = self.schreiner_equation(p_alv_start_he, he_r, time_min, self.he_k, self.he_ip);
+
+        // Update totals
+        self.total_ip = self.n2_ip + self.he_ip;
+
+        if self.total_ip.is_nan() {
+            println!("NaN detected: n2_ip={}, he_ip={}", self.n2_ip, self.he_ip);
+        }
+
+        // Update M-values
+        let (_, _gf_high) = self.model_config.gf;
+        self.m_value_raw = self.m_value(
+            Depth::zero(), // m_value_raw is typically calculated at surface pressure (std behavior)
+            self.model_config.surface_pressure,
+            100,
+        );
+        // Calling code is expected to call recalculate() with the final depth after travel
+        // to correctly update min_tolerable_pressure and m_value_calc.
+    }
+
+    fn schreiner_equation(
+        &self,
+        p_i_0: f64, // Initial inspired pressure
+        r: f64,     // Rate of change of inspired pressure
+        t: f64,     // Time in minutes
+        k: f64,     // Decay constant
+        p_t_0: f64, // Initial tissue pressure
+    ) -> f64 {
+        if abs(r) < 1e-9 {
+            // Fallback to Haldane if rate is effectively zero (constant depth)
+            return p_t_0 + (p_i_0 - p_t_0) * (1.0 - powf(2.0, -t * k / 0.69314718056));
+        }
+        let e_kt = exp(-k * t);
+        p_i_0 + r * (t - 1.0 / k) - (p_i_0 - p_t_0 - r / k) * e_kt
     }
 
     // compartment pressure change for inert gas (Haldane equation)
@@ -224,6 +308,9 @@ impl Compartment {
             n2_param: ZHLParam,
             n2_pp: Pressure,
         ) -> ZHLParam {
+            if (he_pp + n2_pp) == 0.0 {
+                return n2_param;
+            }
             ((he_param * he_pp) + (n2_param * n2_pp)) / (he_pp + n2_pp)
         }
         let (n2_half_time, n2_a_coeff, n2_b_coeff, he_half_time, he_a_coeff, he_b_coeff) =
@@ -273,6 +360,8 @@ mod tests {
             comp,
             Compartment {
                 no: 1,
+                he_k: 0.4590378679205298,
+                n2_k: 0.17328679514,
                 min_tolerable_amb_pressure: -0.257127315,
                 he_ip: 0.0,
                 n2_ip: 0.750737,
@@ -300,6 +389,7 @@ mod tests {
         };
         comp_1.recalculate(&record, 100, 1000);
         comp_5.recalculate(&record, 100, 1000);
+        // Updated expectation for 1020 density physics
         assert_eq!(comp_1.m_value_raw, 3.24009801980198);
         assert_eq!(comp_5.m_value_raw, 1.8506177701206004);
     }
@@ -330,7 +420,7 @@ mod tests {
             gas: &air,
         };
         comp.recalculate(&record, 100, 1000);
-        assert_eq!(comp.total_ip, 1.2850179204911072);
+        assert_eq!(comp.total_ip, 1.2904295673298485);
     }
 
     #[test]
@@ -354,6 +444,6 @@ mod tests {
         };
         comp.recalculate(&recprd, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
-        assert_eq!(min_tolerable_pressure, 0.40957969932131577);
+        assert_eq!(min_tolerable_pressure, 0.41397720354247713);
     }
 }

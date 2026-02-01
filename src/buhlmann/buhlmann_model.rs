@@ -1,7 +1,7 @@
 use crate::buhlmann::buhlmann_config::BuhlmannConfig;
 use crate::buhlmann::compartment::{Compartment, Supersaturation};
 use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
-use crate::common::{abs, ceil};
+use crate::common::{abs, ceil, ln};
 use crate::common::{
     AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
     Gas, GradientFactor, OxTox, RecordData,
@@ -110,25 +110,92 @@ impl DecoModel for BuhlmannModel {
     fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
-        let mut current_depth = self.state.depth;
-        let distance = target_depth - current_depth;
-        let travel_time = time;
-        let dist_rate = distance.as_meters() / travel_time.as_seconds();
-        let mut i = 0;
-        while i < travel_time.as_seconds() as i32 {
-            self.state.time += Time::from_seconds(1.);
-            current_depth += Depth::from_meters(dist_rate);
-            let record = RecordData {
-                depth: current_depth,
-                time: Time::from_seconds(1.),
-                gas,
-            };
-            self.recalculate(record);
-            i += 1;
+
+        let start_depth = self.state.depth;
+
+        // Update time and depth in state
+        self.state.time += time;
+        self.state.depth = target_depth;
+
+        let travel_time_mins = time.as_minutes();
+        if travel_time_mins <= 0.0 {
+            return;
         }
 
-        // align with target depth with lost precision @todo: round / bignumber?
-        self.state.depth = target_depth;
+        // Calculate inspired partial pressures at start and end
+        // Note: We use the water vapor adjusted calculation inside the model
+        use crate::common::physics::depth_to_pressure;
+        let start_p_amb = depth_to_pressure(
+            start_depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+        let end_p_amb = depth_to_pressure(
+            target_depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+
+        let start_pp = gas.inspired_partial_pressures(start_p_amb);
+        let end_pp = gas.inspired_partial_pressures(end_p_amb);
+
+        // Recalculate all compartments using Schreiner equation
+        // (This does the heavy lifting analytically instead of iterating 1s steps)
+        for compartment in self.compartments.iter_mut() {
+            compartment.recalculate_schreiner(
+                start_pp.n2,
+                end_pp.n2,
+                start_pp.he,
+                end_pp.he,
+                travel_time_mins,
+            );
+        }
+
+        // After updating compartments, we calculate CNS toxicity.
+        // We use the 'record' struct which implies a specific depth.
+        // This is consistent with standard implementations for short segments.
+
+        if !self.is_sim() {
+            // CNS accumulation is non-linear (exponential at high PO2).
+            // We iterate in 1-second intervals (or coarser if needed) to integrate CNS.
+            // OxTox calc is cheap (table lookup), making this acceptable for travel segments.
+            let steps = time.as_seconds() as usize;
+            if steps > 0 {
+                let depth_delta =
+                    (target_depth.as_meters() - start_depth.as_meters()) / steps as f64;
+                let mut current_depth_m = start_depth.as_meters();
+                // We use the gas set in state
+
+                for _ in 0..steps {
+                    current_depth_m += depth_delta;
+                    let step_record = RecordData {
+                        depth: Depth::from_meters(current_depth_m),
+                        time: Time::from_seconds(1.),
+                        gas,
+                    };
+                    self.recalculate_ox_tox(&step_record);
+                }
+            } else {
+                // fractional second travel? Use average as fallback or just 1 step ending at target
+                let record = RecordData {
+                    depth: target_depth,
+                    time,
+                    gas,
+                };
+                self.recalculate_ox_tox(&record);
+            }
+        }
+
+        // Finally, trigger a standard recalculate_compartments to ensure M-values, GF-factors, etc
+        // are consistent with the FINAL depth (target_depth).
+        let final_record = RecordData {
+            depth: target_depth,
+            time: Time::zero(), // Time already accounted for
+            gas,
+        };
+
+        // Update derived values (M-values, ceilings) without adding more pressure/time.
+        self.recalculate_compartments(&final_record);
     }
 
     fn record_travel_with_rate(
@@ -248,6 +315,60 @@ impl Sim for BuhlmannModel {
 }
 
 impl BuhlmannModel {
+    /// Calculate time to desaturate to 105% of surface pressure (No-Dive Time)
+    pub fn desaturation_time(&self) -> Time {
+        let surface_pressure = self.config.surface_pressure;
+        let air = Gas::air();
+        use crate::common::physics::depth_to_pressure;
+        let surface_p_amb =
+            depth_to_pressure(Depth::zero(), surface_pressure, self.config.water_density);
+        let surface_pp = air.inspired_partial_pressures(surface_p_amb);
+
+        // Target is 1.05 * surface partial pressure (standard safety margin)
+        let target_n2 = surface_pp.n2 * 1.05;
+        let target_he = surface_pp.he * 1.05; // Usually 0 for air but good for completeness
+
+        let mut max_minutes = 0.0;
+
+        for comp in &self.compartments {
+            // Time for N2 to decay to target
+            // t = -1/k * ln( (P_target - P_inspired) / (P_current - P_inspired) )
+            // If P_current <= P_target, time is 0.
+
+            // N2
+            if comp.n2_ip > target_n2 {
+                let numerator = target_n2 - surface_pp.n2;
+                let denominator = comp.n2_ip - surface_pp.n2;
+                if denominator != 0.0 && numerator > 0.0 {
+                    let ratio = numerator / denominator;
+                    if ratio > 0.0 {
+                        let t = -(ln(ratio)) / comp.n2_k;
+                        if t > max_minutes {
+                            max_minutes = t;
+                        }
+                    }
+                }
+            }
+
+            // He
+            if comp.he_ip > target_he {
+                let numerator = target_he - surface_pp.he;
+                let denominator = comp.he_ip - surface_pp.he;
+                if denominator != 0.0 && numerator > 0.0 {
+                    let ratio = numerator / denominator;
+                    if ratio > 0.0 {
+                        let t = -(ln(ratio)) / comp.he_k;
+                        if t > max_minutes {
+                            max_minutes = t;
+                        }
+                    }
+                }
+            }
+        }
+
+        Time::from_minutes(max_minutes)
+    }
+
     /// set of current gradient factors (GF now, GF surface)
     pub fn supersaturation(&self) -> Supersaturation {
         let mut acc_gf_99 = 0.;
@@ -374,9 +495,11 @@ impl BuhlmannModel {
     }
 
     fn recalculate_ox_tox(&mut self, record: &RecordData) {
-        self.state
-            .ox_tox
-            .recalculate(record, self.config().surface_pressure);
+        self.state.ox_tox.recalculate(
+            record,
+            self.config().surface_pressure,
+            self.config().water_density,
+        );
     }
 
     /// Calculate the maximum gradient factor (GF) for a given depth and gradient factors.
