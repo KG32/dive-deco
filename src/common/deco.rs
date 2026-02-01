@@ -355,16 +355,11 @@ impl Deco {
         let current_gas_partial_pressures =
             current_gas.partial_pressures(current_depth, surface_pressure);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
-        let switch_gasses = gas_mixes
-            .into_iter()
-            .filter(|gas| {
-                let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
-                partial_pressures.o2 > current_gas_partial_pressures.o2
-            })
-            .collect::<Vec<Gas>>();
-
         // mix with the lowest MOD (by absolute o2 content)
-        switch_gasses.first().copied()
+        gas_mixes.into_iter().find(|gas| {
+            let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
+            partial_pressures.o2 > current_gas_partial_pressures.o2
+        })
     }
 
     fn register_deco_stage(&mut self, stage: DecoStage) {
@@ -476,19 +471,19 @@ mod tests {
 
     #[test]
     fn test_ceiling_rounding() {
-        let test_cases: Vec<(DepthType, DepthType)> = vec![
-            (0., 0.),
-            (2., 3.),
-            (2.999, 3.),
-            (3., 3.),
-            (3.00001, 6.),
-            (12., 12.),
+        let test_cases: Vec<(Depth, Depth)> = vec![
+            (Depth::from_meters(0.), Depth::from_meters(0.)),
+            (Depth::from_meters(2.), Depth::from_meters(3.)),
+            (Depth::from_meters(2.999), Depth::from_meters(3.)),
+            (Depth::from_meters(3.), Depth::from_meters(3.)),
+            (Depth::from_meters(3.00001), Depth::from_meters(6.)),
+            (Depth::from_meters(12.), Depth::from_meters(12.)),
         ];
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
-            let res = deco.deco_stop_depth(Depth::from_meters(input_depth));
-            assert_eq!(res, Depth::from_meters(expected_depth));
+            let res = deco.deco_stop_depth(input_depth);
+            assert_eq!(res, expected_depth);
         }
     }
 
@@ -501,31 +496,41 @@ mod tests {
 
         // potential switch if in deco!
         // [ (current_depth, current_gas, gas_mixes, expected_result) ]
-        // @todo depth constructor in test cases
-        let test_cases: Vec<(DepthType, Gas, Vec<Gas>, Option<Gas>)> = vec![
+        let test_cases: Vec<(Depth, Gas, Vec<Gas>, Option<Gas>)> = vec![
             // single gas air
-            (10., air, vec![air], None),
+            (Depth::from_meters(10.), air, vec![air], None),
             // air + ean50 within MOD
-            (10., air, vec![air, ean_50], Some(ean_50)),
+            (Depth::from_meters(10.), air, vec![air, ean_50], Some(ean_50)),
             // air + ean50 over MOD
-            (30., air, vec![air, ean_50], Some(ean_50)),
+            (Depth::from_meters(30.), air, vec![air, ean_50], Some(ean_50)),
             // air + ean50 + oxygen, ean50 withing MOD, oxygen out
-            (20., air, vec![air, ean_50, oxygen], Some(ean_50)),
+            (
+                Depth::from_meters(20.),
+                air,
+                vec![air, ean_50, oxygen],
+                Some(ean_50),
+            ),
             // air + ean50 + oxy, deco on ean50, oxygen within MOD
-            (5.5, ean_50, vec![air, ean_50, oxygen], Some(oxygen)),
+            (
+                Depth::from_meters(5.5),
+                ean_50,
+                vec![air, ean_50, oxygen],
+                Some(oxygen),
+            ),
             // air + heliox within o2 MOD, not considered deco gas
-            (30., air, vec![air, trimix], Some(trimix)),
+            (
+                Depth::from_meters(30.),
+                air,
+                vec![air, trimix],
+                Some(trimix),
+            ),
         ];
 
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (current_depth, current_gas, available_gas_mixes, expected_switch_gas) = case;
-            let res = deco.next_switch_gas(
-                Depth::from_meters(current_depth),
-                &current_gas,
-                available_gas_mixes,
-                1000,
-            );
+            let res =
+                deco.next_switch_gas(current_depth, &current_gas, available_gas_mixes, 1000);
             assert_eq!(res, expected_switch_gas);
         }
     }
