@@ -21,7 +21,7 @@ pub use global_types::{
     AscentRatePerMinute, CeilingType, Cns, DepthType, GradientFactor, GradientFactors,
     MbarPressure, NDLType, Otu, Pressure,
 };
-pub(crate) use math_utils::{abs, ceil, powf, round};
+pub(crate) use math_utils::{abs, ceil, exp2, powf, round};
 pub use ox_tox::OxTox;
 pub use record::RecordData;
 pub use sim::Sim;
