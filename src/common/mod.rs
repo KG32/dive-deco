@@ -1,3 +1,4 @@
+mod cns_table;
 mod deco;
 mod deco_model;
 mod depth;
@@ -9,6 +10,7 @@ mod record;
 mod sim;
 mod time;
 
+pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use deco::{Deco, DecoCalculationError, DecoRuntime, DecoStage, DecoStageType};
 pub use deco_model::{ConfigValidationErr, DecoModel, DecoModelConfig, DiveState};
 pub use depth::{Depth, Unit, Units};

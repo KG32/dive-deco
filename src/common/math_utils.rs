@@ -81,7 +81,6 @@ pub fn round(val: f64) -> f64 {
     }
 }
 
-
 /// Base-2 exponential function for f64
 #[inline]
 pub fn exp2(val: f64) -> f64 {
