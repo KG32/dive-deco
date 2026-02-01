@@ -357,16 +357,11 @@ impl Deco {
         let current_gas_partial_pressures =
             current_gas.partial_pressures(current_depth, surface_pressure);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
-        let switch_gasses = gas_mixes
-            .into_iter()
-            .filter(|gas| {
-                let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
-                partial_pressures.o2 > current_gas_partial_pressures.o2
-            })
-            .collect::<Vec<Gas>>();
-
         // mix with the lowest MOD (by absolute o2 content)
-        switch_gasses.first().copied()
+        gas_mixes.into_iter().find(|gas| {
+            let partial_pressures = gas.partial_pressures(current_depth, surface_pressure);
+            partial_pressures.o2 > current_gas_partial_pressures.o2
+        })
     }
 
     fn register_deco_stage(&mut self, stage: DecoStage) {
