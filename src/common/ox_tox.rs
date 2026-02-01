@@ -243,4 +243,30 @@ mod tests {
         // Expect fallback calculation to be applied
         assert!(ox_tox.cns() > 0.0);
     }
+
+    #[test]
+    fn test_otu_surface() {
+        let mut ox_tox = OxTox::default();
+        let record = RecordData {
+            depth: Depth::zero(),
+            time: Time::from_minutes(60.),
+            gas: &Gas::air(),
+        };
+
+        ox_tox.recalculate_otu(&record, 1013);
+        assert_eq!(ox_tox.otu(), 0.);
+    }
+
+    #[test]
+    fn test_otu_segment() {
+        let mut ox_tox = OxTox::default();
+        let ean32 = Gas::new(0.32, 0.);
+        let record = RecordData {
+            depth: Depth::from_meters(36.),
+            time: Time::from_minutes(22.),
+            gas: &ean32,
+        };
+        ox_tox.recalculate_otu(&record, 1013);
+        assert_eq!(ox_tox.otu(), 37.75920807052313);
+    }
 }

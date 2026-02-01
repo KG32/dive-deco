@@ -35,7 +35,6 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 ### Planned features
 
 - extended deco model config [water density and other configuration options] (currently metric and density assumed to be 1.03kg/l as salt water)
-
 - other deco algorithms (VPM-B)
 - other optimizations
 

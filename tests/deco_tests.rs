@@ -194,7 +194,7 @@ fn test_deco_with_deco_mod_at_bottom() {
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
     assert!(
         (tts.as_seconds() - 468.0).abs() < 50.0,
-        "Expected ~300.0s (was 468), got {:?}",
+        "Expected ~468s, got {:?}",
         tts
     );
 }
