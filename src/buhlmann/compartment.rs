@@ -1,8 +1,8 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        abs, exp, powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure,
-        RecordData,
+        abs, exp, exp2, powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures,
+        Pressure, RecordData,
     },
     BuhlmannConfig, Gas, Time,
 };
@@ -34,6 +34,10 @@ pub struct Compartment {
     pub params: ZHLParams,
     // Buhlmann model config (gradient factors, surface pressure)
     model_config: BuhlmannConfig,
+    // reciprocal of decay constant for He (1 / (half_time * 60))
+    pub he_factor: f64,
+    // reciprocal of decay constant for N2 (1 / (half_time * 60))
+    pub n2_factor: f64,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -61,6 +65,10 @@ impl Compartment {
         let n2_k = ln2 / n2_half_time;
         let he_k = ln2 / he_half_time;
 
+        // Precalculate reciprocal of half-time in seconds
+        let n2_factor = 1.0 / (n2_half_time * 60.0);
+        let he_factor = 1.0 / (he_half_time * 60.0);
+
         let mut compartment = Self {
             no,
             he_k,
@@ -73,6 +81,8 @@ impl Compartment {
             m_value_calc: 0., // initial, recalculated later
             min_tolerable_amb_pressure: 0.,
             model_config,
+            he_factor,
+            n2_factor,
         };
 
         // calculate initial minimal tolerable ambient pressure
@@ -185,18 +195,17 @@ impl Compartment {
         let n2_inspired = n2_pp;
 
         // tissue saturation pressure change for inert gasses
-        let (n2_half_time, _, _, he_half_time, ..) = self.params;
         let he_p_comp_delta = self.compartment_pressure_delta_haldane(
             InertGas::Helium,
             he_inspired_pp,
             *time,
-            he_half_time,
+            self.he_factor,
         );
         let n2_p_comp_delta = self.compartment_pressure_delta_haldane(
             InertGas::Nitrogen,
             n2_inspired,
             *time,
-            n2_half_time,
+            self.n2_factor,
         );
 
         // inert gasses pressures after applying delta P
@@ -264,17 +273,18 @@ impl Compartment {
         inert_gas: InertGas,
         gas_inspired_p: Pressure,
         time: Time,
-        half_time: ZHLParam,
+        factor: f64,
     ) -> Pressure {
         let inert_gas_load = match inert_gas {
             InertGas::Helium => self.he_ip,
             InertGas::Nitrogen => self.n2_ip,
         };
 
-        // (Pi - Po)(1 - e^(-0.693t/half-time))
-        let factor = 1. - powf(2.0, -(time.as_minutes()) / half_time);
+        // (Pi - Po)(1 - 2^(-t/half_time))
+        // factor is 1/(half_time_seconds)
+        let p_delta = 1. - exp2(-time.as_seconds() * factor);
 
-        (gas_inspired_p - inert_gas_load) * factor
+        (gas_inspired_p - inert_gas_load) * p_delta
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buhlmann ZHL params based on tissue inert gasses saturation proportions
@@ -361,6 +371,8 @@ mod tests {
                 params: (4.0, 1.2599, 0.505, 1.51, 1.7424, 0.4245),
                 // mocked config and state
                 model_config: BuhlmannConfig::default(),
+                n2_factor: 1.0 / (4.0 * 60.0),
+                he_factor: 1.0 / (1.51 * 60.0),
             }
         );
     }
