@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Depth, DepthType, GradientFactors, Time};
+use dive_deco::{BreathingSource, DecoModel, Depth, DepthType, GradientFactors, Time};
 pub mod fixtures;
 
 #[test]
@@ -13,7 +13,7 @@ fn test_ndl() {
         ((70, 70), 15., Time::from_minutes(46.)),
     ];
 
-    let air = fixtures::gas_air();
+    let air = BreathingSource::OpenCircuit(fixtures::gas_air());
     for test_case in test_cases {
         let (gradient_factors, test_depth, expected_ndl) = test_case;
         let mut model = fixtures::model_gf(gradient_factors);
@@ -28,7 +28,7 @@ fn test_ndl() {
 fn test_gf_low_ceiling() {
     let mut model = fixtures::model_gf((50, 100));
 
-    let air = fixtures::gas_air();
+    let air = BreathingSource::OpenCircuit(fixtures::gas_air());
 
     model.record(Depth::from_meters(40.), Time::from_minutes(10.), &air);
 

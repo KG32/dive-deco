@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Depth, Supersaturation, Time};
+use dive_deco::{BreathingSource, DecoModel, Depth, Supersaturation, Time};
 pub mod fixtures;
 
 #[test]
@@ -6,7 +6,11 @@ fn travel_descent() {
     let mut model = fixtures::model_default();
     let target_depth = Depth::from_meters(40.);
     let descent_time = Time::from_minutes(10.);
-    model.record_travel(target_depth, descent_time, &fixtures::gas_air());
+    model.record_travel(
+        target_depth,
+        descent_time,
+        &BreathingSource::OpenCircuit(fixtures::gas_air()),
+    );
     let dive_state = model.dive_state();
     let Supersaturation { gf_surf, .. } = model.supersaturation();
     assert_eq!(dive_state.depth, target_depth);
@@ -17,7 +21,7 @@ fn travel_descent() {
 #[test]
 fn travel_ascent() {
     let mut model = fixtures::model_gf((30, 70));
-    let air = fixtures::gas_air();
+    let air = BreathingSource::OpenCircuit(fixtures::gas_air());
     let initial_depth = Depth::from_meters(40.);
     let bottom_time = Time::from_minutes(20.);
     model.record(initial_depth, bottom_time, &air);
@@ -41,14 +45,14 @@ fn travel_invalid_target_depth() {
     model.record_travel(
         Depth::from_meters(-10.),
         Time::from_seconds(1.),
-        &fixtures::gas_air(),
+        &BreathingSource::OpenCircuit(fixtures::gas_air()),
     );
 }
 
 #[test]
 fn test_travel_record_with_rate() {
     let mut model = fixtures::model_default();
-    let air = fixtures::gas_air();
+    let air = BreathingSource::OpenCircuit(fixtures::gas_air());
     let initial_depth = Depth::from_meters(20.);
     let bottom_time = Time::from_minutes(20.);
     let target_depth = Depth::zero();

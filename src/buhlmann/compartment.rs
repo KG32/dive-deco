@@ -1,10 +1,10 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        abs, exp, exp2, powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures,
-        Pressure, RecordData,
+        abs, exp, exp2, powf, BreathingSource, Depth, GasMix, GradientFactor, InertGas,
+        MbarPressure, PartialPressures, Pressure, RecordData,
     },
-    BuhlmannConfig, Gas, Time,
+    BuhlmannConfig, Time,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -49,7 +49,7 @@ pub struct Supersaturation {
 
 impl Compartment {
     pub fn new(no: u8, params: ZHLParams, model_config: BuhlmannConfig) -> Self {
-        let init_gas = Gas::air();
+        let init_gas = BreathingSource::OpenCircuit(GasMix::air());
         use crate::common::physics::depth_to_pressure;
         let p_amb = depth_to_pressure(
             Depth::zero(),
@@ -335,115 +335,5 @@ impl Compartment {
             b_coeff / (max_gf_fraction - (max_gf_fraction * b_coeff) + b_coeff);
 
         (half_time, a_coefficient_adjusted, b_coefficient_adjusted)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{common::Gas, Time};
-
-    fn comp_1() -> Compartment {
-        let comp_1_params = (4., 1.2599, 0.5050, 1.51, 01.7424, 0.4245);
-        Compartment::new(1, comp_1_params, BuhlmannConfig::default())
-    }
-
-    fn comp_5() -> Compartment {
-        let comp_5_params = (27., 0.6200, 0.8126, 10.21, 0.9220, 0.7582);
-        Compartment::new(5, comp_5_params, BuhlmannConfig::default())
-    }
-
-    #[test]
-    fn test_constructor() {
-        let comp = comp_1();
-        assert_eq!(
-            comp,
-            Compartment {
-                no: 1,
-                he_k: 0.4590378679205298,
-                n2_k: 0.17328679514,
-                min_tolerable_amb_pressure: -0.257127315,
-                he_ip: 0.0,
-                n2_ip: 0.750737,
-                total_ip: 0.750737,
-                m_value_raw: 3.265840594059406,
-                m_value_calc: 3.265840594059406,
-                params: (4.0, 1.2599, 0.505, 1.51, 1.7424, 0.4245),
-                // mocked config and state
-                model_config: BuhlmannConfig::default(),
-                n2_factor: 1.0 / (4.0 * 60.0),
-                he_factor: 1.0 / (1.51 * 60.0),
-            }
-        );
-    }
-
-    #[test]
-    fn test_m_value_raw() {
-        let mut comp_1 = comp_1();
-        let mut comp_5 = comp_5();
-        let air = Gas::new(0.21, 0.);
-        let record = RecordData {
-            depth: Depth::zero(),
-            time: Time::from_seconds(1.),
-            gas: &air,
-        };
-        comp_1.recalculate(&record, 100, 1000);
-        comp_5.recalculate(&record, 100, 1000);
-        // Updated expectation for 1020 density physics
-        assert_eq!(comp_1.m_value_raw, 3.24009801980198);
-        assert_eq!(comp_5.m_value_raw, 1.8506177701206004);
-    }
-
-    #[test]
-    fn test_m_value_calc() {
-        let mut comp_1 = comp_1();
-        let mut comp_5 = comp_5();
-        let air = Gas::new(0.21, 0.);
-        let record = RecordData {
-            depth: Depth::zero(),
-            time: Time::from_seconds(1.),
-            gas: &air,
-        };
-        comp_1.recalculate(&record, 70, 1000);
-        comp_5.recalculate(&record, 70, 1000);
-        assert_eq!(comp_1.m_value_calc, 2.568068613861386);
-        assert_eq!(comp_5.m_value_calc, 1.5954324390844203);
-    }
-
-    #[test]
-    fn test_recalculation_ongassing() {
-        let mut comp = comp_5();
-        let air = Gas::new(0.21, 0.);
-        let record = RecordData {
-            depth: Depth::from_meters(30.),
-            time: Time::from_minutes(10.),
-            gas: &air,
-        };
-        comp.recalculate(&record, 100, 1000);
-        assert_eq!(comp.total_ip, 1.2904295673298485);
-    }
-
-    #[test]
-    fn test_weighted_params_trimix() {
-        let comp = comp_1();
-        let weighted_params = comp.weighted_zhl_params(0.5, 1. - (0.18 + 0.5));
-        assert_eq!(
-            weighted_params,
-            (2.481707317073171, 1.5541073170731705, 0.4559146341463414)
-        );
-    }
-
-    #[test]
-    fn test_min_pressure_calculation() {
-        let mut comp = comp_5();
-        let air = Gas::new(0.21, 0.);
-        let recprd = RecordData {
-            depth: Depth::from_meters(30.),
-            time: Time::from_minutes(10.),
-            gas: &air,
-        };
-        comp.recalculate(&recprd, 100, 100);
-        let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
-        assert_eq!(min_tolerable_pressure, 0.41397720354247713);
     }
 }

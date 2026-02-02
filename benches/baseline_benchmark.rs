@@ -7,7 +7,9 @@
 // Compare: cargo bench --bench baseline_benchmark -- --baseline main
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use dive_deco::{BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, Depth, Gas, Sim, Time};
+use dive_deco::{
+    BreathingSource, BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, Depth, Gas, Sim, Time,
+};
 
 /// Benchmark NDL calculation at various depths
 /// Tests the linear search algorithm for No Decompression Limit
@@ -15,7 +17,7 @@ pub fn ndl_calculations(c: &mut Criterion) {
     let mut group = c.benchmark_group("NDL Calculations");
 
     let depths = vec![10.0, 20.0, 30.0, 40.0];
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     for depth in depths {
         group.bench_with_input(
@@ -39,8 +41,8 @@ pub fn ndl_calculations(c: &mut Criterion) {
 pub fn simple_deco(c: &mut Criterion) {
     let mut group = c.benchmark_group("Simple Deco");
 
-    let air = Gas::air();
-    let ean50 = Gas::new(0.50, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
 
     group.bench_function("40m/20min with EAN50", |b| {
         let mut model = BuhlmannModel::default();
@@ -56,9 +58,9 @@ pub fn simple_deco(c: &mut Criterion) {
 pub fn complex_deco(c: &mut Criterion) {
     let mut group = c.benchmark_group("Complex Deco");
 
-    let trimix = Gas::new(0.18, 0.45);
-    let ean50 = Gas::new(0.50, 0.);
-    let oxygen = Gas::new(1.0, 0.);
+    let trimix = BreathingSource::OpenCircuit(Gas::new(0.18, 0.45));
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
+    let oxygen = BreathingSource::OpenCircuit(Gas::new(1.0, 0.));
 
     group.bench_function("70m/25min trimix multi-gas", |b| {
         let mut model = BuhlmannModel::default();
@@ -68,7 +70,7 @@ pub fn complex_deco(c: &mut Criterion) {
 
     group.bench_function("60m/30min air with deco gases", |b| {
         let mut model = BuhlmannModel::default();
-        let air = Gas::air();
+        let air = BreathingSource::OpenCircuit(Gas::air());
         model.record(Depth::from_meters(60.), Time::from_minutes(30.), &air);
         b.iter(|| black_box(model.deco(vec![air, ean50, oxygen]).unwrap()));
     });
@@ -81,7 +83,7 @@ pub fn complex_deco(c: &mut Criterion) {
 pub fn ceiling_calculations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Ceiling Calculations");
 
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     // Test with Actual ceiling (simple)
     group.bench_function("Actual ceiling - in deco", |b| {
@@ -107,7 +109,7 @@ pub fn ceiling_calculations(c: &mut Criterion) {
 pub fn travel_calculations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Travel Calculations");
 
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     group.bench_function("Ascent 40m to surface @ 10m/min", |b| {
         b.iter(|| {
@@ -133,7 +135,7 @@ pub fn travel_calculations(c: &mut Criterion) {
 pub fn tissue_recalculation(c: &mut Criterion) {
     let mut group = c.benchmark_group("Tissue Recalculation");
 
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     // Test with all tissues recalculated (default, expensive)
     group.bench_function("All tissues recalc (GF 30/70)", |b| {
@@ -177,7 +179,7 @@ pub fn tissue_recalculation(c: &mut Criterion) {
 pub fn model_cloning(c: &mut Criterion) {
     let mut group = c.benchmark_group("Model Cloning");
 
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
     let mut model = BuhlmannModel::default();
     model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
 
@@ -201,7 +203,7 @@ pub fn model_cloning(c: &mut Criterion) {
 pub fn supersaturation_calculations(c: &mut Criterion) {
     let mut group = c.benchmark_group("Supersaturation");
 
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     group.bench_function("Supersaturation at depth", |b| {
         let mut model = BuhlmannModel::default();
@@ -217,8 +219,8 @@ pub fn supersaturation_calculations(c: &mut Criterion) {
 pub fn dive_computer_simulation(c: &mut Criterion) {
     let mut group = c.benchmark_group("Dive Computer Simulation");
 
-    let air = Gas::air();
-    let ean50 = Gas::new(0.50, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
     let gases = vec![air, ean50];
 
     group.bench_function("1 minute of dive updates", |b| {
@@ -244,8 +246,8 @@ pub fn dive_computer_simulation(c: &mut Criterion) {
 pub fn tts_projection(c: &mut Criterion) {
     let mut group = c.benchmark_group("TTS Projection");
 
-    let air = Gas::air();
-    let ean50 = Gas::new(0.50, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
     let gases = vec![air, ean50];
 
     group.bench_function("Deco with TTS@+5 (nested sim)", |b| {
@@ -265,11 +267,11 @@ pub fn tts_projection(c: &mut Criterion) {
 pub fn gas_switching(c: &mut Criterion) {
     let mut group = c.benchmark_group("Gas Switching");
 
-    let air = Gas::air();
-    let ean32 = Gas::new(0.32, 0.);
-    let ean50 = Gas::new(0.50, 0.);
-    let ean80 = Gas::new(0.80, 0.);
-    let oxygen = Gas::new(1.0, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean32 = BreathingSource::OpenCircuit(Gas::new(0.32, 0.));
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
+    let ean80 = BreathingSource::OpenCircuit(Gas::new(0.80, 0.));
+    let oxygen = BreathingSource::OpenCircuit(Gas::new(1.0, 0.));
 
     group.bench_function("Deco with 2 gases", |b| {
         let mut model = BuhlmannModel::default();
@@ -291,9 +293,9 @@ pub fn gas_switching(c: &mut Criterion) {
 pub fn full_dive_profile(c: &mut Criterion) {
     let mut group = c.benchmark_group("Full Dive Profile");
 
-    let trimix = Gas::new(0.18, 0.45);
-    let ean50 = Gas::new(0.50, 0.);
-    let oxygen = Gas::new(1.0, 0.);
+    let trimix = BreathingSource::OpenCircuit(Gas::new(0.18, 0.45));
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
+    let oxygen = BreathingSource::OpenCircuit(Gas::new(1.0, 0.));
     let gases = vec![oxygen, trimix, ean50];
 
     group.bench_function("Complete technical dive profile", |b| {

@@ -1,10 +1,12 @@
 use crate::buhlmann::buhlmann_config::BuhlmannConfig;
 use crate::buhlmann::compartment::{Compartment, Supersaturation};
 use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
+use crate::common::BreathingSource;
+use crate::common::GasMix;
 use crate::common::{abs, ceil, ln};
 use crate::common::{
     AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
-    Gas, GradientFactor, OxTox, RecordData,
+    GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use alloc::vec;
@@ -31,7 +33,7 @@ pub type BuehlmannModel = BuhlmannModel;
 pub struct BuhlmannState {
     depth: Depth,
     time: Time,
-    gas: Gas,
+    gas: BreathingSource,
     gf_low_depth: Option<Depth>,
     ox_tox: OxTox,
 }
@@ -41,7 +43,7 @@ impl Default for BuhlmannState {
         Self {
             depth: Depth::zero(),
             time: Time::zero(),
-            gas: Gas::air(),
+            gas: BreathingSource::OpenCircuit(GasMix::air()),
             gf_low_depth: None,
             ox_tox: OxTox::default(),
         }
@@ -96,7 +98,7 @@ impl DecoModel for BuhlmannModel {
     }
 
     /// record data: depth (meters), time (seconds), gas
-    fn record(&mut self, depth: Depth, time: Time, gas: &Gas) {
+    fn record(&mut self, depth: Depth, time: Time, gas: &BreathingSource) {
         self.validate_depth(depth);
         self.state.depth = depth;
         self.state.gas = *gas;
@@ -107,7 +109,7 @@ impl DecoModel for BuhlmannModel {
 
     /// model travel between depths in 1s intervals
     // @todo: Schreiner equation instead of Haldane to avoid imprecise intervals
-    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) {
+    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &BreathingSource) {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
 
@@ -203,7 +205,7 @@ impl DecoModel for BuhlmannModel {
         target_depth: Depth,
         // @todo ascent rate units
         rate: AscentRatePerMinute,
-        gas: &Gas,
+        gas: &BreathingSource,
     ) {
         self.validate_depth(target_depth);
 
@@ -296,7 +298,7 @@ impl DecoModel for BuhlmannModel {
         ceiling
     }
 
-    fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError> {
+    fn deco(&self, gas_mixes: Vec<BreathingSource>) -> Result<DecoRuntime, DecoCalculationError> {
         let mut deco = Deco::default();
         deco.calc(self.fork(), gas_mixes)
     }
@@ -318,7 +320,7 @@ impl BuhlmannModel {
     /// Calculate time to desaturate to 105% of surface pressure (No-Dive Time)
     pub fn desaturation_time(&self) -> Time {
         let surface_pressure = self.config.surface_pressure;
-        let air = Gas::air();
+        let air = BreathingSource::OpenCircuit(GasMix::air());
         use crate::common::physics::depth_to_pressure;
         let surface_p_amb =
             depth_to_pressure(Depth::zero(), surface_pressure, self.config.water_density);
@@ -564,138 +566,5 @@ impl BuhlmannModel {
         if depth < Depth::zero() {
             panic!("Invalid depth [{depth}]");
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use alloc::string::String;
-
-    #[test]
-    fn test_state() {
-        let mut model = BuhlmannModel::new(BuhlmannConfig::default());
-        let air = Gas::new(0.21, 0.);
-        let nx32 = Gas::new(0.32, 0.);
-        model.record(Depth::from_meters(10.), Time::from_minutes(10.), &air);
-        model.record(Depth::from_meters(15.), Time::from_minutes(15.), &nx32);
-        assert_eq!(model.state.depth.as_meters(), 15.);
-        assert_eq!(model.state.time, Time::from_minutes(25.));
-        assert_eq!(model.state.gas, nx32);
-        assert_eq!(model.state.gf_low_depth, None);
-        assert_ne!(model.state.ox_tox, OxTox::default());
-    }
-
-    #[test]
-    fn test_max_gf_within_ndl() {
-        let gf = (50, 100);
-        let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
-        let air = Gas::air();
-        let record = RecordData {
-            depth: Depth::from_meters(0.),
-            time: Time::zero(),
-            gas: &air,
-        };
-        model.record(record.depth, record.time, record.gas);
-        assert_eq!(model.calc_max_sloped_gf(gf, record.depth), 100);
-    }
-
-    #[test]
-    fn test_max_gf_below_first_stop() {
-        let gf = (50, 100);
-
-        let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
-        let air = Gas::air();
-        let record = RecordData {
-            depth: Depth::from_meters(40.),
-            time: Time::from_minutes(12.),
-            gas: &air,
-        };
-        model.record(record.depth, record.time, record.gas);
-        assert_eq!(model.calc_max_sloped_gf(gf, record.depth), 50);
-    }
-
-    #[test]
-    fn test_max_gf_during_deco() {
-        let gf = (30, 70);
-        let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
-        let air = Gas::air();
-
-        model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
-        model.record(Depth::from_meters(21.), Time::from_minutes(5.), &air);
-        model.record(Depth::from_meters(14.), Time::zero(), &air);
-        assert_eq!(model.calc_max_sloped_gf(gf, Depth::from_meters(14.)), 40);
-    }
-
-    #[test]
-    fn test_gf_slope_point() {
-        let gf = (30, 85);
-        let model = BuhlmannModel::new(BuhlmannConfig::new().with_gradient_factors(gf.0, gf.1));
-        let slope_point =
-            model.gf_slope_point(gf, Depth::from_meters(33.528), Depth::from_meters(30.48));
-        assert_eq!(slope_point, 35);
-    }
-
-    #[test]
-    fn test_initial_supersaturation() {
-        fn extract_supersaturations(model: BuhlmannModel) -> Vec<Supersaturation> {
-            model
-                .compartments
-                .clone()
-                .into_iter()
-                .map(|comp| comp.supersaturation(model.config().surface_pressure, Depth::zero()))
-                .collect::<Vec<Supersaturation>>()
-        }
-
-        let model_initial = BuhlmannModel::default();
-
-        let mut model_with_surface_interval = BuhlmannModel::default();
-        model_with_surface_interval.record(Depth::zero(), Time::from_seconds(999999.), &Gas::air());
-
-        let initial_gfs = extract_supersaturations(model_initial);
-        let surface_interval_gfs = extract_supersaturations(model_with_surface_interval);
-
-        assert_eq!(initial_gfs, surface_interval_gfs);
-    }
-
-    #[test]
-    fn test_updating_config() {
-        let mut model = BuhlmannModel::default();
-        let initial_config = model.config();
-        let new_config = BuhlmannConfig::new()
-            .with_gradient_factors(30, 70)
-            .with_round_ceiling(true)
-            .with_ceiling_type(CeilingType::Adaptive)
-            .with_round_ceiling(true);
-        assert_ne!(initial_config, new_config, "given configs aren't identical");
-
-        model.update_config(new_config).unwrap();
-        let updated_config = model.config();
-        assert_eq!(updated_config, new_config, "new config saved");
-
-        let invalid_config = new_config.with_gradient_factors(0, 150);
-        let update_res = model.update_config(invalid_config);
-        assert_eq!(
-            update_res,
-            Err(ConfigValidationErr {
-                field: String::from("gf"),
-                reason: String::from("GF values have to be in 1-100 range"),
-            }),
-            "invalid config update results in Err"
-        );
-    }
-
-    #[test]
-    fn test_ndl_0_if_in_deco() {
-        let mut model = BuhlmannModel::new(
-            BuhlmannConfig::default()
-                .with_gradient_factors(30, 70)
-                .with_ceiling_type(CeilingType::Actual),
-        );
-        let air = Gas::air();
-        model.record(Depth::from_meters(40.), Time::from_minutes(6.), &air);
-        model.record(Depth::from_meters(9.), Time::zero(), &air);
-        let ndl = model.ndl();
-        assert_eq!(ndl, Time::zero());
     }
 }

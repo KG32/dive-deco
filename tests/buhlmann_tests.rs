@@ -1,5 +1,6 @@
 use dive_deco::{
-    BuhlmannConfig, BuhlmannModel, CeilingType, Deco, DecoModel, Depth, Gas, Supersaturation, Time,
+    BreathingSource, BuhlmannConfig, BuhlmannModel, CeilingType, Deco, DecoModel, Depth, Gas,
+    Supersaturation, Time,
 };
 pub mod fixtures;
 
@@ -11,14 +12,14 @@ fn test_should_panic_on_invalid_depth() {
     model.record(
         Depth::from_meters(-10.),
         Time::from_seconds(1.),
-        &fixtures::gas_air(),
+        &BreathingSource::OpenCircuit(fixtures::gas_air()),
     );
 }
 
 #[test]
 fn test_ceiling() {
     let mut model = fixtures::model_default();
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     model.record(Depth::from_meters(40.), Time::from_minutes(30.), &air);
     model.record(Depth::from_meters(30.), Time::from_minutes(30.), &air);
     let calculated_ceiling = model.ceiling();
@@ -32,7 +33,7 @@ fn test_ceiling() {
 #[test]
 fn test_gfs() {
     let mut model = fixtures::model_default();
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
 
     model.record(Depth::from_meters(50.), Time::from_minutes(20.), &air);
     assert_eq!(
@@ -57,7 +58,7 @@ fn test_gfs() {
 #[test]
 fn test_initial_gfs() {
     let mut model = fixtures::model_default();
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     model.record(Depth::from_meters(0.), Time::zero(), &air);
     let Supersaturation { gf_99, gf_surf } = model.supersaturation();
     assert_eq!(gf_99, 0.);
@@ -69,7 +70,7 @@ fn test_model_records_equality() {
     let mut model1 = fixtures::model_default();
     let mut model2 = fixtures::model_default();
 
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     let test_depth = Depth::from_meters(50.);
     let test_time = Time::from_minutes(100.);
 
@@ -102,7 +103,7 @@ fn test_actual_ndl_calculation() {
     let config = BuhlmannConfig::default().with_ceiling_type(CeilingType::Actual);
     let mut model = BuhlmannModel::new(config);
 
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     let depth = Depth::from_meters(30.);
 
     // with 21/00 at 30m expect NDL 16
@@ -119,7 +120,7 @@ fn test_adaptive_ndl_calculation() {
     let config = BuhlmannConfig::default().with_ceiling_type(CeilingType::Adaptive);
     let mut model = BuhlmannModel::new(config);
 
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     let depth = Depth::from_meters(30.);
 
     // with 21/00 at 30m expect NDL 18 (was 19)
@@ -134,7 +135,7 @@ fn test_adaptive_ndl_calculation() {
 #[test]
 fn test_ndl_cut_off() {
     let mut model = fixtures::model_default();
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
 
     model.record(Depth::from_meters(0.), Time::zero(), &air);
     assert_eq!(model.ndl(), Time::from_minutes(99.));
@@ -147,8 +148,8 @@ fn test_ndl_cut_off() {
 fn test_multi_gas_ndl() {
     let mut model =
         BuhlmannModel::new(BuhlmannConfig::default().with_ceiling_type(CeilingType::Actual));
-    let air = Gas::new(0.21, 0.);
-    let ean_28 = Gas::new(0.28, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
+    let ean_28 = BreathingSource::OpenCircuit(Gas::new(0.28, 0.));
 
     model.record(Depth::from_meters(30.), Time::zero(), &air);
     assert_eq!(model.ndl(), Time::from_minutes(16.));
@@ -164,7 +165,7 @@ fn test_multi_gas_ndl() {
 #[test]
 fn test_ndl_with_gf() {
     let mut model = fixtures::model_gf((70, 70));
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     model.record(Depth::from_meters(20.), Time::zero(), &air);
     assert_eq!(model.ndl(), Time::from_minutes(21.));
 }
@@ -172,7 +173,7 @@ fn test_ndl_with_gf() {
 #[test]
 fn test_altitude() {
     let mut model = BuhlmannModel::new(BuhlmannConfig::new().with_surface_pressure(700));
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     model.record(Depth::from_meters(40.), Time::from_minutes(60.), &air);
     let Supersaturation { gf_surf, .. } = model.supersaturation();
     assert_eq!(gf_surf, 302.3513258479816);
@@ -186,7 +187,7 @@ fn test_example_ceiling_start() {
             .with_surface_pressure(1013),
     );
 
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     // instant drop to 40m on air for 10min
     model.record(Depth::from_meters(40.), Time::from_minutes(10.), &air);
@@ -201,8 +202,8 @@ fn test_example_ceiling() {
             .with_surface_pressure(1013),
     );
 
-    let air = Gas::air();
-    let ean_50 = Gas::new(0.50, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean_50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
 
     model.record(Depth::from_meters(40.), Time::from_minutes(40.), &air);
     model.record(Depth::from_meters(30.), Time::from_minutes(3.), &air);
@@ -218,8 +219,8 @@ fn test_example_ceiling_feet() {
             .with_surface_pressure(1013),
     );
 
-    let air = Gas::air();
-    let ean_50 = Gas::new(0.50, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean_50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
 
     model.record(Depth::from_feet(131.234), Time::from_minutes(40.), &air);
     model.record(Depth::from_feet(98.4252), Time::from_minutes(3.), &air);
@@ -233,7 +234,7 @@ fn test_adaptive_ceiling() {
     let mut model = BuhlmannModel::new(
         BuhlmannConfig::new().with_ceiling_type(dive_deco::CeilingType::Adaptive),
     );
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
     model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
     let ceiling = model.ceiling();
     assert_close_to_abs!(ceiling.as_meters(), 4., 0.5);
@@ -246,8 +247,8 @@ fn test_gradual_ascent_with_deco() {
             .with_gradient_factors(30, 70)
             .with_surface_pressure(1013),
     );
-    let air = Gas::air();
-    let ean_50 = Gas::new(0.50, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean_50 = BreathingSource::OpenCircuit(Gas::new(0.50, 0.));
     model.record(Depth::from_meters(45.), Time::from_minutes(30.), &air);
     loop {
         let depth = model.dive_state().depth;
@@ -262,12 +263,9 @@ fn test_gradual_ascent_with_deco() {
 #[test]
 fn test_cns_otu() {
     let mut model = BuhlmannModel::default();
-    model.record(
-        Depth::from_meters(40.),
-        Time::from_minutes(10.),
-        &Gas::air(),
-    );
-    model.record_travel_with_rate(Depth::from_meters(0.), 10., &Gas::air());
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    model.record(Depth::from_meters(40.), Time::from_minutes(10.), &air);
+    model.record_travel_with_rate(Depth::from_meters(0.), 10., &air);
     assert_close_to_abs!(model.otu(), 12.0, 1.);
 }
 
@@ -275,7 +273,7 @@ fn test_cns_otu() {
 fn test_desaturation_times_are_sane() {
     // Test case ported from C implementation ensuring desaturation times are reasonable
     let mut model = BuhlmannModel::default();
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     // Short deep dive
     model.record_travel_with_rate(Depth::from_meters(40.), 18., &air);
@@ -314,7 +312,7 @@ fn test_deco_cal_tts_low_surface_atm() {
     let mut config = BuhlmannConfig::default();
     config.surface_pressure = surface_p;
     let mut model = BuhlmannModel::new(config);
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
 
     // Dive to 30m (Gauge) -> Absolute = 3000mbar + 800 = 3.8 bar
     let depth = Depth::from_meters(30.);
@@ -334,9 +332,9 @@ fn test_deco_cal_tts_low_surface_atm() {
 fn test_deco_runtime_integrity() {
     // Verify gas switches are respected and deco runtime is logically consistent
     let mut model = BuhlmannModel::default();
-    let air = Gas::air();
-    let ean50 = Gas::new(0.5, 0.0);
-    let oxygen = Gas::new(1.0, 0.0);
+    let air = BreathingSource::OpenCircuit(Gas::air());
+    let ean50 = BreathingSource::OpenCircuit(Gas::new(0.5, 0.0));
+    let oxygen = BreathingSource::OpenCircuit(Gas::new(1.0, 0.0));
 
     let depth = Depth::from_meters(45.);
     model.record_travel_with_rate(depth, 18., &air);

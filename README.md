@@ -8,10 +8,14 @@ The Bühlmann decompression set of parameters is an Haldanian mathematical model
 
 ### Features
 
-- step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas (incl. helium mixes)
+- step-by-step decompression model (ZH-L16C params version) calculations using depth, time and breathing source (OC or CCR)
 - optimized travel calculations using Schreiner equation (analytical solution for linear ascent/descent)
 - NDL (no-decompression limit)
 - GF (gradient factors) ascent profile conservatism
+- CCR (Closed Circuit Rebreather) Support
+  - Constant ppO2 (Setpoint) calculations
+  - Automatic setpoint switching with hysteresis
+  - Diluent and Bailout management
 - current deco runtime / deco stop planner
   - decompression stages as a runtime based on current model state
   - TTS (current time to surface including ascent and all decompression stops)
@@ -158,22 +162,73 @@ println!("{}m = {}s", time.as_minutes(), time.as_seconds()); // 1m = 60s
 assert_eq!(Time::from_minutes(0.5), Time::from_seconds(30.));
 ```
 
-##### Gas
+##### BreathingSource (Gas & CCR)
 
-Breathing gas used in the model.
+The library uses a `BreathingSource` enum to represent what the diver is breathing. This can be either Open Circuit (fixed gas mix) or Closed Circuit (Constant Setpoint).
+
+- `BreathingSource`
+  - `OpenCircuit(GasMix)` - Standard Open Circuit diving.
+  - `ClosedCircuit { setpoint, diluent }` - Constant ppO2 rebreather diving.
+
+##### GasMix (formerly Gas)
+
+`GasMix` represents the physical composition of a gas (O2 and Helium fractions).
 
 - `new(o2, he)`
-  - o2 - oxygen partial pressure
-  - he - helium partial pressure
-- `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
-- `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
-- `maximum_operating_depth(pp_o2_limit)` - maximum operating depth considering o2 partial, with maximum o2 partial pressure as parameter
-- `equivalent_narcotic_depth(depth)` - equivalent depth at which given gas has the same narcotic potential as air. Assumes o2 - n2 1:1 narcotic ratio.
+  - o2 - oxygen fraction (e.g., 0.21)
+  - he - helium fraction (e.g., 0.35)
+- `max_operating_depth(pp_o2_limit)` - maximum operating depth for the mix.
+- `equivalent_narcotic_depth(depth)` - equivalent narcotic depth.
 
 ```rust
-let mix = Gas::new(0.21, 0.);
-mix.partial_pressures(10.); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
-mix.inspired_partial_pressures(10.); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
+use dive_deco::{BreathingSource, GasMix};
+
+let air = BreathingSource::OpenCircuit(GasMix::air());
+let ccr = BreathingSource::ClosedCircuit {
+    setpoint: 1.3,
+    diluent: GasMix::air(),
+};
+```
+
+---
+
+#### CCR Features
+
+##### SetpointController
+
+Manages automatic setpoint switching based on depth.
+
+```rust
+use dive_deco::{SetpointController, SetpointConfig, GasMix};
+
+let config = SetpointConfig {
+    low_setpoint: 0.7,
+    high_setpoint: 1.3,
+    switch_depth_descent: Some(20.0), // Auto-switch to 1.3 at 20m
+    switch_depth_ascent: Some(6.0),   // Auto-switch to 0.7 at 6m
+};
+
+let mut controller = SetpointController::new(config, GasMix::air());
+let source = controller.tick(25.0); // Returns CCR source with 1.3 SP
+```
+
+##### DiveComputer
+
+A high-level manager for switching between CCR and Bailout modes.
+
+```rust
+use dive_deco::{DiveComputer, DiveMode, SetpointConfig, GasMix};
+
+let mut computer = DiveComputer::new(
+    GasMix::air(), // Diluent
+    vec![GasMix::new(0.5, 0.0)], // Bailout gases (EAN50)
+    SetpointConfig::default(),
+    DiveMode::ClosedCircuit
+);
+
+let source = computer.step(30.0); // CCR at 1.3
+computer.switch_to_bailout(0); // Switch to EAN50
+let source_oc = computer.step(30.0); // Open Circuit EAN50
 ```
 
 ---
@@ -184,15 +239,15 @@ mix.inspired_partial_pressures(10.); // PartialPressures { o2: 0.406833, n2: 1.5
 
 A DecoModel trait method that represents a single model record as a datapoint.
 
-- `.record(depth, time, gas)`
+- `.record(depth, time, source)`
   - depth - current depth in meters
   - time - duration in seconds
-  - gas - breathing mix used for the duration of this record
+  - source - `&BreathingSource` used for the duration of this record
 
 ```rust
 let depth = Depth::from_meters(20.);
-let time = 1; // 1 second
-let nitrox = Gas::new(0.32, 0.);
+let time = Time::from_seconds(1.);
+let nitrox = BreathingSource::OpenCircuit(GasMix::new(0.32, 0.));
 // register 1 second at 20m breathing nitrox 32
 model.record(depth, time, &nitrox);
 ```
@@ -201,17 +256,17 @@ model.record(depth, time, &nitrox);
 
 A DecoModel trait method that represents a linear change of depth. It assumes a travel from depth A (current model state depth) to B (target_depth) with rate derived from change of depth and time.
 
-- `.record_travel(target_depth, time, gas)`
+- `.record_travel(target_depth, time, source)`
   - target_depth - final depth at the end of the travel
   - time - duration of travel in seconds
-  - gas: breathing mix using for the duration of this record
+  - source: breathing source used for the duration of this record
 
 ```rust
 let target_depth = Depth::from_meters(30.);
-let descent_time = 4 * 60; // 4 minutes as seconds
-let nitrox = Gas::new(0.32, 0.);
+let descent_time = Time::from_minutes(4.);
+let nitrox = BreathingSource::OpenCircuit(GasMix::new(0.32, 0.));
 // register a 4 minute descent to 30m using nitrox 32
-model.record_travel(target_depth, time, &nitrox);
+model.record_travel(target_depth, descent_time, &nitrox);
 ```
 
 ---
@@ -223,7 +278,7 @@ model.record_travel(target_depth, time, &nitrox);
 All decompression stages calculated to clear deco obligations and resurface in a most efficient way - a partial deco runtime from current model state to resurfacing.
 
 ```text
-.deco(Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>
+.deco(Vec<BreathingSource>) -> Result<DecoRuntime, DecoCalculationError>
 
 <!-- DecoRuntime {
   deco_stages: Vec<DecoStage>,
@@ -254,27 +309,27 @@ let config = BuhlmannConfig::new().with_gradient_factors(30, 70);
 let mut model = BuhlmannModel::new(config);
 
 // bottom gas
-let air = Gas::air();
+let air = BreathingSource::OpenCircuit(GasMix::air());
 // deco gases
-let ean_50 = Gas::new(0.5, 0.);
-let oxygen = Gas::new(1., 0.);
-let available_gas_mixes = vec![
+let ean_50 = BreathingSource::OpenCircuit(GasMix::new(0.5, 0.));
+let oxygen = BreathingSource::OpenCircuit(GasMix::new(1., 0.));
+let available_sources = vec![
     air,
     ean_50,
     oxygen,
 ];
 
 let bottom_depth = Depth::from_meters(40.);
-let bottom_time = 20 * 60; // 20 min
+let bottom_time = Time::from_minutes(20.);
 
-// descent to 40m at a rate of 9min/min using air
-model.record_travel_with_rate(bottom_depth, 9., &available_gas_mixes[0]);
+// descent to 40m at a rate of 9m/min using air
+model.record_travel_with_rate(bottom_depth, 9., &air);
 
 // 20 min bottom time
 model.record(bottom_depth, bottom_time, &air);
 
-// calculate deco runtime providing available gasses
-let deco_runtime = model.deco(available_gas_mixes);
+// calculate deco runtime providing available sources
+let deco_runtime = model.deco(available_sources);
 
 println!("{:#?}", deco_runtime);
 ```
@@ -289,11 +344,10 @@ println!("{:#?}", deco_runtime);
               start_depth: Depth { m: 40.0 },
               end_depth: Depth { m: 22.0 },
               duration: 120,
-              gas: Gas {
-                  o2_pp: 0.21,
-                  n2_pp: 0.79,
-                  he_pp: 0.0,
-              },
+              gas: BreathingSource::OpenCircuit(GasMix {
+                  fraction_o2: 0.21,
+                  fraction_he: 0.0,
+              }),
           },
           DecoStage {
               stage_type: GasSwitch,
@@ -425,15 +479,15 @@ use dive_deco::{ BuhlmannConfig, BuhlmannModel, DecoModel, Gas };
 fn main() {
 let mut model = BuhlmannModel::new(BuhlmannConfig::default());
 
-let nitrox_32 = Gas::new(0.32, 0.);
+let nitrox_32 = BreathingSource::OpenCircuit(GasMix::new(0.32, 0.));
 
 // ceiling after 20 min at 20 meters using EAN32 - ceiling at 0m
-model.record(Depth::from_meters(20.), 20 * 60, &nitrox_32);
-println!("Ceiling: {}m", model.ceiling()); // Ceiling: 0m
+model.record(Depth::from_meters(20.), Time::from_minutes(20.), &nitrox_32);
+println!("Ceiling: {}m", model.ceiling().as_meters()); // Ceiling: 0m
 
 // ceiling after another 42 min at 30 meters using EAN32 - ceiling at 3m
-model.record(Depth::from_meters(30.), 42 * 60, &nitrox_32);
-println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
+model.record(Depth::from_meters(30.), Time::from_minutes(42.), &nitrox_32);
+println!("Ceiling: {},", model.ceiling().as_meters()); // Ceiling: 3.004(..)m
 }
 ```
 

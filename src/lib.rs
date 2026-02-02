@@ -9,8 +9,9 @@ pub use buhlmann::{
 };
 
 pub use common::{
-    CeilingType, Deco, DecoCalculationError, DecoModel, DecoRuntime, DecoStage, DecoStageType,
-    Depth, DepthType, DiveState, Gas, GradientFactors, NDLType, Pressure, RecordData, Sim, Time,
+    BreathingSource, CeilingType, Deco, DecoCalculationError, DecoModel, DecoRuntime, DecoStage,
+    DecoStageType, Depth, DepthType, DiveComputer, DiveMode, DiveState, Gas, GasMix,
+    GradientFactors, NDLType, Pressure, RecordData, SetpointConfig, SetpointController, Sim, Time,
     Unit, Units,
 };
 

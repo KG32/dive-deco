@@ -1,11 +1,11 @@
-use dive_deco::{DecoModel, Depth, Gas, Supersaturation, Time};
+use dive_deco::{BreathingSource, DecoModel, Depth, Gas, Supersaturation, Time};
 pub mod fixtures;
 
 #[test]
 fn test_tmx_gf_surf() {
     let mut model = fixtures::model_gf((100, 100));
 
-    let tmx = Gas::new(0.21, 0.35);
+    let tmx = BreathingSource::OpenCircuit(Gas::new(0.21, 0.35));
 
     model.record(Depth::from_meters(30.), Time::from_minutes(300.), &tmx);
 
@@ -18,7 +18,7 @@ fn test_tmx_gf_surf() {
 fn test_tmx_ndl() {
     let mut model = fixtures::model_gf((30, 70));
 
-    let tmx = Gas::new(0.21, 0.35);
+    let tmx = BreathingSource::OpenCircuit(Gas::new(0.21, 0.35));
 
     model.record(Depth::from_meters(20.), Time::zero(), &tmx);
 
@@ -29,7 +29,7 @@ fn test_tmx_ndl() {
 #[test]
 fn test_heliox_gf_surf() {
     let mut model = fixtures::model_gf((100, 100));
-    let tmx = Gas::new(0.21, 0.79);
+    let tmx = BreathingSource::OpenCircuit(Gas::new(0.21, 0.79));
     model.record(Depth::from_meters(30.), Time::from_minutes(40.), &tmx);
 
     let Supersaturation { gf_surf, .. } = model.supersaturation();

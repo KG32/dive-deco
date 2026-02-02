@@ -1,14 +1,14 @@
-use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
+use dive_deco::{BreathingSource, BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 fn main() {
     let config = BuhlmannConfig::new().with_gradient_factors(30, 70);
     let mut model = BuhlmannModel::new(config);
 
     // bottom gas
-    let air = Gas::air();
+    let air = BreathingSource::OpenCircuit(Gas::air());
     // deco gases
-    let ean_50 = Gas::new(0.5, 0.);
-    let oxygen = Gas::new(1., 0.);
+    let ean_50 = BreathingSource::OpenCircuit(Gas::new(0.5, 0.));
+    let oxygen = BreathingSource::OpenCircuit(Gas::new(1., 0.));
     let available_gas_mixes = vec![air, ean_50, oxygen];
 
     let bottom_depth = Depth::from_meters(40.);

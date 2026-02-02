@@ -1,4 +1,4 @@
-use dive_deco::{BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
+use dive_deco::{BreathingSource, BuhlmannConfig, BuhlmannModel, DecoModel, Depth, Gas, Time};
 
 #[test]
 fn test_deep_air_deco_profile() {
@@ -11,7 +11,7 @@ fn test_deep_air_deco_profile() {
         .with_surface_pressure(1013); // "ATM pressure: 1,013mbar (0m)"
 
     let mut model = BuhlmannModel::new(config);
-    let air = Gas::new(0.21, 0.);
+    let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
 
     // "Descend to 10.0 m in 0:10 min - runtime 0:10 on air"
     model.record_travel(Depth::from_meters(10.), Time::from_seconds(10.), &air);

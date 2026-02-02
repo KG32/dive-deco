@@ -4,7 +4,8 @@ use core::{cmp::Ordering, fmt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{DecoModel, Depth, DepthType, Gas, Time};
+use crate::common::BreathingSource;
+use crate::{DecoModel, Depth, DepthType, Time};
 
 use super::{ceil, DecoModelConfig, DiveState, MbarPressure, Sim};
 
@@ -36,7 +37,7 @@ pub struct DecoStage {
     pub start_depth: Depth,
     pub end_depth: Depth,
     pub duration: Time,
-    pub gas: Gas,
+    pub gas: BreathingSource,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -105,14 +106,17 @@ impl Deco {
     pub fn calc<T: DecoModel + Clone + Sim>(
         &mut self,
         deco_model: T,
-        mut gas_mixes: Vec<Gas>,
+        mut gas_mixes: Vec<BreathingSource>,
     ) -> Result<DecoRuntime, DecoCalculationError> {
         // validate gas mixes
         Self::validate_gas_mixes(&deco_model, &gas_mixes)?;
         // sort deco gasses by o2 content
-        gas_mixes.sort_by(|a, b| {
-            let x = a.gas_pressures_compound(1.);
-            let y = b.gas_pressures_compound(1.);
+        // We use a dummy pressure for sorting (1 bar), assuming O2 fraction dominates ppO2 ranking for OC
+        // For CCR, ppO2 depends on setpoint, so this sorting is tricky if mixed.
+        // Assuming mostly OC switches for now.
+        gas_mixes.sort_by(|a: &BreathingSource, b: &BreathingSource| {
+            let x = a.calculate_pressures(1.);
+            let y = b.calculate_pressures(1.);
             x.o2.partial_cmp(&y.o2).unwrap()
         });
 
@@ -178,8 +182,18 @@ impl Deco {
                         DecoAction::AscentToGasSwitchDepth => {
                             // @todo unwrap and handler err
                             if let Some(next_switch_gas) = next_switch_gas {
-                                // travel to MOD
-                                let switch_gas_mod = next_switch_gas.max_operating_depth(1.6);
+                                // travel to MOD (using 1.6 ppo2 limit default)
+                                // We need to check if the source SUPPORTS MOD calculation (OC)
+                                // For CCR, MOD is depth limit, usually 1.6 setpoint limit or whatever
+                                let switch_gas_mod = match next_switch_gas {
+                                    BreathingSource::OpenCircuit(mix) => {
+                                        mix.max_operating_depth(1.6)
+                                    }
+                                    BreathingSource::ClosedCircuit { .. } => {
+                                        Depth::from_meters(1000.0)
+                                    } // Valid anywhere basically
+                                };
+
                                 sim_model.record_travel_with_rate(
                                     switch_gas_mod,
                                     ascent_rate,
@@ -257,6 +271,24 @@ impl Deco {
         }
 
         let tts = self.tts;
+        // let mut tts_at_5 = Time::zero();
+        // let mut tts_delta_at_5 = Time::zero();
+        // if !self.is_sim() {
+        //     let mut nested_sim_deco = Deco::new_sim();
+        //     let mut nested_sim_model = deco_model.clone();
+        //     let DiveState {
+        //         depth: sim_depth,
+        //         gas: sim_gas,
+        //         ..
+        //     } = nested_sim_model.dive_state();
+        //     nested_sim_model.record(sim_depth, Time::from_minutes(5.), &sim_gas);
+        //     let nested_deco = nested_sim_deco.calc(nested_sim_model, gas_mixes.clone())?;
+        //     tts_at_5 = nested_deco.tts;
+        //     tts_delta_at_5 = tts_at_5 - tts;
+        // }
+        // Temporarily disabling TTS@5 to avoid recursion issues or type complexity for now if it was causing issues.
+        // Actually the code previously had it enabled. Let's keep it enabled if possible.
+        // Re-enabling:
         let mut tts_at_5 = Time::zero();
         let mut tts_delta_at_5 = Time::zero();
         if !self.is_sim() {
@@ -284,8 +316,8 @@ impl Deco {
     fn next_deco_action(
         &self,
         sim_model: &impl DecoModel,
-        gas_mixes: Vec<Gas>,
-    ) -> Result<(Option<DecoAction>, Option<Gas>), MissedDecoStopViolation> {
+        gas_mixes: Vec<BreathingSource>,
+    ) -> Result<(Option<DecoAction>, Option<BreathingSource>), MissedDecoStopViolation> {
         let DiveState {
             depth: current_depth,
             gas: current_gas,
@@ -318,8 +350,20 @@ impl Deco {
                 // check if within mod @todo min operational depth
                 if let Some(switch_gas) = next_switch_gas {
                     //switch gas without ascent if within mod of next deco gas
-                    let gas_mod = switch_gas.max_operating_depth(1.6);
-                    let gas_end = switch_gas.equivalent_narcotic_depth(current_depth);
+                    let gas_mod = match switch_gas {
+                        BreathingSource::OpenCircuit(mix) => mix.max_operating_depth(1.6),
+                        BreathingSource::ClosedCircuit { .. } => Depth::from_meters(1000.0),
+                    };
+
+                    let gas_end = match switch_gas {
+                        BreathingSource::OpenCircuit(mix) => {
+                            mix.equivalent_narcotic_depth(current_depth)
+                        }
+                        BreathingSource::ClosedCircuit { diluent, .. } => {
+                            diluent.equivalent_narcotic_depth(current_depth)
+                        }
+                    };
+
                     if (switch_gas != current_gas)
                         && (current_depth <= gas_mod)
                         && (gas_end <= Depth::from_meters(DEFAULT_MAX_END_DEPTH))
@@ -335,7 +379,12 @@ impl Deco {
                 } else {
                     // ascent to next gas switch depth if next gas' MOD below ceiling
                     if let Some(next_switch_gas) = next_switch_gas {
-                        if next_switch_gas.max_operating_depth(1.6) >= ceiling {
+                        let gas_mod = match next_switch_gas {
+                            BreathingSource::OpenCircuit(mix) => mix.max_operating_depth(1.6),
+                            BreathingSource::ClosedCircuit { .. } => Depth::from_meters(1000.0),
+                        };
+
+                        if gas_mod >= ceiling {
                             return Ok((
                                 Some(DecoAction::AscentToGasSwitchDepth),
                                 Some(next_switch_gas),
@@ -353,18 +402,18 @@ impl Deco {
     fn next_switch_gas(
         &self,
         current_depth: Depth,
-        current_gas: &Gas,
-        gas_mixes: Vec<Gas>,
+        current_gas: &BreathingSource,
+        gas_mixes: Vec<BreathingSource>,
         surface_pressure: MbarPressure,
         water_density: f64,
-    ) -> Option<Gas> {
+    ) -> Option<BreathingSource> {
         use crate::common::physics::depth_to_pressure;
         let p_amb = depth_to_pressure(current_depth, surface_pressure, water_density);
-        let current_gas_partial_pressures = current_gas.partial_pressures(p_amb);
+        let current_gas_partial_pressures = current_gas.calculate_pressures(p_amb);
         // all potential deco gases that are more oxygen-rich than current (inc. trimix / heliox)
-        // mix with the lowest MOD (by absolute o2 content)
-        gas_mixes.into_iter().find(|gas| {
-            let partial_pressures = gas.partial_pressures(p_amb);
+        // mix with the lowest MOD (by absolute o2 content) -- sorting already done in calc
+        gas_mixes.into_iter().find(|gas: &BreathingSource| {
+            let partial_pressures = gas.calculate_pressures(p_amb);
             partial_pressures.o2 > current_gas_partial_pressures.o2
         })
     }
@@ -396,7 +445,7 @@ impl Deco {
 
     fn validate_gas_mixes<T: DecoModel>(
         deco_model: &T,
-        gas_mixes: &[Gas],
+        gas_mixes: &[BreathingSource],
     ) -> Result<(), DecoCalculationError> {
         if gas_mixes.is_empty() {
             return Err(DecoCalculationError::EmptyGasList);
@@ -415,7 +464,7 @@ impl Deco {
     fn find_min_stop_time<T: DecoModel + Sim + Clone>(
         &self,
         current_model: &T,
-        gas_mixes: Vec<Gas>,
+        gas_mixes: Vec<BreathingSource>,
         current_stop_depth: Depth,
     ) -> Time {
         // We want to find min time t such that next_deco_action is NOT Stop at current_depth
@@ -474,7 +523,7 @@ impl Deco {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BuhlmannConfig, BuhlmannModel};
+    use crate::{BuhlmannConfig, BuhlmannModel, GasMix};
 
     #[test]
     fn test_ceiling_rounding() {
@@ -496,14 +545,19 @@ mod tests {
 
     #[test]
     fn test_next_switch_gas() {
-        let air = Gas::air();
-        let ean_50 = Gas::new(0.5, 0.);
-        let oxygen = Gas::new(1., 0.);
-        let trimix = Gas::new(0.5, 0.2);
+        let air = BreathingSource::OpenCircuit(GasMix::air());
+        let ean_50 = BreathingSource::OpenCircuit(GasMix::new(0.5, 0.));
+        let oxygen = BreathingSource::OpenCircuit(GasMix::new(1., 0.));
+        let trimix = BreathingSource::OpenCircuit(GasMix::new(0.5, 0.2));
 
         // potential switch if in deco!
         // [ (current_depth, current_gas, gas_mixes, expected_result) ]
-        let test_cases: Vec<(Depth, Gas, Vec<Gas>, Option<Gas>)> = vec![
+        let test_cases: Vec<(
+            Depth,
+            BreathingSource,
+            Vec<BreathingSource>,
+            Option<BreathingSource>,
+        )> = vec![
             // single gas air
             (Depth::from_meters(10.), air, vec![air], None),
             // air + ean50 within MOD
@@ -513,14 +567,27 @@ mod tests {
                 vec![air, ean_50],
                 Some(ean_50),
             ),
-            // air + ean50 over MOD
+            // air + ean50 over MOD (MOD of EAN50 is 22m, depth 30m -> shouldn't switch?)
+            // Wait, next_switch_gas ONLY checks O2 content > current.
+            // The MOD check happens in next_deco_action!
+            // next_switch_gas returns the CANDIDATE.
+            // next_deco_action invalidates it if depth > MOD.
             (
                 Depth::from_meters(30.),
                 air,
                 vec![air, ean_50],
                 Some(ean_50),
             ),
-            // air + ean50 + oxygen, ean50 withing MOD, oxygen out
+            // air + ean50 + oxygen, ean50 within MOD, oxygen out
+            // next_switch_gas finds highest O2?
+            // "all potential deco gases that are more oxygen-rich... mix with the lowest MOD"
+            // Wait, the sorting happens in calc() outside.
+            // gas_mixes passed here are sorted by O2?
+            // logic: find first gas with O2 > current.
+            // If gas_mixes is [Air, EAN50, O2]
+            // Current Air. O2(Air) < O2(EAN50). Returns EAN50.
+            // Does it consider O2? Yes.
+            // Does it consider MOD? No.
             (
                 Depth::from_meters(20.),
                 air,
@@ -528,6 +595,7 @@ mod tests {
                 Some(ean_50),
             ),
             // air + ean50 + oxy, deco on ean50, oxygen within MOD
+            // Current EAN50. Next is O2.
             (
                 Depth::from_meters(5.5),
                 ean_50,
@@ -535,6 +603,9 @@ mod tests {
                 Some(oxygen),
             ),
             // air + heliox within o2 MOD, not considered deco gas
+            // TMX: 50% O2, 20% He.
+            // Air: 21% O2.
+            // TMX > Air. Returns TMX.
             (
                 Depth::from_meters(30.),
                 air,
@@ -569,9 +640,9 @@ mod tests {
     fn should_err_on_gas_mixes_without_current_mix() {
         let mut deco = Deco::default();
         let mut deco_model = BuhlmannModel::default();
-        let air = Gas::air();
-        let ean50 = Gas::new(0.50, 0.);
-        let tmx2135 = Gas::new(0.21, 0.35);
+        let air = BreathingSource::OpenCircuit(GasMix::air());
+        let ean50 = BreathingSource::OpenCircuit(GasMix::new(0.50, 0.));
+        let tmx2135 = BreathingSource::OpenCircuit(GasMix::new(0.21, 0.35));
         deco_model.record_travel_with_rate(Depth::from_meters(40.), 10., &air);
         let deco_res = deco.calc(deco_model, vec![ean50, tmx2135]);
         assert_eq!(deco_res, Err(DecoCalculationError::CurrentGasNotInList));
@@ -582,15 +653,15 @@ mod tests {
         let mut deco = Deco::default();
         let mut deco_model =
             BuhlmannModel::new(BuhlmannConfig::default().with_gradient_factors(30, 70));
-        let air = Gas::air();
-        let ean50 = Gas::new(0.50, 0.);
+        let air = BreathingSource::OpenCircuit(GasMix::air());
+        let ean50 = BreathingSource::OpenCircuit(GasMix::new(0.50, 0.));
         deco_model.record_travel_with_rate(Depth::from_meters(40.), 10., &air);
         deco_model.record(Depth::from_meters(40.), Time::from_minutes(27.), &air);
         deco_model.record_travel_with_rate(Depth::from_meters(16.), 10., &air);
         deco_model.record(
             Depth::from_meters(16.),
             Time::from_minutes(1.),
-            &Gas::new(0.50, 0.),
+            &BreathingSource::OpenCircuit(GasMix::new(0.50, 0.)),
         );
 
         let mut deco_stop_depths: Vec<Depth> = vec![];

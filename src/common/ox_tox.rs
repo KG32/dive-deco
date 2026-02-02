@@ -127,7 +127,7 @@ impl OxTox {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Gas, Time};
+    use crate::{BreathingSource, GasMix, Time};
 
     #[test]
     fn test_default() {
@@ -144,7 +144,7 @@ mod tests {
         // static depth segment
         let depth = Depth::from_meters(36.);
         let time = Time::from_minutes(20.);
-        let ean_32 = Gas::new(0.32, 0.);
+        let ean_32 = BreathingSource::OpenCircuit(GasMix::new(0.32, 0.));
         let record = RecordData {
             depth,
             time,
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_cns_no_accumulation_low_ppo2() {
         let mut ox_tox = OxTox::default();
-        let air = Gas::new(0.21, 0.);
+        let air = BreathingSource::OpenCircuit(GasMix::new(0.21, 0.));
         let record = RecordData {
             depth: Depth::from_meters(0.),
             time: Time::from_minutes(60.),
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn test_cns_accumulation() {
         let mut ox_tox = OxTox::default();
-        let ean50 = Gas::new(0.5, 0.);
+        let ean50 = BreathingSource::OpenCircuit(GasMix::new(0.5, 0.));
         let record = RecordData {
             depth: Depth::from_meters(22.), // 1.6 ppo2
             time: Time::from_minutes(45.),
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_otu_accumulation() {
         let mut ox_tox = OxTox::default();
-        let oxygen = Gas::new(1.0, 0.);
+        let oxygen = BreathingSource::OpenCircuit(GasMix::new(1.0, 0.));
         let record = RecordData {
             depth: Depth::from_meters(0.), // 1.0 ppo2
             time: Time::from_minutes(60.),
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn test_cns_half_life_elimination() {
         let mut ox_tox = OxTox::default();
-        let ean50 = Gas::new(0.5, 0.);
+        let ean50 = BreathingSource::OpenCircuit(GasMix::new(0.5, 0.));
 
         // Build up some CNS
         let record = RecordData {
@@ -233,10 +233,11 @@ mod tests {
         assert!(cns_start > 30.0, "CNS start {} should be > 30.0", cns_start);
 
         // Surface interval 90 mins (one half life)
+        let surface_gas = BreathingSource::OpenCircuit(GasMix::air());
         let surface_record = RecordData {
             depth: Depth::from_meters(0.),
             time: Time::from_minutes(90.),
-            gas: &Gas::air(),
+            gas: &surface_gas,
         };
         // This will add negligible CNS (air at surface is low PO2) but trigger decay?
         // Actually recalculate_cns adds exposure. Decay is separate or integrated?
@@ -262,7 +263,7 @@ mod tests {
 
         let depth = Depth::from_meters(0.); // Surface
         let time = Time::from_minutes(90.); // 1 half-time
-        let air = Gas::air();
+        let air = BreathingSource::OpenCircuit(GasMix::air());
         let record = RecordData {
             depth,
             time,
@@ -290,7 +291,7 @@ mod tests {
         // This validates the legacy behavior (1.4 Ambient -> ~168m limit).
         let depth = Depth::from_meters(4.); // 1.4 bar ambient
         let time = Time::from_minutes(168.);
-        let oxygen = Gas::new(1.0, 0.);
+        let oxygen = BreathingSource::OpenCircuit(GasMix::new(1.0, 0.));
 
         // precise calculation: depth 4m = 1.4013 bar (fresh/salt agnostic approx)
         // CNS_LOOKUP index for 1.4 should be (1.4 - 0.5)*100 = 90.
@@ -322,7 +323,7 @@ mod tests {
         // This validates the legacy behavior (1.6 Ambient -> ~90m limit).
         let depth = Depth::from_meters(6.); // 1.6 bar ambient
         let time = Time::from_minutes(90.);
-        let oxygen = Gas::new(1.0, 0.);
+        let oxygen = BreathingSource::OpenCircuit(GasMix::new(1.0, 0.));
 
         let record = RecordData {
             depth,
@@ -343,7 +344,7 @@ mod tests {
         let mut ox_tox = OxTox::default();
         // PO2 > 1.8.
         let depth = Depth::from_meters(20.); // 3 bar
-        let oxygen = Gas::new(1.0, 0.);
+        let oxygen = BreathingSource::OpenCircuit(GasMix::new(1.0, 0.));
         let time = Time::from_seconds(400.); // Fallback rate usually matches tail logic
 
         // Fix unused variable warning
@@ -363,10 +364,11 @@ mod tests {
     #[test]
     fn test_otu_surface() {
         let mut ox_tox = OxTox::default();
+        let air = BreathingSource::OpenCircuit(GasMix::air());
         let record = RecordData {
             depth: Depth::zero(),
             time: Time::from_minutes(60.),
-            gas: &Gas::air(),
+            gas: &air,
         };
 
         ox_tox.recalculate_otu(&record, 1013, 1020.0);
@@ -376,7 +378,7 @@ mod tests {
     #[test]
     fn test_otu_segment() {
         let mut ox_tox = OxTox::default();
-        let ean32 = Gas::new(0.32, 0.);
+        let ean32 = BreathingSource::OpenCircuit(GasMix::new(0.32, 0.));
         let record = RecordData {
             depth: Depth::from_meters(36.),
             time: Time::from_minutes(22.),
