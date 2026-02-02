@@ -14,11 +14,12 @@ const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
 pub struct GasMix {
     pub fraction_o2: f64,
     pub fraction_he: f64,
+    pub fraction_n2: f64,
 }
 
 pub type Gas = GasMix; // Compatibility alias, though we will deprecate usage
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PartialPressures {
     pub o2: Pressure,
@@ -70,14 +71,16 @@ impl GasMix {
             panic!("Invalid fractions, can't exceed 1.0 in total");
         }
 
+        let fraction_n2 = round((1.0 - o2_fraction - he_fraction) * 1000.0) / 1000.0;
         Self {
             fraction_o2: o2_fraction,
             fraction_he: he_fraction,
+            fraction_n2,
         }
     }
 
     pub fn fraction_n2(&self) -> f64 {
-        round((1.0 - self.fraction_o2 - self.fraction_he) * 100.0) / 100.0
+        self.fraction_n2
     }
 
     pub fn id(&self) -> String {
@@ -97,7 +100,7 @@ impl GasMix {
     pub fn partial_pressures(&self, ambient_pressure: Pressure) -> PartialPressures {
         PartialPressures {
             o2: self.fraction_o2 * ambient_pressure,
-            n2: self.fraction_n2() * ambient_pressure,
+            n2: self.fraction_n2 * ambient_pressure,
             he: self.fraction_he * ambient_pressure,
         }
     }
@@ -178,7 +181,7 @@ impl BreathingSource {
 
                 // Distribute the inert pressure according to the diluent's ratio
                 let he_ratio = diluent.fraction_he / diluent_inert_fraction;
-                let n2_ratio = diluent.fraction_n2() / diluent_inert_fraction;
+                let n2_ratio = diluent.fraction_n2 / diluent_inert_fraction;
 
                 PartialPressures {
                     o2: effective_pp_o2,

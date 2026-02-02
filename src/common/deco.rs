@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::common::BreathingSource;
 use crate::{DecoModel, Depth, DepthType, Time};
 
-use super::{ceil, DecoModelConfig, DiveState, MbarPressure, Sim};
+use super::{ceil, DecoModelConfig, DecoStopFormatting, DiveState, MbarPressure, Sim};
 
 // @todo move to model config
 const DEFAULT_CEILING_WINDOW: DepthType = 3.;
@@ -61,14 +61,12 @@ pub struct DecoRuntime {
     pub tts_delta_at_5: Time,
 }
 
-#[derive(Debug)]
-struct MissedDecoStopViolation;
-
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DecoCalculationError {
     EmptyGasList,
     CurrentGasNotInList,
+    MissedDecoStopViolation,
 }
 
 impl fmt::Display for DecoCalculationError {
@@ -81,6 +79,9 @@ impl fmt::Display for DecoCalculationError {
                 f,
                 "Available gas mixes must include current gas mix used by deco model"
             ),
+            DecoCalculationError::MissedDecoStopViolation => {
+                write!(f, "Current depth is shallower than mandatory deco stop")
+            }
         }
     }
 }
@@ -111,12 +112,11 @@ impl Deco {
         // validate gas mixes
         Self::validate_gas_mixes(&deco_model, &gas_mixes)?;
         // sort deco gasses by o2 content
-        // We use a dummy pressure for sorting (1 bar), assuming O2 fraction dominates ppO2 ranking for OC
-        // For CCR, ppO2 depends on setpoint, so this sorting is tricky if mixed.
-        // Assuming mostly OC switches for now.
+        // We use a high reference pressure (10 bar / 90m) to ensure CCR setpoints (e.g. 1.3)
+        // are distinguishable from OC mixes and not clamped at surface pressures.
         gas_mixes.sort_by(|a: &BreathingSource, b: &BreathingSource| {
-            let x = a.calculate_pressures(1.);
-            let y = b.calculate_pressures(1.);
+            let x = a.calculate_pressures(10.0);
+            let y = b.calculate_pressures(10.0);
             x.o2.partial_cmp(&y.o2).unwrap()
         });
 
@@ -137,14 +137,19 @@ impl Deco {
             let next_deco_action = self.next_deco_action(&sim_model, gas_mixes.clone());
             if let Err(e) = next_deco_action {
                 return match e {
-                    MissedDecoStopViolation => {
+                    DecoCalculationError::MissedDecoStopViolation => {
                         sim_model.record(
-                            self.deco_stop_depth(ceiling),
+                            self.deco_stop_depth(
+                                ceiling,
+                                sim_model.config().stop_formatting(),
+                                sim_model.config().last_stop_depth(),
+                            ),
                             Time::zero(),
                             &pre_stage_gas,
                         );
                         self.calc(sim_model, gas_mixes)
                     }
+                    _ => Err(e),
                 };
             }
 
@@ -163,7 +168,11 @@ impl Deco {
                         // ascent to min depth (deco stop or surface)
                         DecoAction::AscentToCeil => {
                             sim_model.record_travel_with_rate(
-                                self.deco_stop_depth(ceiling),
+                                self.deco_stop_depth(
+                                    ceiling,
+                                    sim_model.config().stop_formatting(),
+                                    sim_model.config().last_stop_depth(),
+                                ),
                                 ascent_rate,
                                 &pre_stage_gas,
                             );
@@ -246,7 +255,11 @@ impl Deco {
 
                         // decompression stop
                         DecoAction::Stop => {
-                            let stop_depth = self.deco_stop_depth(ceiling);
+                            let stop_depth = self.deco_stop_depth(
+                                ceiling,
+                                sim_model.config().stop_formatting(),
+                                sim_model.config().last_stop_depth(),
+                            );
                             let stop_duration =
                                 self.find_min_stop_time(&sim_model, gas_mixes.clone(), stop_depth);
 
@@ -317,7 +330,7 @@ impl Deco {
         &self,
         sim_model: &impl DecoModel,
         gas_mixes: Vec<BreathingSource>,
-    ) -> Result<(Option<DecoAction>, Option<BreathingSource>), MissedDecoStopViolation> {
+    ) -> Result<(Option<DecoAction>, Option<BreathingSource>), DecoCalculationError> {
         let DiveState {
             depth: current_depth,
             gas: current_gas,
@@ -336,8 +349,13 @@ impl Deco {
             Some(Ordering::Equal | Ordering::Less) => Ok((Some(DecoAction::AscentToCeil), None)),
             Some(Ordering::Greater) => {
                 // check if deco violation
-                if current_depth < self.deco_stop_depth(ceiling) {
-                    return Err(MissedDecoStopViolation);
+                let stop_depth = self.deco_stop_depth(
+                    ceiling,
+                    sim_model.config().stop_formatting(),
+                    sim_model.config().last_stop_depth(),
+                );
+                if current_depth < stop_depth {
+                    return Err(DecoCalculationError::MissedDecoStopViolation);
                 }
 
                 let next_switch_gas = self.next_switch_gas(
@@ -373,7 +391,11 @@ impl Deco {
                 }
 
                 // check if already at deco stop depth
-                let stop_depth = self.deco_stop_depth(ceiling);
+                let stop_depth = self.deco_stop_depth(
+                    ceiling,
+                    sim_model.config().stop_formatting(),
+                    sim_model.config().last_stop_depth(),
+                );
                 if current_depth == stop_depth {
                     Ok((Some(DecoAction::Stop), None))
                 } else {
@@ -438,9 +460,39 @@ impl Deco {
     }
 
     // round ceiling up to the bottom of deco window
-    fn deco_stop_depth(&self, ceiling: Depth) -> Depth {
-        let depth = DEFAULT_CEILING_WINDOW * ceil(ceiling.as_meters() / DEFAULT_CEILING_WINDOW);
-        Depth::from_meters(depth)
+    fn deco_stop_depth(
+        &self,
+        ceiling: Depth,
+        formatting: DecoStopFormatting,
+        last_stop_depth: Depth,
+    ) -> Depth {
+        if ceiling <= Depth::zero() {
+            return Depth::zero();
+        }
+
+        // Calculate raw stop depth based on formatting
+        let calculated_stop = match formatting {
+            DecoStopFormatting::Metric => {
+                // Round up to nearest 3m
+                Depth::from_meters(ceil(ceiling.as_meters() / 3.0) * 3.0)
+            }
+            DecoStopFormatting::Imperial => {
+                // Round up to nearest 10ft (3.048m)
+                Depth::from_feet(ceil(ceiling.as_feet() / 10.0) * 10.0)
+            }
+            DecoStopFormatting::Continuous => {
+                // "Surf the gradient" - exact ceiling depth
+                ceiling
+            }
+        };
+
+        // Ensure we don't stop shallower than the user's "Last Stop" preference
+        // unless we are clear to surface.
+        if calculated_stop < last_stop_depth {
+            last_stop_depth
+        } else {
+            calculated_stop
+        }
     }
 
     fn validate_gas_mixes<T: DecoModel>(
@@ -490,7 +542,11 @@ impl Deco {
                             // If we are still told to stop, check if the calculated stop depth
                             // is STILL the same as current_stop_depth.
                             let ceiling = sim.ceiling();
-                            let new_stop_depth = self.deco_stop_depth(ceiling);
+                            let new_stop_depth = self.deco_stop_depth(
+                                ceiling,
+                                sim.config().stop_formatting(),
+                                sim.config().last_stop_depth(),
+                            );
                             // If calculated stop depth is shallower, we can ascend -> condmet
                             // If it's same, we still need to wait -> cond false
                             new_stop_depth < current_stop_depth
@@ -538,7 +594,11 @@ mod tests {
         let deco = Deco::default();
         for case in test_cases.into_iter() {
             let (input_depth, expected_depth) = case;
-            let res = deco.deco_stop_depth(input_depth);
+            let res = deco.deco_stop_depth(
+                input_depth,
+                DecoStopFormatting::Metric,
+                Depth::from_meters(3.0),
+            );
             assert_eq!(res, expected_depth);
         }
     }

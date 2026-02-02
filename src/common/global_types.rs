@@ -23,3 +23,15 @@ pub enum CeilingType {
     Actual,
     Adaptive,
 }
+
+/// Defines how decompression stops are rounded/calculated.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DecoStopFormatting {
+    /// Standard Metric: Stops at 3m, 6m, 9m...
+    Metric,
+    /// Standard Imperial: Stops at 10ft, 20ft, 30ft...
+    Imperial,
+    /// Continuous: Stops at exact ceiling depth (Continuous Decompression)
+    Continuous,
+}

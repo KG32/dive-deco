@@ -1,4 +1,4 @@
-use dive_deco::{BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel};
+use dive_deco::{BuhlmannConfig, BuhlmannModel, CeilingType, DecoModel, DecoStopFormatting, Depth};
 
 fn main() {
     // model with default config (GF 100/100)
@@ -15,6 +15,8 @@ fn main() {
         ceiling_type: CeilingType::Actual,
         round_ceiling: false,
         recalc_all_tissues_m_values: true,
+        stop_formatting: DecoStopFormatting::Metric,
+        last_stop_depth: Depth::from_meters(3.0),
     };
     let model_2 = BuhlmannModel::new(config_instance);
     println!("{:?}", model_2.config());

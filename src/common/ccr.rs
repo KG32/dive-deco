@@ -1,4 +1,5 @@
 use crate::common::gas::{BreathingSource, GasMix};
+use crate::{BuhlmannModel, Deco, DecoModel, DecoRuntime, Time};
 use alloc::vec::Vec;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -149,6 +150,13 @@ pub struct DiveComputer {
     pub mode: DiveMode,
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DivePlan {
+    pub ccr_runtime: DecoRuntime,
+    pub bailout_runtime: DecoRuntime,
+}
+
 impl DiveComputer {
     pub fn new(
         diluent: GasMix,
@@ -192,5 +200,68 @@ impl DiveComputer {
 
     pub fn switch_to_ccr(&mut self) {
         self.mode = DiveMode::ClosedCircuit;
+    }
+
+    /// Calculates TTS and Decompression stops for both CCR (Primary) and OC (Bailout) scenarios.
+    pub fn plan_dive(
+        &self,
+        current_model: &BuhlmannModel,
+    ) -> Result<DivePlan, crate::DecoCalculationError> {
+        // 1. Primary CCR Plan
+        let mut ccr_deco = Deco::default();
+        let current_source = current_model.dive_state().gas;
+        // Include current source to satisfy Deco's requirement of current gas being in list
+        let ccr_plan = ccr_deco.calc(current_model.clone(), vec![current_source])?;
+
+        // 2. Bailout OC Plan
+        let mut bailout_deco = Deco::default();
+        let mut bailout_model = current_model.clone();
+        let current_depth = bailout_model.dive_state().depth;
+
+        // Simple Bailout Logic: Switch to the best available OC gas immediately
+        // Filter available bailout gases to find the one with highest safe PO2
+        let best_bailout = self
+            .bailout_gases
+            .iter()
+            .filter(|g| {
+                let p_amb = crate::common::physics::depth_to_pressure(
+                    current_depth,
+                    current_model.config().surface_pressure,
+                    current_model.config().water_density,
+                );
+                // Hardcoded 1.6 limit for emergency bailout switch.
+                // Using 1.61 to handle minor floats/density variations at exactly 6m on salt water.
+                g.partial_pressures(p_amb).o2 <= 1.61
+            })
+            // Find the richest (highest O2) gas available at this depth
+            .max_by(|a, b| a.fraction_o2.partial_cmp(&b.fraction_o2).unwrap())
+            .unwrap_or(&self.diluent_supply);
+
+        // Record the switch event in the simulation
+        bailout_model.record(
+            current_depth,
+            Time::zero(),
+            &BreathingSource::OpenCircuit(*best_bailout),
+        );
+
+        // Calculate the rest of the ascent using all available bailout gases
+        let mut bailout_sources: Vec<BreathingSource> = self
+            .bailout_gases
+            .iter()
+            .map(|g| BreathingSource::OpenCircuit(*g))
+            .collect();
+
+        // Ensure current bailout gas is in the list
+        let current_bailout_gas = BreathingSource::OpenCircuit(*best_bailout);
+        if !bailout_sources.contains(&current_bailout_gas) {
+            bailout_sources.push(current_bailout_gas);
+        }
+
+        let bailout_plan = bailout_deco.calc(bailout_model, bailout_sources)?;
+
+        Ok(DivePlan {
+            ccr_runtime: ccr_plan,
+            bailout_runtime: bailout_plan,
+        })
     }
 }

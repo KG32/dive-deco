@@ -1,5 +1,5 @@
 use crate::common::deco::{DecoCalculationError, DecoRuntime};
-use crate::common::global_types::{CeilingType, MbarPressure};
+use crate::common::global_types::{CeilingType, DecoStopFormatting, MbarPressure};
 use crate::common::ox_tox::OxTox;
 use crate::common::{AscentRatePerMinute, BreathingSource, Cns, Otu};
 use crate::common::{Depth, Time};
@@ -32,6 +32,8 @@ pub trait DecoModelConfig {
     fn ceiling_type(&self) -> CeilingType;
     fn round_ceiling(&self) -> bool;
     fn water_density(&self) -> f64;
+    fn stop_formatting(&self) -> DecoStopFormatting;
+    fn last_stop_depth(&self) -> Depth;
 }
 
 #[derive(Debug, Clone)]

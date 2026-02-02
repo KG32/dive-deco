@@ -1,7 +1,7 @@
 use crate::{
     common::{
-        AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactor, GradientFactors,
-        MbarPressure,
+        AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, DecoStopFormatting, Depth,
+        GradientFactor, GradientFactors, MbarPressure,
     },
     CeilingType,
 };
@@ -27,6 +27,8 @@ pub struct BuhlmannConfig {
     pub round_ceiling: bool,
     pub recalc_all_tissues_m_values: bool,
     pub water_density: f64,
+    pub stop_formatting: DecoStopFormatting,
+    pub last_stop_depth: Depth,
 }
 
 impl BuhlmannConfig {
@@ -78,6 +80,16 @@ impl BuhlmannConfig {
         self.water_density = 1000.0 + (code as f64 * 10.0);
         self
     }
+
+    pub fn with_stop_formatting(mut self, formatting: DecoStopFormatting) -> Self {
+        self.stop_formatting = formatting;
+        self
+    }
+
+    pub fn with_last_stop_depth(mut self, depth: Depth) -> Self {
+        self.last_stop_depth = depth;
+        self
+    }
 }
 
 impl Default for BuhlmannConfig {
@@ -91,6 +103,8 @@ impl Default for BuhlmannConfig {
             recalc_all_tissues_m_values: true,
             // Default to EN13319 standard (1030 kg/m3)
             water_density: crate::common::WaterDensities::EN13319,
+            stop_formatting: DecoStopFormatting::Metric,
+            last_stop_depth: Depth::from_meters(3.0),
         }
     }
 }
@@ -130,6 +144,14 @@ impl DecoModelConfig for BuhlmannConfig {
 
     fn water_density(&self) -> f64 {
         self.water_density
+    }
+
+    fn stop_formatting(&self) -> DecoStopFormatting {
+        self.stop_formatting
+    }
+
+    fn last_stop_depth(&self) -> Depth {
+        self.last_stop_depth
     }
 }
 

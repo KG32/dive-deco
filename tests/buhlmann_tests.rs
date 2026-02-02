@@ -40,7 +40,7 @@ fn test_gfs() {
         model.supersaturation(),
         Supersaturation {
             gf_99: 0.,
-            gf_surf: 195.98203494812856
+            gf_surf: 195.98203494813478
         }
     );
 
@@ -49,8 +49,8 @@ fn test_gfs() {
     assert_eq!(
         model.supersaturation(),
         Supersaturation {
-            gf_99: 0.,
-            gf_surf: 210.3133762617861
+            gf_99: 0.0,
+            gf_surf: 210.3133762617924
         }
     );
 }
@@ -176,7 +176,7 @@ fn test_altitude() {
     let air = BreathingSource::OpenCircuit(Gas::new(0.21, 0.));
     model.record(Depth::from_meters(40.), Time::from_minutes(60.), &air);
     let Supersaturation { gf_surf, .. } = model.supersaturation();
-    assert_eq!(gf_surf, 302.3513258479816);
+    assert_eq!(gf_surf, 302.3513258479962);
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn test_example_ceiling_start() {
 
     // instant drop to 40m on air for 10min
     model.record(Depth::from_meters(40.), Time::from_minutes(10.), &air);
-    assert_eq!(model.ceiling().as_meters(), 12.925502817776621);
+    assert_eq!(model.ceiling().as_meters(), 12.925502817777206);
 }
 
 #[test]
@@ -208,7 +208,7 @@ fn test_example_ceiling() {
     model.record(Depth::from_meters(40.), Time::from_minutes(40.), &air);
     model.record(Depth::from_meters(30.), Time::from_minutes(3.), &air);
     model.record(Depth::from_meters(21.), Time::from_minutes(10.), &ean_50);
-    assert_eq!(model.ceiling().as_meters(), 12.51628876257663);
+    assert_eq!(model.ceiling().as_meters(), 12.516288762576789);
 }
 
 #[test]
@@ -225,8 +225,8 @@ fn test_example_ceiling_feet() {
     model.record(Depth::from_feet(131.234), Time::from_minutes(40.), &air);
     model.record(Depth::from_feet(98.4252), Time::from_minutes(3.), &air);
     model.record(Depth::from_feet(68.8976), Time::from_minutes(10.), &ean_50);
-    assert_eq!(model.ceiling().as_feet(), 41.06407617494764);
-    assert_eq!(model.ceiling().as_meters(), 12.51633001760148);
+    assert_eq!(model.ceiling().as_feet(), 41.064076174948156);
+    assert_eq!(model.ceiling().as_meters(), 12.516330017601637);
 }
 
 #[test]

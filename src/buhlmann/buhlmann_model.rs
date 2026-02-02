@@ -375,9 +375,16 @@ impl BuhlmannModel {
     pub fn supersaturation(&self) -> Supersaturation {
         let mut acc_gf_99 = 0.;
         let mut acc_gf_surf = 0.;
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(
+            self.state.depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+        let p_surf = self.config.surface_pressure as f64 / 1000.0;
+
         for comp in self.compartments.iter() {
-            let Supersaturation { gf_99, gf_surf } =
-                comp.supersaturation(self.config.surface_pressure, self.state.depth);
+            let Supersaturation { gf_99, gf_surf } = comp.supersaturation(p_amb, p_surf);
             if gf_99 > acc_gf_99 {
                 acc_gf_99 = gf_99;
             }
@@ -450,9 +457,16 @@ impl BuhlmannModel {
     }
 
     fn recalculate_compartments(&mut self, record: &RecordData) {
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(
+            record.depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+        let inspired_pp = record.gas.inspired_partial_pressures(p_amb);
         let (gf_low, gf_high) = self.config.gf;
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(record, gf_high, self.config.surface_pressure);
+            compartment.recalculate(p_amb, inspired_pp, record.time, gf_high);
         }
 
         // recalc
@@ -474,8 +488,15 @@ impl BuhlmannModel {
             time: Time::zero(),
             gas: record.gas,
         };
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(
+            record.depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+        let inspired_pp = record.gas.inspired_partial_pressures(p_amb);
         for compartment in self.compartments.iter_mut() {
-            compartment.recalculate(&recalc_record, max_gf, self.config.surface_pressure);
+            compartment.recalculate(p_amb, inspired_pp, recalc_record.time, max_gf);
         }
     }
 
@@ -484,7 +505,13 @@ impl BuhlmannModel {
         record: &RecordData,
         max_gf: GradientFactor,
     ) {
-        let surface_pressure = self.config.surface_pressure;
+        use crate::common::physics::depth_to_pressure;
+        let p_amb = depth_to_pressure(
+            record.depth,
+            self.config.surface_pressure,
+            self.config.water_density,
+        );
+        let inspired_pp = record.gas.inspired_partial_pressures(p_amb);
         let leading = self.leading_comp_mut();
 
         // recalculate leading tissue with max gf
@@ -493,7 +520,12 @@ impl BuhlmannModel {
             time: Time::zero(),
             gas: record.gas,
         };
-        leading.recalculate(&leading_tissue_recalc_record, max_gf, surface_pressure);
+        leading.recalculate(
+            p_amb,
+            inspired_pp,
+            leading_tissue_recalc_record.time,
+            max_gf,
+        );
     }
 
     fn recalculate_ox_tox(&mut self, record: &RecordData) {

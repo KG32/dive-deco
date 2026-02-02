@@ -2,6 +2,7 @@ use dive_deco::{
     BreathingSource, BuhlmannModel, DecoModel, Depth, DiveComputer, DiveMode, GasMix,
     SetpointConfig, SetpointController, Time,
 };
+pub mod fixtures;
 
 #[test]
 fn test_ccr_breathing_source_pressures() {
@@ -142,4 +143,93 @@ fn test_ccr_deco_calculation() {
     }
 
     println!("CCR TTS: {:?}", deco_runtime.tts);
+}
+
+#[test]
+fn test_dive_computer_planning() {
+    let config = SetpointConfig::default();
+    let diluent = GasMix::air();
+    let bailout_1 = GasMix::new(0.32, 0.0); // EAN32
+    let bailout_2 = GasMix::new(0.50, 0.0); // EAN50
+
+    let computer = DiveComputer::new(
+        diluent,
+        vec![bailout_1, bailout_2],
+        config,
+        DiveMode::ClosedCircuit,
+    );
+    let mut model = fixtures::model_gf((30, 70));
+
+    // Deep dive: 45m for 30 mins
+    model.record(
+        Depth::from_meters(45.0),
+        Time::from_minutes(30.0),
+        &BreathingSource::ClosedCircuit {
+            setpoint: 1.3,
+            diluent,
+        },
+    );
+
+    let plan = computer.plan_dive(&model).unwrap();
+
+    // Verify CCR plan is populated
+    assert!(plan.ccr_runtime.tts > Time::zero());
+    assert!(plan.ccr_runtime.deco_stages.len() > 0);
+
+    // Verify Bailout plan is populated
+    assert!(plan.bailout_runtime.tts > Time::zero());
+    assert!(plan.bailout_runtime.deco_stages.len() > 0);
+
+    let first_bailout_stage = &plan.bailout_runtime.deco_stages[0];
+    assert!(matches!(
+        first_bailout_stage.gas,
+        BreathingSource::OpenCircuit(_)
+    ));
+}
+
+#[test]
+fn test_bailout_gas_selection() {
+    let config = SetpointConfig::default();
+    let air = GasMix::air();
+    let ean50 = GasMix::new(0.50, 0.0);
+    let oxygen = GasMix::new(1.0, 0.0);
+
+    let computer = DiveComputer::new(
+        air,
+        vec![air, ean50, oxygen],
+        config,
+        DiveMode::ClosedCircuit,
+    );
+    let mut model = BuhlmannModel::default();
+
+    // At 21m (3.1 bar): Oxygen PO2 = 3.1. EAN50 PO2 = 1.55. Air PO2 = 0.65.
+    // Best bailout should be EAN50.
+    model.record(
+        Depth::from_meters(21.0),
+        Time::from_minutes(10.0),
+        &BreathingSource::ClosedCircuit {
+            setpoint: 1.3,
+            diluent: air,
+        },
+    );
+
+    let plan = computer.plan_dive(&model).unwrap();
+    let first_gas = plan.bailout_runtime.deco_stages[0].gas;
+    assert_eq!(first_gas.fraction_o2(), 0.50);
+
+    // At 5.5m (1.56 bar on salt water): Oxygen PO2 = 1.56.
+    // Best bailout should be Oxygen.
+    let mut model_shallow = BuhlmannModel::default();
+    model_shallow.record(
+        Depth::from_meters(5.5),
+        Time::from_minutes(60.0), // Get some deco
+        &BreathingSource::ClosedCircuit {
+            setpoint: 1.3,
+            diluent: air,
+        },
+    );
+
+    let plan_shallow = computer.plan_dive(&model_shallow).unwrap();
+    let first_gas_shallow = plan_shallow.bailout_runtime.deco_stages[0].gas;
+    assert_eq!(first_gas_shallow.fraction_o2(), 1.0);
 }

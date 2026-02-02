@@ -1,8 +1,10 @@
-use super::zhl_values::{ZHLParam, ZHLParams};
+use super::zhl_values::{
+    ZHLParam, ZHLParams, HE_DECAY_1S, HE_DECAY_60S, N2_DECAY_1S, N2_DECAY_60S,
+};
 use crate::{
     common::{
-        abs, exp, exp2, powf, BreathingSource, Depth, GasMix, GradientFactor, InertGas,
-        MbarPressure, PartialPressures, Pressure, RecordData,
+        abs, exp, BreathingSource, Depth, GasMix, GradientFactor, InertGas, PartialPressures,
+        Pressure,
     },
     BuhlmannConfig, Time,
 };
@@ -34,10 +36,6 @@ pub struct Compartment {
     pub params: ZHLParams,
     // Buhlmann model config (gradient factors, surface pressure)
     model_config: BuhlmannConfig,
-    // reciprocal of decay constant for He (1 / (half_time * 60))
-    pub he_factor: f64,
-    // reciprocal of decay constant for N2 (1 / (half_time * 60))
-    pub n2_factor: f64,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,10 +63,6 @@ impl Compartment {
         let n2_k = ln2 / n2_half_time;
         let he_k = ln2 / he_half_time;
 
-        // Precalculate reciprocal of half-time in seconds
-        let n2_factor = 1.0 / (n2_half_time * 60.0);
-        let he_factor = 1.0 / (he_half_time * 60.0);
-
         let mut compartment = Self {
             no,
             he_k,
@@ -81,32 +75,27 @@ impl Compartment {
             m_value_calc: 0., // initial, recalculated later
             min_tolerable_amb_pressure: 0.,
             model_config,
-            he_factor,
-            n2_factor,
         };
 
         // calculate initial minimal tolerable ambient pressure
         let (_, gf_high) = compartment.model_config.gf;
-        compartment.m_value_raw = compartment.m_value(
-            Depth::zero(),
-            compartment.model_config.surface_pressure,
-            100,
-        );
+        compartment.m_value_raw = compartment.m_value(p_amb, 100);
         compartment.m_value_calc = compartment.m_value_raw;
         compartment.min_tolerable_amb_pressure = compartment.min_tolerable_amb_pressure(gf_high);
 
         compartment
     }
 
-    // recalculate tissue inert gasses saturation and tolerable pressure
     pub fn recalculate(
         &mut self,
-        record: &RecordData,
+        p_amb: Pressure,
+        inspired_pp: PartialPressures,
+        time: Time,
         max_gf: GradientFactor,
-        surface_pressure: MbarPressure,
     ) {
+        // 1. Update Tissue Loading
         let (he_inert_pressure, n2_inert_pressure) =
-            self.compartment_inert_pressure(record, surface_pressure);
+            self.compartment_inert_pressure(inspired_pp, time);
 
         self.he_ip = he_inert_pressure;
         self.n2_ip = n2_inert_pressure;
@@ -114,16 +103,29 @@ impl Compartment {
 
         if self.total_ip.is_nan() {
             println!(
-                "recalculate (Haldane) NaN detected: n2_ip={}, he_ip={}, record={:?}",
-                self.n2_ip, self.he_ip, record
+                "recalculate (Haldane) NaN detected: n2_ip={}, he_ip={}",
+                self.n2_ip, self.he_ip
             );
         }
 
-        // @todo m_value tuple
-        self.m_value_raw = self.m_value(record.depth, surface_pressure, 100);
-        self.m_value_calc = self.m_value(record.depth, surface_pressure, max_gf);
+        // 2. Calculate Weighted Params ONCE
+        let weighted_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
+        let (_, a_weighted, b_weighted) = weighted_params;
 
-        self.min_tolerable_amb_pressure = self.min_tolerable_amb_pressure(max_gf);
+        // 3. Calculate Raw M-Value (GF 100)
+        self.m_value_raw = a_weighted + (p_amb / b_weighted);
+
+        // 4. Calculate Adjusted M-Value (GF Low/High)
+        if max_gf == 100 {
+            // Optimization: If GF is 100, skip the adjustment math
+            self.m_value_calc = self.m_value_raw;
+            self.min_tolerable_amb_pressure = (self.total_ip - a_weighted) * b_weighted;
+        } else {
+            // Apply GF Scaling
+            let (_, a_calc, b_calc) = self.max_gf_adjusted_zhl_params(weighted_params, max_gf);
+            self.m_value_calc = a_calc + (p_amb / b_calc);
+            self.min_tolerable_amb_pressure = (self.total_ip - a_calc) * b_calc;
+        }
     }
 
     // tissue ceiling as depth
@@ -140,72 +142,47 @@ impl Compartment {
         ceiling_depth
     }
 
-    // tissue supersaturation (gf99, surface gf)
-    pub fn supersaturation(&self, surface_pressure: MbarPressure, depth: Depth) -> Supersaturation {
-        use crate::common::physics::depth_to_pressure;
-
-        let p_surf = (surface_pressure as f64) / 1000.;
-        let p_amb = depth_to_pressure(depth, surface_pressure, self.model_config.water_density);
-
-        let m_value = self.m_value_raw;
-        let m_value_surf = self.m_value(Depth::zero(), surface_pressure, 100);
+    pub fn supersaturation(&self, p_amb: Pressure, p_surf: Pressure) -> Supersaturation {
+        let m_value = self.m_value(p_amb, 100);
+        let m_value_surf = self.m_value(p_surf, 100);
         let gf_99 = ((self.total_ip - p_amb) / (m_value - p_amb)) * 100.;
         let gf_surf = ((self.total_ip - p_surf) / (m_value_surf - p_surf)) * 100.;
 
         Supersaturation { gf_99, gf_surf }
     }
 
-    fn m_value(
-        &self,
-        depth: Depth,
-        surface_pressure: MbarPressure,
-        max_gf: GradientFactor,
-    ) -> Pressure {
-        use crate::common::physics::depth_to_pressure;
-
+    fn m_value(&self, p_amb: Pressure, max_gf: GradientFactor) -> Pressure {
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
         let (_, a_coeff_adjusted, b_coeff_adjusted) =
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
 
-        // p_amb logic updated to use water density
-        let p_amb = depth_to_pressure(depth, surface_pressure, self.model_config.water_density);
-
         a_coeff_adjusted + (p_amb / b_coeff_adjusted)
     }
 
-    // tissue inert gasses pressure after record
     fn compartment_inert_pressure(
         &self,
-        record: &RecordData,
-        surface_pressure: MbarPressure,
+        inspired_pp: PartialPressures,
+        time: Time,
     ) -> (Pressure, Pressure) {
         // (he, n2)
-        let RecordData { depth, time, gas } = record;
-        // p_amb logic updated to use water density
-        use crate::common::physics::depth_to_pressure;
-        let p_amb = depth_to_pressure(*depth, surface_pressure, self.model_config.water_density);
         let PartialPressures {
-            n2: n2_pp,
-            he: he_pp,
+            n2: n2_inspired,
+            he: he_inspired_pp,
             ..
-        } = gas.inspired_partial_pressures(p_amb);
-
-        // partial pressure of inert gases in inspired gas (adjusted alveoli water vapor pressure)
-        let he_inspired_pp = he_pp;
-        let n2_inspired = n2_pp;
+        } = inspired_pp;
 
         // tissue saturation pressure change for inert gasses
         let he_p_comp_delta = self.compartment_pressure_delta_haldane(
             InertGas::Helium,
             he_inspired_pp,
-            *time,
-            self.he_factor,
+            time,
+            self.he_k,
         );
         let n2_p_comp_delta = self.compartment_pressure_delta_haldane(
             InertGas::Nitrogen,
             n2_inspired,
-            *time,
-            self.n2_factor,
+            time,
+            self.n2_k,
         );
 
         // inert gasses pressures after applying delta P
@@ -240,14 +217,7 @@ impl Compartment {
             println!("NaN detected: n2_ip={}, he_ip={}", self.n2_ip, self.he_ip);
         }
 
-        // Update M-values
-        let (_, _gf_high) = self.model_config.gf;
-        self.m_value_raw = self.m_value(
-            Depth::zero(), // m_value_raw is typically calculated at surface pressure (std behavior)
-            self.model_config.surface_pressure,
-            100,
-        );
-        // Calling code is expected to call recalculate() with the final depth after travel
+        // Calling code is expected to call recalculate() with the final p_amb after travel
         // to correctly update min_tolerable_pressure and m_value_calc.
     }
 
@@ -261,7 +231,8 @@ impl Compartment {
     ) -> f64 {
         if abs(r) < 1e-9 {
             // Fallback to Haldane if rate is effectively zero (constant depth)
-            return p_t_0 + (p_i_0 - p_t_0) * (1.0 - powf(2.0, -t * k / 0.69314718056));
+            // P = P_i + (P_old - P_i) * e^(-k * t)
+            return p_t_0 + (p_i_0 - p_t_0) * (1.0 - exp(-k * t));
         }
         let e_kt = exp(-k * t);
         p_i_0 + r * (t - 1.0 / k) - (p_i_0 - p_t_0 - r / k) * e_kt
@@ -273,16 +244,32 @@ impl Compartment {
         inert_gas: InertGas,
         gas_inspired_p: Pressure,
         time: Time,
-        factor: f64,
+        k: f64,
     ) -> Pressure {
         let inert_gas_load = match inert_gas {
             InertGas::Helium => self.he_ip,
             InertGas::Nitrogen => self.n2_ip,
         };
 
-        // (Pi - Po)(1 - 2^(-t/half_time))
-        // factor is 1/(half_time_seconds)
-        let p_delta = 1. - exp2(-time.as_seconds() * factor);
+        let t_sec = time.as_seconds();
+        let idx = (self.no - 1) as usize;
+        let p_delta = if (t_sec - 1.0).abs() < f64::EPSILON {
+            // Optimization: LUT for 1s
+            match inert_gas {
+                InertGas::Nitrogen => N2_DECAY_1S[idx],
+                InertGas::Helium => HE_DECAY_1S[idx],
+            }
+        } else if (t_sec - 60.0).abs() < f64::EPSILON {
+            // Optimization: LUT for 60s
+            match inert_gas {
+                InertGas::Nitrogen => N2_DECAY_60S[idx],
+                InertGas::Helium => HE_DECAY_60S[idx],
+            }
+        } else {
+            // Fallback: Standard calculation
+            // P = P_i + (P_old - P_i) * (1 - e^(-k * t))
+            1. - exp(-time.as_minutes() * k)
+        };
 
         (gas_inspired_p - inert_gas_load) * p_delta
     }
@@ -302,6 +289,14 @@ impl Compartment {
         he_pp: Pressure,
         n2_pp: Pressure,
     ) -> (ZHLParam, ZHLParam, ZHLParam) {
+        let (n2_half_time, n2_a_coeff, n2_b_coeff, he_half_time, he_a_coeff, he_b_coeff) =
+            self.params;
+
+        // OPTIMIZATION: Fast path for Air/Nitrox (No Helium)
+        if he_pp <= f64::EPSILON {
+            return (n2_half_time, n2_a_coeff, n2_b_coeff);
+        }
+
         fn weighted_param(
             he_param: ZHLParam,
             he_pp: Pressure,
@@ -313,8 +308,7 @@ impl Compartment {
             }
             ((he_param * he_pp) + (n2_param * n2_pp)) / (he_pp + n2_pp)
         }
-        let (n2_half_time, n2_a_coeff, n2_b_coeff, he_half_time, he_a_coeff, he_b_coeff) =
-            self.params;
+
         (
             weighted_param(he_half_time, he_pp, n2_half_time, n2_pp),
             weighted_param(he_a_coeff, he_pp, n2_a_coeff, n2_pp),
