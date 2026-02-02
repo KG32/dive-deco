@@ -17,6 +17,7 @@ fn main() {
         recalc_all_tissues_m_values: true,
         stop_formatting: DecoStopFormatting::Metric,
         last_stop_depth: Depth::from_meters(3.0),
+        min_pp_o2: 0.18,
     };
     let model_2 = BuhlmannModel::new(config_instance);
     println!("{:?}", model_2.config());

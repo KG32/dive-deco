@@ -1,7 +1,7 @@
 use crate::{
     common::{
         AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, DecoStopFormatting, Depth,
-        GradientFactor, GradientFactors, MbarPressure,
+        GradientFactor, GradientFactors, MbarPressure, Pressure,
     },
     CeilingType,
 };
@@ -29,6 +29,7 @@ pub struct BuhlmannConfig {
     pub water_density: f64,
     pub stop_formatting: DecoStopFormatting,
     pub last_stop_depth: Depth,
+    pub min_pp_o2: Pressure,
 }
 
 impl BuhlmannConfig {
@@ -90,6 +91,11 @@ impl BuhlmannConfig {
         self.last_stop_depth = depth;
         self
     }
+
+    pub fn with_min_pp_o2(mut self, min_pp_o2: f64) -> Self {
+        self.min_pp_o2 = min_pp_o2;
+        self
+    }
 }
 
 impl Default for BuhlmannConfig {
@@ -105,6 +111,7 @@ impl Default for BuhlmannConfig {
             water_density: crate::common::WaterDensities::EN13319,
             stop_formatting: DecoStopFormatting::Metric,
             last_stop_depth: Depth::from_meters(3.0),
+            min_pp_o2: 0.18,
         }
     }
 }
@@ -152,6 +159,10 @@ impl DecoModelConfig for BuhlmannConfig {
 
     fn last_stop_depth(&self) -> Depth {
         self.last_stop_depth
+    }
+
+    fn min_pp_o2(&self) -> f64 {
+        self.min_pp_o2
     }
 }
 

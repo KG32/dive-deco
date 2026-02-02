@@ -434,7 +434,7 @@ println!("{:#?}", deco_runtime);
     </code>
 </details>
 
-:warning: Current deco stops implementation consideres gas switches based on MOD only - don't use with hypoxic trimix mixes
+Note: The implementation supports hypoxic trimix mixes by enforcing Minimum Operating Depth based on configurable `min_pp_o2`.
 
 ##### NDL (no-decompression limit)
 

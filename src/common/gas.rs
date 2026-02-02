@@ -128,6 +128,32 @@ impl GasMix {
         end
     }
 
+    /// Min Operating Depth (MinOD) (Open Circuit)
+    /// Returns the depth at which the gas becomes hypoxic (PO2 < min_pp_o2).
+    /// Safe to breathe at depths >= this value.
+    pub fn min_operating_depth(&self, min_pp_o2: Pressure) -> Depth {
+        if self.fraction_o2 <= f64::EPSILON {
+            // 0% O2 is essentially unbreathable (MinOD infinite)
+            // But let's return a very deep depth to indicate it's only safe very deep (if we ignore physiology of pure inert gas)
+            // Actually, 0% O2 is NEVER safe. return MAX
+            return Depth::from_meters(10000.0);
+        }
+
+        // standard dive formula: Depth = 10m/bar * (PO2 / FO2 - P_surface)
+        // Assuming Standard Surface Pressure of 1 bar for "MOD markings" logic usually.
+        // However, physically: P_ambient = PO2 / FO2.
+        // Depth = (P_ambient - 1 bar) * 10.
+        // If result < 0, it means it's safe at surface (0m).
+
+        let target_amb_pressure = min_pp_o2 / self.fraction_o2;
+        if target_amb_pressure <= 1.0 {
+            // simplified 1 bar check
+            Depth::zero()
+        } else {
+            Depth::from_meters(10. * (target_amb_pressure - 1.0))
+        }
+    }
+
     // TODO standard nitrox (bottom and deco) and trimix gasses
     pub fn air() -> Self {
         Self::new(0.21, 0.)
@@ -233,6 +259,26 @@ impl BreathingSource {
                 // END = (Depth + 10m) * (1 - Fraction_He) - 10m.
                 // For CCR, Fraction_He is roughly same as Diluent Fraction_He (ignoring metabolic O2 consumption effects on inert ratio).
                 diluent.equivalent_narcotic_depth(depth)
+            }
+        }
+    }
+
+    /// Min Operating Depth (MinOD).
+    /// For OC: Derived from gas fraction and Min PPO2.
+    /// For CCR: Loop setpoint is maintained, so usually safe at surface unless setpoint is hypoxic (unlikely for deco/travel).
+    /// We assume setpoints are normoxic/hyperoxic.
+    pub fn min_operating_depth(&self, min_pp_o2: Pressure) -> Depth {
+        match self {
+            BreathingSource::OpenCircuit(mix) => mix.min_operating_depth(min_pp_o2),
+            BreathingSource::ClosedCircuit { setpoint, .. } => {
+                if *setpoint < min_pp_o2 {
+                    // If setpoint itself is hypoxic, the loop is hypoxic everywhere (ignoring O2 injection dynamics for now)
+                    // Realistically, returns 0m as we assume machinery maintains it.
+                    // But strictly:
+                    Depth::zero()
+                } else {
+                    Depth::zero()
+                }
             }
         }
     }

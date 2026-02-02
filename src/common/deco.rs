@@ -143,6 +143,7 @@ impl Deco {
                                 ceiling,
                                 sim_model.config().stop_formatting(),
                                 sim_model.config().last_stop_depth(),
+                                pre_stage_gas.min_operating_depth(sim_model.config().min_pp_o2()),
                             ),
                             Time::zero(),
                             &pre_stage_gas,
@@ -172,6 +173,8 @@ impl Deco {
                                     ceiling,
                                     sim_model.config().stop_formatting(),
                                     sim_model.config().last_stop_depth(),
+                                    pre_stage_gas
+                                        .min_operating_depth(sim_model.config().min_pp_o2()),
                                 ),
                                 ascent_rate,
                                 &pre_stage_gas,
@@ -259,6 +262,7 @@ impl Deco {
                                 ceiling,
                                 sim_model.config().stop_formatting(),
                                 sim_model.config().last_stop_depth(),
+                                pre_stage_gas.min_operating_depth(sim_model.config().min_pp_o2()),
                             );
                             let stop_duration =
                                 self.find_min_stop_time(&sim_model, gas_mixes.clone(), stop_depth);
@@ -345,78 +349,83 @@ impl Deco {
 
         let ceiling = sim_model.ceiling();
 
-        match ceiling.partial_cmp(&Depth::zero()) {
-            Some(Ordering::Equal | Ordering::Less) => Ok((Some(DecoAction::AscentToCeil), None)),
-            Some(Ordering::Greater) => {
-                // check if deco violation
-                let stop_depth = self.deco_stop_depth(
-                    ceiling,
-                    sim_model.config().stop_formatting(),
-                    sim_model.config().last_stop_depth(),
-                );
-                if current_depth < stop_depth {
-                    return Err(DecoCalculationError::MissedDecoStopViolation);
+        // Check min_od
+        let min_od = current_gas.min_operating_depth(sim_model.config().min_pp_o2());
+
+        let effective_ceiling = if ceiling > min_od { ceiling } else { min_od };
+
+        // If effective_ceiling is 0, we are clear to surface.
+        if effective_ceiling <= Depth::zero() {
+            return Ok((Some(DecoAction::AscentToCeil), None)); // Will ascend to 0 via deco_stop_depth
+        }
+
+        // We treat everything as "Greater" if effective_ceiling > 0
+        // check if deco violation (or MinOD violation)
+        let stop_depth = self.deco_stop_depth(
+            ceiling,
+            sim_model.config().stop_formatting(),
+            sim_model.config().last_stop_depth(),
+            min_od,
+        );
+
+        if current_depth < stop_depth {
+            return Err(DecoCalculationError::MissedDecoStopViolation);
+        }
+
+        let next_switch_gas = self.next_switch_gas(
+            current_depth,
+            &current_gas,
+            gas_mixes,
+            surface_pressure,
+            sim_model.config().water_density(),
+        );
+
+        // check if within mod @todo min operational depth
+        if let Some(switch_gas) = next_switch_gas {
+            //switch gas without ascent if within mod of next deco gas
+            let gas_mod = match switch_gas {
+                BreathingSource::OpenCircuit(mix) => mix.max_operating_depth(1.6),
+                BreathingSource::ClosedCircuit { .. } => Depth::from_meters(1000.0),
+            };
+
+            // Check MinOD of switch gas too (ensure we don't switch to hypoxic gas)
+            let gas_min_od = switch_gas.min_operating_depth(sim_model.config().min_pp_o2());
+
+            let gas_end = match switch_gas {
+                BreathingSource::OpenCircuit(mix) => mix.equivalent_narcotic_depth(current_depth),
+                BreathingSource::ClosedCircuit { diluent, .. } => {
+                    diluent.equivalent_narcotic_depth(current_depth)
                 }
+            };
 
-                let next_switch_gas = self.next_switch_gas(
-                    current_depth,
-                    &current_gas,
-                    gas_mixes,
-                    surface_pressure,
-                    sim_model.config().water_density(),
-                );
-                // check if within mod @todo min operational depth
-                if let Some(switch_gas) = next_switch_gas {
-                    //switch gas without ascent if within mod of next deco gas
-                    let gas_mod = match switch_gas {
-                        BreathingSource::OpenCircuit(mix) => mix.max_operating_depth(1.6),
-                        BreathingSource::ClosedCircuit { .. } => Depth::from_meters(1000.0),
-                    };
+            if (switch_gas != current_gas)
+                && (current_depth <= gas_mod)
+                && (current_depth >= gas_min_od)
+                && (gas_end <= Depth::from_meters(DEFAULT_MAX_END_DEPTH))
+            {
+                return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
+            }
+        }
 
-                    let gas_end = match switch_gas {
-                        BreathingSource::OpenCircuit(mix) => {
-                            mix.equivalent_narcotic_depth(current_depth)
-                        }
-                        BreathingSource::ClosedCircuit { diluent, .. } => {
-                            diluent.equivalent_narcotic_depth(current_depth)
-                        }
-                    };
+        // check if already at deco stop depth
+        if current_depth == stop_depth {
+            Ok((Some(DecoAction::Stop), None))
+        } else {
+            // ascent to next gas switch depth if next gas' MOD below ceiling
+            if let Some(next_switch_gas) = next_switch_gas {
+                let gas_mod = match next_switch_gas {
+                    BreathingSource::OpenCircuit(mix) => mix.max_operating_depth(1.6),
+                    BreathingSource::ClosedCircuit { .. } => Depth::from_meters(1000.0),
+                };
 
-                    if (switch_gas != current_gas)
-                        && (current_depth <= gas_mod)
-                        && (gas_end <= Depth::from_meters(DEFAULT_MAX_END_DEPTH))
-                    {
-                        return Ok((Some(DecoAction::SwitchGas), Some(switch_gas)));
-                    }
-                }
-
-                // check if already at deco stop depth
-                let stop_depth = self.deco_stop_depth(
-                    ceiling,
-                    sim_model.config().stop_formatting(),
-                    sim_model.config().last_stop_depth(),
-                );
-                if current_depth == stop_depth {
-                    Ok((Some(DecoAction::Stop), None))
-                } else {
-                    // ascent to next gas switch depth if next gas' MOD below ceiling
-                    if let Some(next_switch_gas) = next_switch_gas {
-                        let gas_mod = match next_switch_gas {
-                            BreathingSource::OpenCircuit(mix) => mix.max_operating_depth(1.6),
-                            BreathingSource::ClosedCircuit { .. } => Depth::from_meters(1000.0),
-                        };
-
-                        if gas_mod >= ceiling {
-                            return Ok((
-                                Some(DecoAction::AscentToGasSwitchDepth),
-                                Some(next_switch_gas),
-                            ));
-                        }
-                    }
-                    Ok((Some(DecoAction::AscentToCeil), None))
+                if gas_mod >= effective_ceiling {
+                    return Ok((
+                        Some(DecoAction::AscentToGasSwitchDepth),
+                        Some(next_switch_gas),
+                    ));
                 }
             }
-            None => panic!("Ceiling and depth uncomparable"),
+            Ok((Some(DecoAction::AscentToCeil), None))
         }
     }
 
@@ -459,30 +468,39 @@ impl Deco {
         self.tts += stage.duration;
     }
 
-    // round ceiling up to the bottom of deco window
+    // round ceiling up to the bottom of deco window and respect MinOD
     fn deco_stop_depth(
         &self,
         ceiling: Depth,
         formatting: DecoStopFormatting,
         last_stop_depth: Depth,
+        min_operating_depth: Depth,
     ) -> Depth {
-        if ceiling <= Depth::zero() {
+        // Enforce MinOD floor
+        let effective_ceiling = if ceiling > min_operating_depth {
+            ceiling
+        } else {
+            min_operating_depth
+        };
+
+        if effective_ceiling <= Depth::zero() {
             return Depth::zero();
         }
 
         // Calculate raw stop depth based on formatting
+        // Calculate raw stop depth based on formatting
         let calculated_stop = match formatting {
             DecoStopFormatting::Metric => {
                 // Round up to nearest 3m
-                Depth::from_meters(ceil(ceiling.as_meters() / 3.0) * 3.0)
+                Depth::from_meters(ceil(effective_ceiling.as_meters() / 3.0) * 3.0)
             }
             DecoStopFormatting::Imperial => {
                 // Round up to nearest 10ft (3.048m)
-                Depth::from_feet(ceil(ceiling.as_feet() / 10.0) * 10.0)
+                Depth::from_feet(ceil(effective_ceiling.as_feet() / 10.0) * 10.0)
             }
             DecoStopFormatting::Continuous => {
                 // "Surf the gradient" - exact ceiling depth
-                ceiling
+                effective_ceiling
             }
         };
 
@@ -546,6 +564,9 @@ impl Deco {
                                 ceiling,
                                 sim.config().stop_formatting(),
                                 sim.config().last_stop_depth(),
+                                sim.dive_state()
+                                    .gas
+                                    .min_operating_depth(sim.config().min_pp_o2()),
                             );
                             // If calculated stop depth is shallower, we can ascend -> condmet
                             // If it's same, we still need to wait -> cond false
@@ -598,6 +619,7 @@ mod tests {
                 input_depth,
                 DecoStopFormatting::Metric,
                 Depth::from_meters(3.0),
+                Depth::zero(),
             );
             assert_eq!(res, expected_depth);
         }
