@@ -331,14 +331,12 @@ impl BuhlmannModel {
                     let active_dist = d_deep - active_shallow;
                     let total_dist = d_deep - d_shallow;
                     let active_frac = active_dist / total_dist;
-                    let active_time =
-                        Time::from_seconds(time.as_seconds() * active_frac);
+                    let active_time = Time::from_seconds(time.as_seconds() * active_frac);
                     let n_segments = 10;
-                    let seg_time =
-                        Time::from_seconds(active_time.as_seconds() / n_segments as f64);
+                    let seg_time = Time::from_seconds(active_time.as_seconds() / n_segments as f64);
                     for i in 0..n_segments {
-                        let depth_m = active_shallow
-                            + active_dist * (i as f64 + 0.5) / n_segments as f64;
+                        let depth_m =
+                            active_shallow + active_dist * (i as f64 + 0.5) / n_segments as f64;
                         let sample_record = RecordData {
                             depth: Depth::from_meters(depth_m),
                             time: seg_time,
@@ -374,14 +372,20 @@ impl BuhlmannModel {
             return 0.0;
         }
 
-        let pp_o2_start = gas.inspired_partial_pressures(start_depth, surface_pressure).o2;
-        let pp_o2_end = gas.inspired_partial_pressures(end_depth, surface_pressure).o2;
+        let pp_o2_start = gas
+            .inspired_partial_pressures(start_depth, surface_pressure)
+            .o2;
+        let pp_o2_end = gas
+            .inspired_partial_pressures(end_depth, surface_pressure)
+            .o2;
 
         let u_start = (pp_o2_start - 0.5) / 0.5;
         let u_end = (pp_o2_end - 0.5) / 0.5;
 
         if (u_start <= 0.0 && u_end <= 0.0) || (u_start - u_end).abs() < 1e-15 {
-            if u_start <= 0.0 { return 0.0; }
+            if u_start <= 0.0 {
+                return 0.0;
+            }
             return u_start.powf(0.8333) * tm;
         }
 

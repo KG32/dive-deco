@@ -138,7 +138,12 @@ fn test_deco_multi_gas() {
     ];
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_eq!(tts, Time::from_seconds(120.0 + 0.0 + (1320.0 + 16.0 / 9.0 * 60.0) - 1320.0 + 34.0 + 20.0 + 291.0 + 20.0));
+    assert_eq!(
+        tts,
+        Time::from_seconds(
+            120.0 + 0.0 + (1320.0 + 16.0 / 9.0 * 60.0) - 1320.0 + 34.0 + 20.0 + 291.0 + 20.0
+        )
+    );
 }
 
 #[test]
