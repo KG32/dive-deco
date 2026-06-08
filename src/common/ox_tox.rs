@@ -34,12 +34,16 @@ impl OxTox {
         self.otu
     }
 
+    pub fn add_otu(&mut self, otu: Otu) {
+        self.otu += otu;
+    }
+
     pub fn recalculate(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         self.recalculate_cns(record, surface_pressure);
         self.recalculate_otu(record, surface_pressure);
     }
 
-    fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+    pub(crate) fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         let RecordData { depth, time, gas } = *record;
 
         let pp_o2 = gas.inspired_partial_pressures(depth, surface_pressure).o2;

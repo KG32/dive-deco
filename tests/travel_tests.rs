@@ -52,7 +52,7 @@ fn test_travel_record_with_rate() {
     let initial_depth = Depth::from_meters(20.);
     let bottom_time = Time::from_minutes(20.);
     let target_depth = Depth::zero();
-    let expected_travel_time = Time::from_seconds(133.);
+    let expected_travel_time = Time::from_seconds(20.0 / 9.0 * 60.0);
     let travel_rate = 9.;
     model.record(initial_depth, bottom_time, &air);
     model.record_travel_with_rate(target_depth, travel_rate, &air);

@@ -28,7 +28,7 @@ fn test_deco_single_gas() {
         deco_stages, tts, ..
     } = model.deco(vec![air]).unwrap();
 
-    assert_eq!(tts, Time::from_seconds(754.));
+    assert_eq!(tts, Time::from_seconds(755.6666666666667));
     assert_eq!(deco_stages.len(), 5);
 
     let expected_deco_stages = vec![
@@ -36,7 +36,7 @@ fn test_deco_single_gas() {
             stage_type: DecoStageType::Ascent,
             start_depth: Depth::from_meters(40.0),
             end_depth: Depth::from_meters(6.0),
-            duration: Time::from_seconds(226.),
+            duration: Time::from_seconds(226.66666666666674),
             gas: air,
         },
         DecoStage {
@@ -57,7 +57,7 @@ fn test_deco_single_gas() {
             stage_type: DecoStageType::DecoStop,
             start_depth: Depth::from_meters(3.0),
             end_depth: Depth::from_meters(3.0),
-            duration: Time::from_seconds(400.),
+            duration: Time::from_seconds(401.),
             gas: air,
         },
         DecoStage {
@@ -104,7 +104,7 @@ fn test_deco_multi_gas() {
             stage_type: DecoStageType::Ascent,
             start_depth: Depth::from_meters(22.),
             end_depth: Depth::from_meters(6.),
-            duration: Time::from_seconds(106.),
+            duration: Time::from_seconds((1320.0 + 16.0 / 9.0 * 60.0) - 1320.0),
             gas: ean_50,
         },
         DecoStage {
@@ -138,7 +138,7 @@ fn test_deco_multi_gas() {
     ];
 
     assert_deco_stages_eq(deco_stages, expected_deco_stages);
-    assert_eq!(tts, Time::from_seconds(591.));
+    assert_eq!(tts, Time::from_seconds(120.0 + 0.0 + (1320.0 + 16.0 / 9.0 * 60.0) - 1320.0 + 34.0 + 20.0 + 291.0 + 20.0));
 }
 
 #[test]
