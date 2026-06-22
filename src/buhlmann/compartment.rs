@@ -362,12 +362,12 @@ mod tests {
     fn test_min_pressure_calculation() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let recprd = RecordData {
+        let record = RecordData {
             depth: Depth::from_meters(30.),
             time: Time::from_minutes(10.),
             gas: &air,
         };
-        comp.recalculate(&recprd, 100, 100);
+        comp.recalculate(&record, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.40957969932131577);
     }

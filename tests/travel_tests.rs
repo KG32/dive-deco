@@ -45,6 +45,49 @@ fn travel_invalid_target_depth() {
     );
 }
 
+// Confirms record_travel with Time::zero() produces the same results
+// as record() at the same depth (M-values must be recalculated).
+#[test]
+fn test_zero_time_travel_consistency() {
+    let air = fixtures::gas_air();
+    let mut model = fixtures::model_default();
+    model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
+
+    let mut travel_model = model.clone();
+    let mut record_model = model.clone();
+
+    let new_depth = Depth::from_meters(21.);
+    travel_model.record_travel(new_depth, Time::zero(), &air);
+    record_model.record(new_depth, Time::zero(), &air);
+
+    let travel_sat = travel_model.supersaturation();
+    let record_sat = record_model.supersaturation();
+    assert_eq!(travel_sat.gf_99, record_sat.gf_99);
+    assert_eq!(travel_sat.gf_surf, record_sat.gf_surf);
+}
+
+// Schreiner with zero R (same start/end depth) should match Haldane
+#[test]
+fn test_travel_same_depth_equivalence() {
+    let air = fixtures::gas_air();
+    let mut model = fixtures::model_default();
+    model.record(Depth::from_meters(40.), Time::from_minutes(20.), &air);
+
+    let mut travel_model = model.clone();
+    let mut record_model = model.clone();
+
+    let depth = Depth::from_meters(40.);
+    let time = Time::from_seconds(60.);
+
+    travel_model.record_travel(depth, time, &air);
+    record_model.record(depth, time, &air);
+
+    let travel_sat = travel_model.supersaturation();
+    let record_sat = record_model.supersaturation();
+    assert_eq!(travel_sat.gf_99, record_sat.gf_99);
+    assert_eq!(travel_sat.gf_surf, record_sat.gf_surf);
+}
+
 #[test]
 fn test_travel_record_with_rate() {
     let mut model = fixtures::model_default();

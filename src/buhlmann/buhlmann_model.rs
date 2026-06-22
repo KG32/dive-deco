@@ -4,7 +4,7 @@ use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{abs, ceil};
 use crate::common::{
     AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
-    Gas, GradientFactor, InertGas, OxTox, RecordData,
+    Gas, GradientFactor, InertGas, OTU_EQUATION_EXPONENT, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use alloc::vec;
@@ -113,6 +113,13 @@ impl DecoModel for BuhlmannModel {
 
         if time > Time::zero() {
             self.schreiner_travel(start_depth, target_depth, time, gas);
+        } else {
+            let record = RecordData {
+                depth: target_depth,
+                time: Time::zero(),
+                gas,
+            };
+            self.recalculate(record);
         }
 
         self.state.depth = target_depth;
@@ -327,9 +334,9 @@ impl BuhlmannModel {
                 let d_deep = d_start.max(d_end);
                 let d_shallow = d_start.min(d_end);
                 let active_shallow = threshold.max(d_shallow).min(d_deep);
-                if active_shallow < d_deep {
+                let total_dist = d_deep - d_shallow;
+                if active_shallow < d_deep && total_dist > 0.0 {
                     let active_dist = d_deep - active_shallow;
-                    let total_dist = d_deep - d_shallow;
                     let active_frac = active_dist / total_dist;
                     let active_time = Time::from_seconds(time.as_seconds() * active_frac);
                     let n_segments = 10;
@@ -358,7 +365,7 @@ impl BuhlmannModel {
     }
 
     /// Exact analytical integral of OTU rate over a linear change in ppO2
-    /// OTU rate = ((ppO2 - 0.5) / 0.5)^0.8333 for ppO2 >= 0.5, else 0
+    /// OTU rate = ((ppO2 - 0.5) / 0.5)^(-OTU_EQUATION_EXPONENT) for ppO2 >= 0.5, else 0
     fn schreiner_otu_integral(
         &self,
         start_depth: Depth,
@@ -386,7 +393,7 @@ impl BuhlmannModel {
             if u_start <= 0.0 {
                 return 0.0;
             }
-            return u_start.powf(0.8333) * tm;
+            return u_start.powf(-OTU_EQUATION_EXPONENT) * tm;
         }
 
         let u0 = u_start.max(0.0);
@@ -411,12 +418,12 @@ impl BuhlmannModel {
         // du/dt within the integration window
         let du_dt = (u_end - u_start) / tm;
         if du_dt.abs() < 1e-15 {
-            return u0.powf(0.8333) * dt;
+            return u0.powf(-OTU_EQUATION_EXPONENT) * dt;
         }
 
         // OTU = ∫ u^p dt = ∫ u^p * du / du_dt
         // = [u^(p+1) / (p+1)] / du_dt from u0 to u1
-        let p = 0.8333_f64;
+        let p = -OTU_EQUATION_EXPONENT;
         let p1 = p + 1.0;
         (u1.powf(p1) - u0.powf(p1)) / (du_dt * p1)
     }
@@ -584,6 +591,41 @@ impl BuhlmannModel {
 mod tests {
     use super::*;
     use alloc::string::String;
+
+    #[test]
+    fn test_schreiner_otu_integral_matches_segmented() {
+        let model = BuhlmannModel::default();
+        let gas = Gas::new(0.50, 0.);
+        let start = Depth::from_meters(30.);
+        let end = Depth::from_meters(6.);
+        let time = Time::from_seconds(180.);
+
+        let analytical = model.schreiner_otu_integral(start, end, time, &gas);
+
+        let surface_pressure = model.config.surface_pressure;
+        let n_segs = 10000;
+        let tm_seg = time.as_minutes() / n_segs as f64;
+        let mut segmented = 0.0;
+        let exponent = 0.8333;
+        for i in 0..n_segs {
+            let frac = (i as f64 + 0.5) / n_segs as f64;
+            let depth_m =
+                start.as_meters() + (end.as_meters() - start.as_meters()) * frac;
+            let pp_o2 = gas
+                .inspired_partial_pressures(Depth::from_meters(depth_m), surface_pressure)
+                .o2;
+            if pp_o2 >= 0.5 {
+                segmented += tm_seg * ((pp_o2 - 0.5) / 0.5).powf(exponent);
+            }
+        }
+
+        assert!(
+            (analytical - segmented).abs() < 0.5,
+            "OTU mismatch: analytical={}, segmented={}",
+            analytical,
+            segmented
+        );
+    }
 
     #[test]
     fn test_state() {
