@@ -22,7 +22,7 @@ pub use global_types::{
     MbarPressure, NDLType, Otu, Pressure,
 };
 pub(crate) use math_utils::{abs, ceil, exp, powf, round};
-pub(crate) use ox_tox::OTU_EQUATION_EXPONENT;
 pub use ox_tox::OxTox;
+pub(crate) use ox_tox::OTU_EQUATION_EXPONENT;
 pub use record::RecordData;
 pub use sim::Sim;

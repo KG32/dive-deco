@@ -4,7 +4,7 @@ use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{abs, ceil};
 use crate::common::{
     AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
-    Gas, GradientFactor, InertGas, OTU_EQUATION_EXPONENT, OxTox, RecordData,
+    Gas, GradientFactor, InertGas, OxTox, RecordData, OTU_EQUATION_EXPONENT,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use alloc::vec;
@@ -609,8 +609,7 @@ mod tests {
         let exponent = 0.8333;
         for i in 0..n_segs {
             let frac = (i as f64 + 0.5) / n_segs as f64;
-            let depth_m =
-                start.as_meters() + (end.as_meters() - start.as_meters()) * frac;
+            let depth_m = start.as_meters() + (end.as_meters() - start.as_meters()) * frac;
             let pp_o2 = gas
                 .inspired_partial_pressures(Depth::from_meters(depth_m), surface_pressure)
                 .o2;
