@@ -1,7 +1,8 @@
 use super::zhl_values::{ZHLParam, ZHLParams};
 use crate::{
     common::{
-        powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure, RecordData,
+        exp, powf, Depth, GradientFactor, InertGas, MbarPressure, PartialPressures, Pressure,
+        RecordData,
     },
     BuhlmannConfig, Gas, Time,
 };
@@ -191,6 +192,34 @@ impl Compartment {
         (gas_inspired_p - inert_gas_load) * factor
     }
 
+    // compartment pressure change for inert gas (Schreiner equation)
+    // Analytical solution for linear change in inspired partial pressure during ascent/descent
+    pub(crate) fn compartment_pressure_delta_schreiner(
+        &self,
+        inert_gas: InertGas,
+        pi0: Pressure,
+        r: Pressure,
+        time: Time,
+        half_time: ZHLParam,
+    ) -> Pressure {
+        let t = time.as_minutes();
+        if t <= 0.0 {
+            return 0.0;
+        }
+
+        let inert_gas_load = match inert_gas {
+            InertGas::Helium => self.he_ip,
+            InertGas::Nitrogen => self.n2_ip,
+        };
+
+        let k = core::f64::consts::LN_2 / half_time;
+
+        let e_kt = exp(-k * t);
+        let result = pi0 + r * (t - 1.0 / k) - (pi0 - inert_gas_load - r / k) * e_kt;
+
+        result - inert_gas_load
+    }
+
     // tissue tolerable ambient pressure using GF slope, weighted Buhlmann ZHL params based on tissue inert gasses saturation proportions
     fn min_tolerable_amb_pressure(&self, max_gf: GradientFactor) -> Pressure {
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
@@ -333,12 +362,12 @@ mod tests {
     fn test_min_pressure_calculation() {
         let mut comp = comp_5();
         let air = Gas::new(0.21, 0.);
-        let recprd = RecordData {
+        let record = RecordData {
             depth: Depth::from_meters(30.),
             time: Time::from_minutes(10.),
             gas: &air,
         };
-        comp.recalculate(&recprd, 100, 100);
+        comp.recalculate(&record, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
         assert_eq!(min_tolerable_pressure, 0.40957969932131577);
     }

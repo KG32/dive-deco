@@ -54,3 +54,16 @@ pub fn round(val: f64) -> f64 {
         libm::round(val)
     }
 }
+
+/// Exponential function for f64
+#[inline]
+pub fn exp(val: f64) -> f64 {
+    #[cfg(not(feature = "no-std"))]
+    {
+        val.exp()
+    }
+    #[cfg(feature = "no-std")]
+    {
+        libm::exp(val)
+    }
+}

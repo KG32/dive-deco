@@ -10,7 +10,7 @@ use super::{powf, CNSCoeffRow, Cns, Depth, MbarPressure};
 
 const CNS_ELIMINATION_HALF_TIME_MINUTES: f64 = 90.;
 const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f64 = 400.;
-const OTU_EQUATION_EXPONENT: f64 = -0.8333;
+pub(crate) const OTU_EQUATION_EXPONENT: f64 = -0.8333;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -34,12 +34,16 @@ impl OxTox {
         self.otu
     }
 
+    pub fn add_otu(&mut self, otu: Otu) {
+        self.otu += otu;
+    }
+
     pub fn recalculate(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         self.recalculate_cns(record, surface_pressure);
         self.recalculate_otu(record, surface_pressure);
     }
 
-    fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
+    pub(crate) fn recalculate_cns(&mut self, record: &RecordData, surface_pressure: MbarPressure) {
         let RecordData { depth, time, gas } = *record;
 
         let pp_o2 = gas.inspired_partial_pressures(depth, surface_pressure).o2;
@@ -187,6 +191,13 @@ mod tests {
         };
         ox_tox.recalculate_cns(&record, 1013);
         assert_eq!(ox_tox.cns(), 100.)
+    }
+
+    #[test]
+    fn test_otu_exponent_value_pinned() {
+        // Must stay in sync with the Schreiner OTU integral exponent (p = 0.8333)
+        // in buhlmann_model.rs::schreiner_otu_integral
+        assert_eq!(OTU_EQUATION_EXPONENT, -0.8333);
     }
 
     #[test]

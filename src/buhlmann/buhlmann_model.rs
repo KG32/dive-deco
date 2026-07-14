@@ -4,7 +4,7 @@ use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{abs, ceil};
 use crate::common::{
     AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
-    Gas, GradientFactor, OxTox, RecordData,
+    Gas, GradientFactor, InertGas, OxTox, RecordData, OTU_EQUATION_EXPONENT,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
 use alloc::vec;
@@ -105,30 +105,25 @@ impl DecoModel for BuhlmannModel {
         self.recalculate(record);
     }
 
-    /// model travel between depths in 1s intervals
-    // @todo: Schreiner equation instead of Haldane to avoid imprecise intervals
+    /// model travel between depths using Schreiner equation
     fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
-        let mut current_depth = self.state.depth;
-        let distance = target_depth - current_depth;
-        let travel_time = time;
-        let dist_rate = distance.as_meters() / travel_time.as_seconds();
-        let mut i = 0;
-        while i < travel_time.as_seconds() as i32 {
-            self.state.time += Time::from_seconds(1.);
-            current_depth += Depth::from_meters(dist_rate);
+        let start_depth = self.state.depth;
+
+        if time > Time::zero() {
+            self.schreiner_travel(start_depth, target_depth, time, gas);
+        } else {
             let record = RecordData {
-                depth: current_depth,
-                time: Time::from_seconds(1.),
+                depth: target_depth,
+                time: Time::zero(),
                 gas,
             };
             self.recalculate(record);
-            i += 1;
         }
 
-        // align with target depth with lost precision @todo: round / bignumber?
         self.state.depth = target_depth;
+        self.state.time += time;
     }
 
     fn record_travel_with_rate(
@@ -283,6 +278,154 @@ impl BuhlmannModel {
         let mut sim_model = self.fork();
         sim_model.record(self.state.depth, time, &self.state.gas);
         !sim_model.in_deco()
+    }
+
+    /// Travel between depths using Schreiner equation for all compartments
+    fn schreiner_travel(&mut self, start_depth: Depth, end_depth: Depth, time: Time, gas: &Gas) {
+        let surface_pressure = self.config.surface_pressure;
+        let t_minutes = time.as_minutes();
+
+        let start_pp = gas.inspired_partial_pressures(start_depth, surface_pressure);
+        let end_pp = gas.inspired_partial_pressures(end_depth, surface_pressure);
+
+        let r_he = (end_pp.he - start_pp.he) / t_minutes;
+        let r_n2 = (end_pp.n2 - start_pp.n2) / t_minutes;
+
+        for compartment in self.compartments.iter_mut() {
+            let (n2_half_time, _, _, he_half_time, _, _) = compartment.params;
+
+            let he_delta = compartment.compartment_pressure_delta_schreiner(
+                InertGas::Helium,
+                start_pp.he,
+                r_he,
+                time,
+                he_half_time,
+            );
+            let n2_delta = compartment.compartment_pressure_delta_schreiner(
+                InertGas::Nitrogen,
+                start_pp.n2,
+                r_n2,
+                time,
+                n2_half_time,
+            );
+
+            compartment.he_ip += he_delta;
+            compartment.n2_ip += n2_delta;
+            compartment.total_ip = compartment.he_ip + compartment.n2_ip;
+        }
+
+        // Recompute M-values at final depth using existing infrastructure
+        // Time::zero() ensures Haldane delta is 0, so IPs stay as set by Schreiner
+        let final_record = RecordData {
+            depth: end_depth,
+            time: Time::zero(),
+            gas,
+        };
+        self.recalculate_compartments(&final_record);
+
+        if !self.is_sim() {
+            // CNS: 10-segment midpoint integration over the CNS-active depth range
+            let f_o2 = gas.gas_pressures_compound(1.0).o2;
+            if f_o2 > 0.0 {
+                let surf_p_bar = surface_pressure as f64 / 1000.0;
+                let threshold = 10.0 * (0.5 / f_o2 - surf_p_bar + 0.0627);
+                let d_start = start_depth.as_meters();
+                let d_end = end_depth.as_meters();
+                let d_deep = d_start.max(d_end);
+                let d_shallow = d_start.min(d_end);
+                let active_shallow = threshold.max(d_shallow).min(d_deep);
+                let total_dist = d_deep - d_shallow;
+                if active_shallow < d_deep && total_dist > 0.0 {
+                    let active_dist = d_deep - active_shallow;
+                    let active_frac = active_dist / total_dist;
+                    let active_time = Time::from_seconds(time.as_seconds() * active_frac);
+                    let n_segments = 10;
+                    let seg_time = Time::from_seconds(active_time.as_seconds() / n_segments as f64);
+                    for i in 0..n_segments {
+                        let depth_m =
+                            active_shallow + active_dist * (i as f64 + 0.5) / n_segments as f64;
+                        let sample_record = RecordData {
+                            depth: Depth::from_meters(depth_m),
+                            time: seg_time,
+                            gas,
+                        };
+                        self.state
+                            .ox_tox
+                            .recalculate_cns(&sample_record, surface_pressure);
+                    }
+                }
+            }
+            self.state.ox_tox.add_otu(self.schreiner_otu_integral(
+                start_depth,
+                end_depth,
+                time,
+                gas,
+            ));
+        }
+    }
+
+    /// Exact analytical integral of OTU rate over a linear change in ppO2
+    /// OTU rate = ((ppO2 - 0.5) / 0.5)^(-OTU_EQUATION_EXPONENT) for ppO2 >= 0.5, else 0
+    fn schreiner_otu_integral(
+        &self,
+        start_depth: Depth,
+        end_depth: Depth,
+        time: Time,
+        gas: &Gas,
+    ) -> f64 {
+        let surface_pressure = self.config.surface_pressure;
+        let tm = time.as_minutes();
+        if tm <= 0.0 {
+            return 0.0;
+        }
+
+        let pp_o2_start = gas
+            .inspired_partial_pressures(start_depth, surface_pressure)
+            .o2;
+        let pp_o2_end = gas
+            .inspired_partial_pressures(end_depth, surface_pressure)
+            .o2;
+
+        let u_start = (pp_o2_start - 0.5) / 0.5;
+        let u_end = (pp_o2_end - 0.5) / 0.5;
+
+        if (u_start <= 0.0 && u_end <= 0.0) || (u_start - u_end).abs() < 1e-15 {
+            if u_start <= 0.0 {
+                return 0.0;
+            }
+            return u_start.powf(-OTU_EQUATION_EXPONENT) * tm;
+        }
+
+        let u0 = u_start.max(0.0);
+        let u1 = u_end.max(0.0);
+
+        let t0 = if u_start <= 0.0 {
+            (0.0 - u_start) / (u_end - u_start) * tm
+        } else {
+            0.0
+        };
+        let t1 = if u_end <= 0.0 {
+            (0.0 - u_start) / (u_end - u_start) * tm
+        } else {
+            tm
+        };
+
+        let dt = t1 - t0;
+        if dt <= 0.0 {
+            return 0.0;
+        }
+
+        // du/dt within the integration window
+        let du_dt = (u_end - u_start) / tm;
+        if du_dt.abs() < 1e-15 {
+            return u0.powf(-OTU_EQUATION_EXPONENT) * dt;
+        }
+
+        // OTU = ∫ u^p dt = ∫ u^p * du / du_dt
+        // = [u^(p+1) / (p+1)] / du_dt from u0 to u1
+        let p = -OTU_EQUATION_EXPONENT;
+        let p1 = p + 1.0;
+        (u1.powf(p1) - u0.powf(p1)) / (du_dt * p1)
     }
 
     fn leading_comp(&self) -> &Compartment {
@@ -448,6 +591,40 @@ impl BuhlmannModel {
 mod tests {
     use super::*;
     use alloc::string::String;
+
+    #[test]
+    fn test_schreiner_otu_integral_matches_segmented() {
+        let model = BuhlmannModel::default();
+        let gas = Gas::new(0.50, 0.);
+        let start = Depth::from_meters(30.);
+        let end = Depth::from_meters(6.);
+        let time = Time::from_seconds(180.);
+
+        let analytical = model.schreiner_otu_integral(start, end, time, &gas);
+
+        let surface_pressure = model.config.surface_pressure;
+        let n_segs = 10000;
+        let tm_seg = time.as_minutes() / n_segs as f64;
+        let mut segmented = 0.0;
+        let exponent = 0.8333;
+        for i in 0..n_segs {
+            let frac = (i as f64 + 0.5) / n_segs as f64;
+            let depth_m = start.as_meters() + (end.as_meters() - start.as_meters()) * frac;
+            let pp_o2 = gas
+                .inspired_partial_pressures(Depth::from_meters(depth_m), surface_pressure)
+                .o2;
+            if pp_o2 >= 0.5 {
+                segmented += tm_seg * ((pp_o2 - 0.5) / 0.5).powf(exponent);
+            }
+        }
+
+        assert!(
+            (analytical - segmented).abs() < 0.5,
+            "OTU mismatch: analytical={}, segmented={}",
+            analytical,
+            segmented
+        );
+    }
 
     #[test]
     fn test_state() {
