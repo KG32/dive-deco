@@ -1,40 +1,63 @@
 # dive-deco
 
-A dive decompression models library.
+A dive decompression models library. Its model-agnostic interface is the `DecoModel` trait; this crate provides `BuhlmannModel` as its ZH-L16C implementation.
+
+## DecoModel
+
+`DecoModel` defines the state and calculations shared by decompression models. Import the trait to call its methods on a model implementation.
+
+```rust
+use dive_deco::DecoModel;
+```
+
+- Model lifecycle and state
+    - `default()` creates a model with its default configuration.
+    - `new(config)` creates a model with an implementation-specific configuration.
+    - `config()` returns the current configuration.
+    - `dive_state()` returns the current depth, elapsed time, breathing gas, and oxygen-toxicity state.
+- Dive recording
+    - `record(depth, time, gas)` records constant-depth exposure.
+    - `record_travel(target_depth, time, gas)` records linear travel over a duration.
+    - `record_travel_with_rate(target_depth, rate, gas)` records linear travel at a rate.
+    - `record_surface_interval(time)` records off-gassing at the surface while breathing air. It returns `Err(String)` when the model is not at 0 m.
+- Decompression and exposure data
+    - `ndl()`, `ceiling()`, and `in_deco()` return the current no-decompression limit, ceiling, and decompression status.
+    - `deco(gas_mixes)` calculates decompression stages and time to surface.
+    - `cns()` and `otu()` return accumulated central nervous system and pulmonary oxygen toxicity.
 
 ## Buhlmann ZH-L16C
 
-The Bühlmann decompression set of parameters is an Haldanian mathematical model of the way in which inert gases enter and leave the human body as the ambient pressure changes. Versions are used to create Bühlmann decompression tables and in personal dive computers to compute no-decompression limits and decompression schedules for dives in real-time.[^1]
+`BuhlmannModel` implements `DecoModel` using the Bühlmann decompression set of parameters, a Haldanian mathematical model of the way inert gases enter and leave the body as ambient pressure changes. It is used to create decompression tables and in personal dive computers to compute no-decompression limits and decompression schedules in real time.[^1]
 
 ### Features
 
 - step-by-step decompression model (ZH-L16C params version) calculations using depth, time and used gas (incl. helium mixes)
+- linear ascent and descent records using the Schreiner equation
 - NDL (no-decompression limit)
 - GF (gradient factors) ascent profile conservatism
 - current deco runtime / deco stop planner
-  - decompression stages as a runtime based on current model state
-  - TTS (current time to surface including ascent and all decompression stops)
-  - TTS @+5 (TTS after 5 mins given constant depth and breathing mix)
-  - TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
+    - decompression stages as a runtime based on current model state
+    - TTS (current time to surface including ascent and all decompression stops)
+    - TTS @+5 (TTS after 5 mins given constant depth and breathing mix)
+    - TTS Δ+5 (absolute change in TTS after 5 mins given current depth and gas mix)
 - ceiling
 - supersaturation
-  - GF99 (the raw percentage of the Bühlmann supersaturation at the current depth, i.e. super-saturation percent gradient)
-  - GFsurf(the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
+    - GF99 (the raw percentage of the Bühlmann supersaturation at the current depth, i.e. super-saturation percent gradient)
+    - GFsurf(the surfacing gradient factor, i.e. super-saturation percentage gradient relative to the surface)
 - oxygen toxicity
-  - CNS (central nervous system toxicity)
-  - OTU (pulmonary oxygen toxicity)
+    - CNS (central nervous system toxicity)
+    - OTU (pulmonary oxygen toxicity)
 - configurable model settings
-  - gradient factors
-  - surface pressure
-  - deco ascent rate
-  - NDL definition
-    - Actual (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
-    - Adaptive - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
+    - gradient factors
+    - surface pressure
+    - deco ascent rate
+    - NDL definition
+        - Actual (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
+        - Adaptive - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
 
 ### Planned features
 
 - extended deco model config [water density and other configuration options] (currently metric and density assumed to be 1.03kg/l as salt water)
-- travel records optimization (linear ascent / descent records using Schreiner equation instead of iterative Haldane equation)
 - other deco algorithms (VPM-B)
 - other optimizations
 
@@ -48,7 +71,7 @@ To use `dive-deco` in your Rust project, you can add it as a dependency in your 
 
 ```toml
 [dependencies]
-dive-deco = "6.0.1" # Check for the latest version on crates.io
+dive-deco = "6.1.1" # Check for the latest version on crates.io
 ```
 
 Or, you can use the `cargo add` command:
@@ -65,14 +88,14 @@ This crate provides the following optional features that can be enabled in your 
 
 ```toml
 [dependencies]
-dive-deco = { version = "6.0.0", features = ["no-std"] }
+dive-deco = { version = "6.1.1", features = ["no-std"] }
 ```
 
 - **serde**: Adds serialization and deserialization support via the `serde` crate, allowing model state to be saved and restored. This is useful for persisting dive calculations.
 
 ```toml
 [dependencies]
-dive-deco = { version = "6.0.0", features = ["serde"] }
+dive-deco = { version = "6.1.1", features = ["serde"] }
 ```
 
 ---
@@ -101,8 +124,9 @@ Current config options:
 - `surface_pressure` - atmospheric pressure at the surface at the time of model initialization and assumed constant throughout model's life
 - `deco_ascent_rate` - ascent rate in m/s that is assumed to be followed when calculating deco obligations and simulations. Default value: 10 m/min (33 ft/min)
 - `ceiling_type` (enum `CeilingType`)
-  - `Actual` (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
-  - `Adaptive` - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
+    - `Actual` (default) - both NDL time and ceiling are determined by the current tissues saturation, it counts down to a condition where calculated ceiling is below the surface
+    - `Adaptive` - takes into account off-gassing on ascent, determines if real deco obligation assuming direct ascent with set ascent rate
+- `round_ceiling` - round calculated ceiling depths (default: false)
 - `recalc_all_tissues_m_values` - recalculate all tissues considering gradient factors (default: true). If set to false, only leading tissue is recalculated with max gf
 
 ```rust
@@ -111,7 +135,8 @@ let config = BuhlmannConfig::new()
     .with_gradient_factors(30, 70)
     .with_surface_pressure(1013)
     .with_deco_ascent_rate(10.)
-    .with_ceiling_type(CeilingType::Actual);
+    .with_ceiling_type(CeilingType::Actual)
+    .with_round_ceiling(true);
 let model = BuhlmannModel::new(config);
 println!("{:?}", model.config()); // BuhlmannConfig { gf: (30, 70) }
 ```
@@ -163,17 +188,19 @@ assert_eq!(Time::from_minutes(0.5), Time::from_seconds(30.));
 Breathing gas used in the model.
 
 - `new(o2, he)`
-  - o2 - oxygen partial pressure
-  - he - helium partial pressure
-- `partial_pressures(depth)` - compounded gas's components partial pressures at certain depth
-- `inspired_partial_pressures(depth)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
+    - o2 - oxygen partial pressure
+    - he - helium partial pressure
+- `partial_pressures(depth, surface_pressure)` - compounded gas's components partial pressures at certain depth
+- `inspired_partial_pressures(depth, surface_pressure)` - inspired gas partial pressures in alveoli taking into account alveolar water vapor pressure
 - `maximum_operating_depth(pp_o2_limit)` - maximum operating depth considering o2 partial, with maximum o2 partial pressure as parameter
 - `equivalent_narcotic_depth(depth)` - equivalent depth at which given gas has the same narcotic potential as air. Assumes o2 - n2 1:1 narcotic ratio.
 
 ```rust
 let mix = Gas::new(0.21, 0.);
-mix.partial_pressures(10.); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
-mix.inspired_partial_pressures(10.); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
+let depth = Depth::from_meters(10.);
+let surface_pressure = 1000;
+mix.partial_pressures(depth, surface_pressure); // PartialPressures { o2: 0.42, n2: 1.58, he: 0.0 }
+mix.inspired_partial_pressures(depth, surface_pressure); // PartialPressures { o2: 0.406833, n2: 1.530467, he: 0.0 }
 ```
 
 ---
@@ -185,9 +212,9 @@ mix.inspired_partial_pressures(10.); // PartialPressures { o2: 0.406833, n2: 1.5
 A DecoModel trait method that represents a single model record as a datapoint.
 
 - `.record(depth, time, gas)`
-  - depth - current depth in meters
-  - time - duration in seconds
-  - gas - breathing mix used for the duration of this record
+    - depth - current depth in meters
+    - time - duration in seconds
+    - gas - breathing mix used for the duration of this record
 
 ```rust
 let depth = Depth::from_meters(20.);
@@ -202,9 +229,9 @@ model.record(depth, time, &nitrox);
 A DecoModel trait method that represents a linear change of depth. It assumes a travel from depth A (current model state depth) to B (target_depth) with rate derived from change of depth and time.
 
 - `.record_travel(target_depth, time, gas)`
-  - target_depth - final depth at the end of the travel
-  - time - duration of travel in seconds
-  - gas: breathing mix using for the duration of this record
+    - target_depth - final depth at the end of the travel
+    - time - duration of travel in seconds
+    - gas: breathing mix using for the duration of this record
 
 ```rust
 let target_depth = Depth::from_meters(30.);
@@ -212,6 +239,20 @@ let descent_time = 4 * 60; // 4 minutes as seconds
 let nitrox = Gas::new(0.32, 0.);
 // register a 4 minute descent to 30m using nitrox 32
 model.record_travel(target_depth, time, &nitrox);
+```
+
+##### Record surface interval
+
+Records off-gassing at the surface while breathing air. The model must already be at 0 m; otherwise, the method returns an error containing the current depth in meters and feet.
+
+- `.record_surface_interval(time) -> Result<(), String>`
+    - time - surface interval duration
+
+```rust
+model.record_travel_with_rate(Depth::zero(), 9., &nitrox);
+model
+    .record_surface_interval(Time::from_minutes(60.))
+    .expect("model must be at the surface");
 ```
 
 ---
@@ -234,20 +275,20 @@ All decompression stages calculated to clear deco obligations and resurface in a
 ```
 
 - `DecoRuntime`
-  - `deco_stages (DecoStage)`
-    - `stage_type` (enum)
-      - ```Ascent``` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
-      - ```DecoStop``` - a mandatory deco stop needed to desaturate enough to proceed to the next one
-      - ```GasSwitch``` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
-    - `start_depth` - depth at which deco stage started
-    - `end_depth` - depth at which deco stage ended
-  - `duration` - duration of deco stage in seconds
-  - `tts` - current time to surface in minutes. The least amount of time possible to surface without violating decompression obligations according to the current model. Includes the duration of all necessary deco stops (assuming switching to most optimal decompression gas) and travel time between them
-  - `tts_at_5` (aka @+5) - TTS in 5 minutes assuming constant depth and gas mix
-  - `tts_delta_at_5` (aka Δ+5) - absolute change in TTS after 5 mins assuming constant depth and gas mix
+    - `deco_stages (DecoStage)`
+        - `stage_type` (enum)
+            - `Ascent` - linear ascent to shallowest depth possible, defined by deco stop depth (ceiling rounded using default 3m deco stop window) or surface if no deco obligation
+            - `DecoStop` - a mandatory deco stop needed to desaturate enough to proceed to the next one
+            - `GasSwitch` - a switch to another (most efficient) deco gas considering MOD and o2 content. Gas switch to another gas considered only if currently in decompression
+        - `start_depth` - depth at which deco stage started
+        - `end_depth` - depth at which deco stage ended
+    - `duration` - duration of deco stage in seconds
+    - `tts` - current time to surface in minutes. The least amount of time possible to surface without violating decompression obligations according to the current model. Includes the duration of all necessary deco stops (assuming switching to most optimal decompression gas) and travel time between them
+    - `tts_at_5` (aka @+5) - TTS in 5 minutes assuming constant depth and gas mix
+    - `tts_delta_at_5` (aka Δ+5) - absolute change in TTS after 5 mins assuming constant depth and gas mix
 - `DecoCalculationError`
-  - `EmptyGasList` - occurs when available gasses vector is empty
-  - `CurrentGasNotInList` - occurs when provided available list doesn't include gas currently in use according to deco model's state
+    - `EmptyGasList` - occurs when available gasses vector is empty
+    - `CurrentGasNotInList` - occurs when provided available list doesn't include gas currently in use according to deco model's state
 
 ```rust
 let config = BuhlmannConfig::new().with_gradient_factors(30, 70);
@@ -387,7 +428,7 @@ println!("{:#?}", deco_runtime);
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
 
 - `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix. This method has a cut-off at 99 minutes.
-NDL controllable by `ceiling_type` model config. By default (`Actual`), NDL is determined by the current tissues saturation, it counts down to a condition where ceiling isn't equal to the surface. The other ceiling type config (`Adaptive`) takes into account off-gassing during ascent and it's defined as a maximum time at given depth that won't create any decompression obligations (i.e. even on existing ceiling, limit occures when a direct ascent with configured ascent rate doesn't cause any tissue to intersect with its M-Value at a given time).
+  NDL controllable by `ceiling_type` model config. By default (`Actual`), NDL is determined by the current tissues saturation, it counts down to a condition where ceiling isn't equal to the surface. The other ceiling type config (`Adaptive`) takes into account off-gassing during ascent and it's defined as a maximum time at given depth that won't create any decompression obligations (i.e. even on existing ceiling, limit occures when a direct ascent with configured ascent rate doesn't cause any tissue to intersect with its M-Value at a given time).
 
 ```rust
 use dive_deco::{DecoModel, BuhlmannModel, BuhlmannConfig, Gas};
@@ -442,8 +483,8 @@ println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 Current tissue oversaturation as gradient factors.
 
 - `supersaturation() -> Supersaturation { gf_99, gf_surf }` - supersaturation in % relative to M-value ()
-  - gf_99 (f64) - GF99, current oversaturation relative to ambient pressure
-  - gf_surf (f64) - Surface GF, current oversaturation relative to surface pressure
+    - gf_99 (f64) - GF99, current oversaturation relative to ambient pressure
+    - gf_surf (f64) - Surface GF, current oversaturation relative to surface pressure
 
 ```rust
 // given model state after 120 seconds at 40 meters breathing air
@@ -458,7 +499,7 @@ let supersaturation = model.supersaturation(); // Supersaturation { gf_99: 0.0, 
 Current Central Nervous System Toxicity percentage (derived from NOAA limits).
 Measure (%) of accumulated exposure to elevated oxygen partial pressure in relation to maximum allowed exposure time for given ranges.
 
-- `cns()` - CNS %
+`cns()` is a `DecoModel` trait method that returns CNS %.
 
 ```rust
 // given model
@@ -471,7 +512,7 @@ let cns = model.cns(); // 32.5
 Pulmonary oxygen toxicity which concerns the effects to the lungs of long-term exposures
 to oxygen at elevated partial pressures presented as units (1 OTU = 100% O2 @ 1bar equivalent).
 
-- `otu()` - OTU
+`otu()` is a `DecoModel` trait method that returns OTU.
 
 ```rust
 // given model
@@ -492,7 +533,7 @@ let cns = model.otu(); // 78.43
 - [Salm, Albi & Eisenstein, Yael & Vered, Nurit & Rosenblat, Miri. (2022). On the arbitrariness of the ZH-L Helium coefficients (16.08.2022). 10.13140/RG.2.2.19048.55040.](https://www.researchgate.net/publication/362716934_On_the_arbitrariness_of_the_ZH-L_Helium_coefficients_16082022)
 - [Rosenblat, Miri & Salm, Albi. (2024). Introduction to Decompression Calculation.](https://www.researchgate.net/publication/362716934_On_the_arbitrariness_of_the_ZH-L_Helium_coefficients_16082022)
 
-> :warning: Disclaimer: Not Suitable for Dive Planning,  Work-in-Progress Model
+> :warning: Disclaimer: Not Suitable for Dive Planning, Work-in-Progress Model
 > This decompression model is currently in a developmental stage and should be treated as a work in progress. Users are advised that the information generated by this model may not be accurate and could contain errors. It is important to exercise caution and verify any critical information provided by the model through alternative sources.
 > This model is not designed or intended to be used as a dive planning software. Diving involves inherent risks, and accurate planning is crucial for safety. Users are strongly advised to rely on specialized dive planning software and consult with certified dive professionals for accurate and reliable information related to diving activities.
 > By using this model, users acknowledge that it is not a substitute for professional advice or dedicated tools designed for specific tasks, and the developers take no responsibility for any consequences arising from the use of information generated by this model.
