@@ -96,7 +96,7 @@ impl DecoModel for BuhlmannModel {
     }
 
     /// record data: depth (meters), time (seconds), gas
-    fn record(&mut self, depth: Depth, time: Time, gas: &Gas) {
+    fn record(&mut self, depth: Depth, time: Time, gas: &Gas) -> () {
         self.validate_depth(depth);
         self.state.depth = depth;
         self.state.gas = *gas;
@@ -106,7 +106,7 @@ impl DecoModel for BuhlmannModel {
     }
 
     /// model travel between depths using Schreiner equation
-    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) {
+    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) -> () {
         self.validate_depth(target_depth);
         self.state.gas = *gas;
         let start_depth = self.state.depth;
@@ -132,7 +132,7 @@ impl DecoModel for BuhlmannModel {
         // @todo ascent rate units
         rate: AscentRatePerMinute,
         gas: &Gas,
-    ) {
+    ) -> () {
         self.validate_depth(target_depth);
 
         let travel_distance = abs((target_depth - self.state.depth).as_meters());

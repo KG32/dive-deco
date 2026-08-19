@@ -58,10 +58,10 @@ pub trait DecoModel {
     fn dive_state(&self) -> DiveState;
 
     /// record (depth: meters, time: seconds)
-    fn record(&mut self, depth: Depth, time: Time, gas: &Gas);
+    fn record(&mut self, depth: Depth, time: Time, gas: &Gas) -> ();
 
     /// record linear ascent / descent record given travel time
-    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas);
+    fn record_travel(&mut self, target_depth: Depth, time: Time, gas: &Gas) -> ();
 
     /// register linear ascent / descent record given rate
     fn record_travel_with_rate(
@@ -70,6 +70,21 @@ pub trait DecoModel {
         rate: AscentRatePerMinute,
         gas: &Gas,
     );
+
+    /// record surface interval
+    fn record_surface_interval(&mut self, time: Time) -> Result<(), String> {
+        let current_depth = self.dive_state().depth;
+        if current_depth != Depth::zero() {
+            return Err(format!(
+                "Unable to record surface interval at depth ({}m / {}ft)",
+                current_depth.as_meters(),
+                current_depth.as_feet(),
+            ));
+        }
+        self.record(Depth::zero(), time, &Gas::air());
+
+        Ok(())
+    }
 
     /// current non decompression limit (NDL)
     fn ndl(&self) -> Time;

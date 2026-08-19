@@ -80,7 +80,9 @@ impl fmt::Display for DecoCalculationError {
                 f,
                 "Available gas mixes must include current gas mix used by deco model"
             ),
-        }
+        }?;
+
+        Ok(())
     }
 }
 
