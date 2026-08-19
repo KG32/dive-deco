@@ -428,7 +428,7 @@ println!("{:#?}", deco_runtime);
 The NDL is a theoretical time obtained by calculating inert gas uptake and release in the body that determines a time interval a diver may theoretically spend at given depth without aquiring any decompression obligations (given constant depth and gas mix).
 
 - `ndl()` - no-decompression limit for current model state in minutes, assuming constant depth and gas mix. This method has a cut-off at 99 minutes.
-  NDL controllable by `ceiling_type` model config. By default (`Actual`), NDL is determined by the current tissues saturation, it counts down to a condition where ceiling isn't equal to the surface. The other ceiling type config (`Adaptive`) takes into account off-gassing during ascent and it's defined as a maximum time at given depth that won't create any decompression obligations (i.e. even on existing ceiling, limit occures when a direct ascent with configured ascent rate doesn't cause any tissue to intersect with its M-Value at a given time).
+  NDL controllable by `ceiling_type` model config. By default (`Actual`), NDL is determined by the current tissues saturation, it counts down to a condition where ceiling isn't equal to the surface. The other ceiling type config (`Adaptive`) takes into account off-gassing during ascent and it's defined as a maximum time at given depth that won't create any decompression obligations (i.e. even on existing ceiling, limit occurs when a direct ascent with configured ascent rate doesn't cause any tissue to intersect with its M-Value at a given time).
 
 ```rust
 use dive_deco::{DecoModel, BuhlmannModel, BuhlmannConfig, Gas};
