@@ -1,7 +1,7 @@
 use crate::buhlmann::buhlmann_config::BuhlmannConfig;
 use crate::buhlmann::compartment::{Compartment, Supersaturation};
 use crate::buhlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
-use crate::common::{abs, ceil};
+use crate::common::{abs, ceil, powf};
 use crate::common::{
     AscentRatePerMinute, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth, DiveState,
     Gas, GradientFactor, InertGas, OxTox, RecordData, OTU_EQUATION_EXPONENT,
@@ -393,7 +393,7 @@ impl BuhlmannModel {
             if u_start <= 0.0 {
                 return 0.0;
             }
-            return u_start.powf(-OTU_EQUATION_EXPONENT) * tm;
+            return powf(u_start, -OTU_EQUATION_EXPONENT) * tm;
         }
 
         let u0 = u_start.max(0.0);
@@ -418,14 +418,14 @@ impl BuhlmannModel {
         // du/dt within the integration window
         let du_dt = (u_end - u_start) / tm;
         if du_dt.abs() < 1e-15 {
-            return u0.powf(-OTU_EQUATION_EXPONENT) * dt;
+            return powf(u0, -OTU_EQUATION_EXPONENT) * dt;
         }
 
         // OTU = ∫ u^p dt = ∫ u^p * du / du_dt
         // = [u^(p+1) / (p+1)] / du_dt from u0 to u1
         let p = -OTU_EQUATION_EXPONENT;
         let p1 = p + 1.0;
-        (u1.powf(p1) - u0.powf(p1)) / (du_dt * p1)
+        (powf(u1, p1) - powf(u0, p1)) / (du_dt * p1)
     }
 
     fn leading_comp(&self) -> &Compartment {

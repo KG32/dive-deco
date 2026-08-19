@@ -75,7 +75,7 @@ pub trait DecoModel {
     fn record_surface_interval(&mut self, time: Time) -> Result<(), String> {
         let current_depth = self.dive_state().depth;
         if current_depth != Depth::zero() {
-            return Err(format!(
+            return Err(alloc::format!(
                 "Unable to record surface interval at depth ({}m / {}ft)",
                 current_depth.as_meters(),
                 current_depth.as_feet(),
