@@ -6,6 +6,7 @@ use crate::common::{Depth, Time};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,25 @@ impl ConfigValidationErr {
         Self {
             field: String::from(field),
             reason: String::from(reason),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum SurfaceIntervalError {
+    NotAtSurface { current_depth: Depth },
+}
+
+impl fmt::Display for SurfaceIntervalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotAtSurface { current_depth } => write!(
+                f,
+                "Unable to record surface interval at depth ({}m / {}ft)",
+                current_depth.as_meters(),
+                current_depth.as_feet(),
+            ),
         }
     }
 }
@@ -72,14 +92,10 @@ pub trait DecoModel {
     );
 
     /// record surface interval
-    fn record_surface_interval(&mut self, time: Time) -> Result<(), String> {
+    fn record_surface_interval(&mut self, time: Time) -> Result<(), SurfaceIntervalError> {
         let current_depth = self.dive_state().depth;
         if current_depth != Depth::zero() {
-            return Err(alloc::format!(
-                "Unable to record surface interval at depth ({}m / {}ft)",
-                current_depth.as_meters(),
-                current_depth.as_feet(),
-            ));
+            return Err(SurfaceIntervalError::NotAtSurface { current_depth });
         }
         self.record(Depth::zero(), time, &Gas::air());
 

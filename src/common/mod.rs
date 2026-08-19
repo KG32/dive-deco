@@ -12,7 +12,9 @@ mod time;
 
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use deco::{Deco, DecoCalculationError, DecoRuntime, DecoStage, DecoStageType};
-pub use deco_model::{ConfigValidationErr, DecoModel, DecoModelConfig, DiveState};
+pub use deco_model::{
+    ConfigValidationErr, DecoModel, DecoModelConfig, DiveState, SurfaceIntervalError,
+};
 pub use depth::{Depth, Unit, Units};
 pub use time::Time;
 
