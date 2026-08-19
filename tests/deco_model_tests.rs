@@ -1,4 +1,4 @@
-use dive_deco::{DecoModel, Depth, Gas, Time};
+use dive_deco::{DecoModel, Depth, Gas, SurfaceIntervalError, Time};
 
 pub mod fixtures;
 
@@ -73,10 +73,8 @@ fn test_record_surface_interval_fails_below_surface() {
 
     assert_eq!(
         error,
-        format!(
-            "Unable to record surface interval at depth ({}m / {}ft)",
-            depth.as_meters(),
-            depth.as_feet()
-        )
+        SurfaceIntervalError::NotAtSurface {
+            current_depth: depth,
+        }
     );
 }
